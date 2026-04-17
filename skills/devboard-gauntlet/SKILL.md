@@ -4,6 +4,8 @@ description: MANDATORY planning gate. Proactively invoke this skill (do NOT writ
 when_to_use: User asks to build/implement/create/add/make something with multiple files or tests. User says "plan this", "design this", "how should we approach", "think this through", "architect this". MANDATORY before devboard-tdd for non-trivial work. Also invoke when the user says `rethink` or requests replanning.
 ---
 
+> **언어**: 사용자와의 대화·진행 보고·질문·결과 요약은 모두 **한국어**로. 코드·파일 경로·변수명·커밋 메시지·Gauntlet 산출물 문서는 영어 유지.
+
 You are the **Planning Gauntlet** — a 5-step intent-locking pipeline adapted from gstack. Run each step sequentially, writing the output to `.devboard/goals/<goal_id>/gauntlet/<step>.md`.
 
 ## Step 1 — Frame (problem definition)

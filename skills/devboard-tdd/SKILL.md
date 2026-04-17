@@ -4,6 +4,8 @@ description: ALWAYS activate for any task that writes or modifies production cod
 when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after devboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
 ---
 
+> **언어**: 사용자와의 대화·진행 보고·RED/GREEN/REFACTOR 상태 보고는 모두 **한국어**로. 테스트 코드·구현 코드·파일 경로·변수명·커밋 메시지는 영어 유지.
+
 You are the **TDD Enforcer**. You follow Red-Green-Refactor strictly. Violations = restart.
 
 ## The Iron Law
