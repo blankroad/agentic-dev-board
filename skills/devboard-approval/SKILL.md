@@ -67,19 +67,21 @@ On y:
 - **Checklist has ✗ items**: refuse to push. Hand back to `devboard-tdd`.
 - **Uncommitted changes**: refuse — must be clean working tree first.
 
-## Required MCP calls
+## Required MCP calls — ALL mandatory, in order
 
-| When | Tool |
-|---|---|
-| On entry | `devboard_load_plan(project_root, goal_id)` + `devboard_load_decisions(project_root, task_id)` — build summary |
-| Before asking user | `devboard_get_diff_stats(project_root)` |
-| Before asking user | `devboard_verify(project_root, checklist)` — re-verify fresh |
-| On user approval | `devboard_apply_squash_policy(project_root, branch, base_branch, policy, message)` |
-| Build PR body | `devboard_build_pr_body(project_root, goal_id, task_id, iterations_completed, diff_stats)` |
-| Push | `devboard_push_pr(project_root, branch, pr_title, pr_body, base_branch)` |
-| After push | `devboard_update_task_status(project_root, task_id, "pushed")` |
-| After push | `devboard_checkpoint(project_root, run_id, "converged", {pr_url, policy, iterations})` |
-| Log | `devboard_log_decision(project_root, task_id, iter=N, phase="approval", reasoning=<pr_url>, verdict_source="PUSHED")` |
+**The `converged` checkpoint is a HARD REQUIREMENT** whether push succeeded, was skipped (no remote), or was rejected by user. Without it, diagnose shows skill_activation_score < 100%.
+
+| When | Tool | Notes |
+|---|---|---|
+| On entry | `devboard_load_plan(project_root, goal_id)` + `devboard_load_decisions(project_root, task_id)` | Build summary |
+| Before asking user | `devboard_get_diff_stats(project_root)` | |
+| Before asking user | `devboard_verify(project_root, checklist)` | Re-verify fresh |
+| On user approval | `devboard_apply_squash_policy(project_root, branch, base_branch, policy, message)` | |
+| Build PR body | `devboard_build_pr_body(project_root, goal_id, task_id, iterations_completed, diff_stats)` | |
+| Push (if remote) | `devboard_push_pr(project_root, branch, pr_title, pr_body, base_branch)` | |
+| **Always** after push/commit | `devboard_checkpoint(project_root, run_id, "converged", {pr_url_or_reason, policy, iterations})` | **MANDATORY — even if local-only ship** |
+| **Always** after converged | `devboard_update_task_status(project_root, task_id, "pushed")` | |
+| **Always** after converged | `devboard_log_decision(project_root, task_id, iter=N, phase="approval", reasoning=<pr_url_or_reason>, verdict_source="PUSHED")` | |
 
 ## Discipline
 

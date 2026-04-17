@@ -548,12 +548,97 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
     if name == "devboard_checkpoint":
         store = _store(args["project_root"])
         run_id = args["run_id"]
+        event = args["event"]
+        state = args.get("state", {}) or {}
         run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
         if not run_path.parent.exists():
             run_path.parent.mkdir(parents=True, exist_ok=True)
         cp = Checkpointer(run_path)
-        cp.save(args["event"], args.get("state", {}) or {})
-        return _text({"status": "saved", "run_id": run_id, "event": args["event"]})
+
+        # Order validation — warn (but not block) when an event is logged out of order
+        warnings: list[str] = []
+        prior_events = [e.get("event") for e in cp.load_all()]
+        prior_states = [e.get("state", {}) or {} for e in cp.load_all()]
+
+        # tdd_green_complete requires prior tdd_red_complete for same iteration
+        if event == "tdd_green_complete":
+            iteration = state.get("iteration")
+            if iteration is not None:
+                red_for_iter = any(
+                    prior_events[i] == "tdd_red_complete"
+                    and (prior_states[i].get("iteration") == iteration)
+                    for i in range(len(prior_events))
+                )
+                if not red_for_iter:
+                    warnings.append(
+                        f"tdd_green_complete logged for iter {iteration} without a prior "
+                        f"tdd_red_complete for the same iter. TDD Iron Law requires "
+                        f"writing the failing test FIRST and checkpointing RED before GREEN."
+                    )
+
+        # tdd_refactor_complete requires prior tdd_green_complete for same iteration
+        if event == "tdd_refactor_complete":
+            iteration = state.get("iteration")
+            if iteration is not None:
+                green_for_iter = any(
+                    prior_events[i] == "tdd_green_complete"
+                    and (prior_states[i].get("iteration") == iteration)
+                    for i in range(len(prior_events))
+                )
+                if not green_for_iter:
+                    warnings.append(
+                        f"tdd_refactor_complete for iter {iteration} without prior "
+                        f"tdd_green_complete. Refactor requires a green baseline."
+                    )
+
+        # converged requires at minimum a tdd_complete or tdd_green_complete
+        if event == "converged":
+            has_tdd_work = any(
+                e in ("tdd_complete", "tdd_green_complete", "review_complete")
+                for e in prior_events
+            )
+            if not has_tdd_work:
+                warnings.append(
+                    "converged logged without any preceding tdd_complete / tdd_green_complete / "
+                    "review_complete. Did TDD actually run?"
+                )
+
+        # Save the event
+        cp.save(event, state)
+
+        # Side-effect: when converged/blocked fires, auto-update task.converged flag
+        if event in ("converged", "blocked"):
+            # Find task_id from state or prior run_start
+            task_id = state.get("task_id")
+            if not task_id:
+                for e in cp.load_all():
+                    s = e.get("state", {}) or {}
+                    if s.get("task_id"):
+                        task_id = s["task_id"]
+                        break
+            if task_id:
+                try:
+                    board = store.load_board()
+                    for goal in board.goals:
+                        if task_id in goal.task_ids:
+                            task = store.load_task(goal.id, task_id)
+                            if task:
+                                task.converged = (event == "converged")
+                                if event == "converged":
+                                    task.status = TaskStatus.converged
+                                elif event == "blocked":
+                                    task.status = TaskStatus.blocked
+                                store.save_task(task)
+                            break
+                except Exception:
+                    pass  # non-fatal
+
+        return _text({
+            "status": "saved",
+            "run_id": run_id,
+            "event": event,
+            "warnings": warnings,
+        })
 
     if name == "devboard_resume_run":
         store = _store(args["project_root"])

@@ -72,7 +72,21 @@ For existing code without tests: add tests for existing behavior BEFORE modifyin
 - The LockedPlan's `out_of_scope_guard` paths: never touch them. If a change requires touching one, STOP and invoke `devboard-rca` — the plan may need to be revised.
 - The `goal_checklist` is authoritative. PASS requires every item verified, not just "tests pass".
 
-## Required MCP calls
+## Required MCP calls — Logging is NOT optional
+
+**DO NOT batch phases.** Each of RED / GREEN / REFACTOR is a separate transition and MUST produce its own `devboard_checkpoint` call. Writing code without logging the RED checkpoint first = skipping the audit trail = breaks retro + replay + diagnose. If you "know" the test will fail before writing it, log RED anyway — the checkpoint is the proof of discipline, not just observation.
+
+**Anti-pattern (FORBIDDEN)**:
+```
+write test → write impl → log single "tdd_green_complete" ❌
+```
+
+**Correct pattern**:
+```
+write test → run pytest → see fail → log tdd_red_complete ✓
+write impl → run pytest → see pass → log tdd_green_complete ✓
+(optional refactor → log tdd_refactor_complete — SKIPPED is a valid status)
+```
 
 Per atomic_step, per cycle:
 
@@ -93,10 +107,14 @@ Thread `task_id` + `run_id` through all calls.
 ## Loop termination
 
 After all atomic_steps are complete:
-- Full suite green
-- All checklist items verified via `devboard_verify`
-- No regressions
-- No uncommitted changes
-- Call `devboard_checkpoint(... "tdd_complete", {total_iterations, checklist_verified: true})`
+
+1. Run full suite via `devboard_verify(project_root, checklist)`
+2. Issue review verdict — call:
+   - `devboard_checkpoint(... "review_complete", {verdict: "PASS"|"RETRY", checklist_verified: true})` **(required)**
+   - `devboard_log_decision(... phase="review", verdict_source="PASS"|"RETRY", reasoning=<summary>)` **(required)**
+3. Mark TDD done:
+   - `devboard_checkpoint(... "tdd_complete", {total_iterations, checklist_verified: true})` **(required)**
+
+All three above are independent events — log each one separately. Do not combine.
 
 Hand off to `devboard-cso` (if diff is security-sensitive) or `devboard-redteam` (adversarial review) or `devboard-approval` (final review + PR).
