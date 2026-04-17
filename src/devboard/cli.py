@@ -225,30 +225,79 @@ def goal_list() -> None:
 
 
 @task_app.command("show")
-def task_show(task_id: str = typer.Argument(...)) -> None:
-    """Show task details."""
+def task_show(
+    task_id: Optional[str] = typer.Argument(None, help="Task ID (default: latest)"),
+) -> None:
+    """Show task details — status, decision counts, review outcomes, iter diffs."""
+    from collections import Counter
     store = _get_store()
-    board = store.load_board()
-    task = None
-    for goal in board.goals:
-        if task_id in goal.task_ids:
-            task = store.load_task(goal.id, task_id)
-            break
-    if task is None:
-        console.print(f"[red]Task not found:[/red] {task_id}")
+    tid = _latest_task_id(store, None, task_id)
+    if not tid:
+        console.print("[red]No task found.[/red]")
         raise typer.Exit(1)
 
-    console.print(f"\n[bold]{task.title}[/bold] [dim]({task.id})[/dim]")
-    console.print(f"Status:     {task.status.value}")
-    console.print(f"Branch:     {task.branch or '(none)'}")
-    console.print(f"Iterations: {len(task.iterations)}")
-    console.print(f"Converged:  {task.converged}")
+    board = store.load_board()
+    goal_id = None
+    task = None
+    for g in board.goals:
+        if tid in g.task_ids:
+            goal_id = g.id
+            task = store.load_task(g.id, tid)
+            break
+    if task is None:
+        console.print(f"[red]Task not found: {tid}[/red]")
+        raise typer.Exit(1)
 
-    entries = store.load_decisions(task.id)
+    # Header
+    console.print(f"\n[bold]{task.title}[/bold]")
+    console.print(f"  task_id:    [dim]{task.id}[/dim]")
+    console.print(f"  goal_id:    [dim]{goal_id}[/dim]")
+    console.print(f"  status:     {_status_color(task.status.value)}")
+    console.print(f"  branch:     {task.branch or '(none)'}")
+    converged_str = "[green]yes[/green]" if task.converged else "[yellow]no[/yellow]"
+    console.print(f"  converged:  {converged_str}")
+
+    # Decision breakdown by phase
+    entries = store.load_decisions(tid)
     if entries:
-        console.print(f"\n[bold]Decisions ({len(entries)})[/bold]")
-        for e in entries[-10:]:
-            console.print(f"  iter {e.iter} [{e.phase}] — {e.reasoning[:80]}")
+        phase_counts = Counter(e.phase for e in entries)
+        console.print(f"\n[bold]Decisions[/bold]  ({len(entries)} total)")
+        for phase, count in sorted(phase_counts.items()):
+            color = _PHASE_COLORS.get(phase, "white")
+            console.print(f"  [{color}]{phase:<13}[/{color}] × {count}")
+
+        # Review outcomes
+        review_entries = [e for e in entries if e.phase in ("review", "cso", "redteam", "approval")]
+        if review_entries:
+            console.print(f"\n[bold]Final Verdicts[/bold]")
+            for e in review_entries:
+                color = _PHASE_COLORS.get(e.phase, "white")
+                console.print(f"  [{color}]{e.phase:<10}[/{color}] iter {e.iter:>2}  {e.verdict_source}")
+
+    # Iter diffs
+    changes_dir = store.root / ".devboard" / "goals" / goal_id / "tasks" / tid / "changes"
+    if changes_dir.exists():
+        diffs = sorted(changes_dir.glob("iter_*.diff"))
+        if diffs:
+            console.print(f"\n[bold]Iteration Diffs[/bold]  ({len(diffs)})")
+            for p in diffs:
+                size = p.stat().st_size
+                console.print(f"  {p.stem}  [dim]{size} bytes[/dim]")
+
+    console.print(
+        f"\n[dim]more:[/dim] "
+        f"[bold]devboard decisions {tid}[/bold]  |  "
+        f"[bold]devboard reviews {tid}[/bold]  |  "
+        f"[bold]devboard diff {tid} --iter N[/bold]"
+    )
+
+
+def _status_color(s: str) -> str:
+    color = {
+        "converged": "blue", "pushed": "cyan", "blocked": "red",
+        "awaiting_approval": "yellow", "in_progress": "green", "failed": "red",
+    }.get(s, "white")
+    return f"[{color}]{s}[/{color}]"
 
 
 # ── Board TUI ─────────────────────────────────────────────────────────────
@@ -599,6 +648,327 @@ def learnings_import(
         zf.extractall(target)
 
     console.print(f"[green]✓ imported {len(names)} learning(s) → {target}[/green]")
+
+
+# ── Inspection commands (no JSON/jq needed) ──────────────────────────────
+
+
+def _latest_goal_id(store: FileStore, explicit: Optional[str]) -> Optional[str]:
+    if explicit:
+        return explicit
+    board = store.load_board()
+    return board.active_goal_id or (board.goals[-1].id if board.goals else None)
+
+
+def _latest_task_id(store: FileStore, goal_id: Optional[str], explicit: Optional[str]) -> Optional[str]:
+    if explicit:
+        return explicit
+    board = store.load_board()
+    gid = goal_id or board.active_goal_id
+    for g in board.goals:
+        if g.id == gid and g.task_ids:
+            return g.task_ids[-1]
+    return None
+
+
+def _latest_run_path(store: FileStore, explicit: Optional[str]):
+    runs_dir = store.root / ".devboard" / "runs"
+    if not runs_dir.exists():
+        return None
+    if explicit:
+        p = runs_dir / f"{explicit}.jsonl"
+        return p if p.exists() else None
+    files = sorted(runs_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files[0] if files else None
+
+
+@app.command()
+def plan(
+    goal_id: Optional[str] = typer.Argument(None, help="Goal ID (default: active)"),
+    full: bool = typer.Option(False, "--full", "-f", help="Include Gauntlet artifacts"),
+) -> None:
+    """Show the LockedPlan for a goal (hash, checklist, atomic_steps, guards)."""
+    store = _get_store()
+    gid = _latest_goal_id(store, goal_id)
+    if not gid:
+        console.print("[red]No goal.[/red]")
+        raise typer.Exit(1)
+
+    locked = store.load_locked_plan(gid)
+    if locked is None:
+        console.print(f"[red]No plan for {gid}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[bold]LockedPlan[/bold]  [dim]{gid}[/dim]")
+    console.print(f"  hash:            [bold]{locked.locked_hash}[/bold]")
+    console.print(f"  locked_at:       {locked.locked_at}")
+    console.print(f"  scope_decision:  {locked.scope_decision}")
+    console.print(f"  token_ceiling:   {locked.token_ceiling:,}")
+    console.print(f"  max_iterations:  {locked.max_iterations}")
+
+    console.print(f"\n[bold]Problem[/bold]\n  {locked.problem}")
+
+    if locked.non_goals:
+        console.print(f"\n[bold]Non-goals[/bold]")
+        for ng in locked.non_goals:
+            console.print(f"  - {ng}")
+
+    console.print(f"\n[bold]Goal Checklist[/bold] ({len(locked.goal_checklist)} items)")
+    for item in locked.goal_checklist:
+        console.print(f"  - {item}")
+
+    console.print(f"\n[bold]Atomic Steps[/bold] ({len(locked.atomic_steps)})")
+    for s in locked.atomic_steps:
+        console.print(f"  [cyan]{s.id}[/cyan] {s.behavior}")
+        console.print(f"    test: {s.test_file}::{s.test_name}   impl: {s.impl_file}")
+
+    if locked.out_of_scope_guard:
+        console.print(f"\n[bold]Out-of-scope Guard[/bold]")
+        for g in locked.out_of_scope_guard:
+            console.print(f"  - {g}")
+
+    if locked.known_failure_modes:
+        console.print(f"\n[bold]Known Failure Modes[/bold]")
+        for m in locked.known_failure_modes:
+            console.print(f"  - {m}")
+
+    if full:
+        gauntlet_dir = store.root / ".devboard" / "goals" / gid / "gauntlet"
+        if gauntlet_dir.exists():
+            console.print(f"\n[bold]Gauntlet Artifacts[/bold]")
+            for f in sorted(gauntlet_dir.glob("*.md")):
+                console.print(f"\n[dim]── {f.name} ──[/dim]")
+                console.print(f.read_text())
+
+
+@app.command()
+def timeline(
+    run_id: Optional[str] = typer.Option(None, "--run", "-r"),
+    last_n: Optional[int] = typer.Option(None, "--last-n", "-n"),
+) -> None:
+    """Show chronological state transitions from a run (or the latest one)."""
+    import json as _json
+    store = _get_store()
+    run_path = _latest_run_path(store, run_id)
+    if not run_path:
+        console.print("[dim]No runs yet.[/dim]")
+        return
+
+    console.print(f"\n[bold]Timeline[/bold]  [dim]{run_path.stem}[/dim]\n")
+    entries = [_json.loads(l) for l in run_path.read_text().splitlines() if l.strip()]
+    if last_n:
+        entries = entries[-last_n:]
+
+    for i, e in enumerate(entries, 1):
+        ts = (e.get("ts") or "")[:19]
+        event = e.get("event", "?")
+        state = e.get("state") or {}
+        iter_n = state.get("iteration", "")
+        step = state.get("current_step_id", "")
+        color = _EVENT_COLORS.get(event, "white")
+        iter_str = f"iter={iter_n}" if iter_n else ""
+        step_str = f"step={step}" if step else ""
+        extra = "  ".join(filter(None, [iter_str, step_str]))
+        console.print(f"  {i:3}. [dim]{ts}[/dim]  [{color}]{event:<26}[/{color}]  [dim]{extra}[/dim]")
+
+
+@app.command()
+def decisions(
+    task_id: Optional[str] = typer.Argument(None),
+    goal: Optional[str] = typer.Option(None, "--goal", "-g"),
+    phase: Optional[str] = typer.Option(None, "--phase", "-p",
+        help="Filter: plan, tdd_red, tdd_green, tdd_refactor, review, cso, redteam, reflect, iron_law, approval"),
+    iter_n: Optional[int] = typer.Option(None, "--iter", "-i"),
+    verdict: Optional[str] = typer.Option(None, "--verdict", "-v"),
+    verbose: bool = typer.Option(False, "--verbose", "-V", help="Show full reasoning"),
+) -> None:
+    """Browse the decisions log (why each step happened)."""
+    store = _get_store()
+    tid = _latest_task_id(store, goal, task_id)
+    if not tid:
+        console.print("[red]No task found.[/red]")
+        raise typer.Exit(1)
+
+    entries = store.load_decisions(tid)
+    if not entries:
+        console.print(f"[dim]No decisions for task {tid}[/dim]")
+        return
+
+    # Filter
+    filtered = entries
+    if phase:
+        filtered = [e for e in filtered if e.phase == phase]
+    if iter_n is not None:
+        filtered = [e for e in filtered if e.iter == iter_n]
+    if verdict:
+        filtered = [e for e in filtered if verdict.upper() in (e.verdict_source or "").upper()]
+
+    console.print(f"\n[bold]Decisions[/bold]  [dim]{tid}[/dim]  ({len(filtered)}/{len(entries)} shown)\n")
+    for e in filtered:
+        color = _PHASE_COLORS.get(e.phase, "white")
+        reasoning = e.reasoning if verbose else e.reasoning[:100]
+        console.print(f"  iter {e.iter:>2}  [{color}]{e.phase:<13}[/{color}] {(e.verdict_source or '-'):<18} [dim]{reasoning}[/dim]")
+        if verbose and e.next_strategy:
+            console.print(f"           [dim]→ strategy: {e.next_strategy[:200]}[/dim]")
+
+
+@app.command()
+def reviews(
+    task_id: Optional[str] = typer.Argument(None),
+    goal: Optional[str] = typer.Option(None, "--goal", "-g"),
+) -> None:
+    """Show review outcomes — reviewer, CSO, red-team, approval."""
+    store = _get_store()
+    tid = _latest_task_id(store, goal, task_id)
+    if not tid:
+        console.print("[red]No task found.[/red]")
+        raise typer.Exit(1)
+
+    entries = store.load_decisions(tid)
+    review_phases = ("review", "cso", "redteam", "approval", "iron_law")
+    reviews = [e for e in entries if e.phase in review_phases]
+
+    if not reviews:
+        console.print("[dim]No review entries yet.[/dim]")
+        return
+
+    console.print(f"\n[bold]Reviews[/bold]  [dim]{tid}[/dim]\n")
+    for e in reviews:
+        color = _PHASE_COLORS.get(e.phase, "white")
+        icon = {"PASS": "✓", "SECURE": "✓", "SURVIVED": "✓", "PUSHED": "↑",
+                "RETRY": "↻", "VULNERABLE": "✗", "BROKEN": "✗",
+                "RED_CONFIRMED": "—", "iron_law": "⚠"}.get(e.verdict_source or "", "·")
+        console.print(
+            f"  iter {e.iter:>2}  [{color}]{e.phase.upper():<10}[/{color}]  "
+            f"{icon} {(e.verdict_source or '').ljust(12)}"
+        )
+        if e.reasoning:
+            for line in e.reasoning.split("\n")[:3]:
+                console.print(f"           [dim]{line[:90]}[/dim]")
+            if len(e.reasoning.split("\n")) > 3:
+                console.print(f"           [dim]... ({len(e.reasoning)} chars total)[/dim]")
+        console.print()
+
+
+@app.command()
+def diff(
+    task_id: Optional[str] = typer.Argument(None),
+    goal: Optional[str] = typer.Option(None, "--goal", "-g"),
+    iter_n: Optional[int] = typer.Option(None, "--iter", "-i", help="Specific iteration"),
+    list_iters: bool = typer.Option(False, "--list", "-l", help="Just list available iter diffs"),
+) -> None:
+    """Show per-iteration diff archive."""
+    store = _get_store()
+    tid = _latest_task_id(store, goal, task_id)
+    if not tid:
+        console.print("[red]No task found.[/red]")
+        raise typer.Exit(1)
+
+    # Find changes dir
+    board = store.load_board()
+    gid = None
+    for g in board.goals:
+        if tid in g.task_ids:
+            gid = g.id
+            break
+    if not gid:
+        console.print("[red]Task's goal not found.[/red]")
+        raise typer.Exit(1)
+
+    changes_dir = store.root / ".devboard" / "goals" / gid / "tasks" / tid / "changes"
+    if not changes_dir.exists():
+        console.print("[dim]No diffs saved for this task.[/dim]")
+        return
+
+    diffs = sorted(changes_dir.glob("iter_*.diff"))
+    if not diffs:
+        console.print("[dim]No diffs saved.[/dim]")
+        return
+
+    if list_iters or iter_n is None:
+        console.print(f"\n[bold]Iteration Diffs[/bold]  [dim]{tid}[/dim]\n")
+        for p in diffs:
+            size = p.stat().st_size
+            console.print(f"  {p.stem:<12}  {size:>6} bytes  [dim]{p}[/dim]")
+        if iter_n is None and not list_iters:
+            console.print(f"\n[dim]Use --iter N to view a specific iter[/dim]")
+        return
+
+    target = changes_dir / f"iter_{iter_n}.diff"
+    if not target.exists():
+        console.print(f"[red]No diff for iter {iter_n}[/red]")
+        raise typer.Exit(1)
+    console.print(f"\n[bold]iter_{iter_n}.diff[/bold]\n")
+    console.print(target.read_text())
+
+
+@app.command()
+def violations(
+    goal: Optional[str] = typer.Option(None, "--goal", "-g"),
+) -> None:
+    """Show all problems: Iron Law hits, RCA escalations, CSO VULNERABLE, red-team BROKEN."""
+    store = _get_store()
+    board = store.load_board()
+    goals = [g for g in board.goals if (not goal or g.id == goal)]
+    if not goals:
+        console.print("[dim]No goals.[/dim]")
+        return
+
+    any_found = False
+    for g in goals:
+        for tid in g.task_ids:
+            entries = store.load_decisions(tid)
+            problems = []
+            for e in entries:
+                vs = (e.verdict_source or "").upper()
+                if e.phase == "iron_law":
+                    problems.append((e, "iron_law", "⚠"))
+                elif "ESCALATED" in vs:
+                    problems.append((e, "rca_escalated", "🚨"))
+                elif "VULNERABLE" in vs:
+                    problems.append((e, "cso_vulnerable", "🔓"))
+                elif "BROKEN" in vs:
+                    problems.append((e, "redteam_broken", "💥"))
+            if problems:
+                any_found = True
+                console.print(f"\n[bold]{g.title[:60]}[/bold]  [dim]{tid}[/dim]")
+                for e, kind, icon in problems:
+                    color = {"iron_law": "yellow", "rca_escalated": "bright_red",
+                             "cso_vulnerable": "red", "redteam_broken": "bright_red"}[kind]
+                    console.print(f"  {icon} [{color}]iter {e.iter} {kind:<16}[/{color}] {e.reasoning[:90]}")
+
+    if not any_found:
+        console.print("[green]✓ No violations detected.[/green]")
+
+
+@app.command("show-gauntlet")
+def show_gauntlet(
+    goal_id: Optional[str] = typer.Argument(None),
+    step: Optional[str] = typer.Option(None, "--step", "-s",
+        help="frame | scope | arch | challenge | decide (default: all)"),
+) -> None:
+    """Show Gauntlet 5-step artifacts (frame/scope/arch/challenge/decide)."""
+    store = _get_store()
+    gid = _latest_goal_id(store, goal_id)
+    if not gid:
+        console.print("[red]No goal.[/red]")
+        raise typer.Exit(1)
+
+    gauntlet_dir = store.root / ".devboard" / "goals" / gid / "gauntlet"
+    if not gauntlet_dir.exists():
+        console.print("[dim]No Gauntlet artifacts for this goal.[/dim]")
+        return
+
+    files = sorted(gauntlet_dir.glob("*.md"))
+    if step:
+        files = [f for f in files if f.stem == step]
+        if not files:
+            console.print(f"[red]No {step}.md[/red]")
+            raise typer.Exit(1)
+
+    for f in files:
+        console.print(f"\n[bold]── {f.stem.upper()} ──[/bold]  [dim]{f.name}[/dim]\n")
+        console.print(f.read_text())
 
 
 # ── Retro ─────────────────────────────────────────────────────────────────
