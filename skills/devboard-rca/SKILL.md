@@ -86,9 +86,17 @@ Only now:
 
 If this is the **3rd+ consecutive failure on the same symptom** (check `devboard_load_decisions` for the task), set `escalate_if_3_plus: true` and set risk to HIGH. The orchestrator should HALT and the user should run `devboard rethink <goal_id>`. The architecture itself is suspect — more iterations won't fix it.
 
-## After outputting
+## Required MCP calls
 
-1. Call MCP tool `devboard_log_decision(iter, phase='reflect', reasoning=<root_cause>, next_strategy=<...>, ...)`
-2. If `escalate`: STOP. Hand to user with explicit "rethink needed" message.
-3. If learning has abstract value: call `devboard_save_learning(name, content, tags=['debugging', <topic>], category='pattern', confidence=0.7)`
-4. Hand `next_strategy` back to `devboard-tdd` as the next iteration's directive.
+| When | Tool |
+|---|---|
+| After phase 4 output | `devboard_checkpoint(project_root, run_id, "rca_complete", {root_cause, risk, consecutive_failures, escalate})` |
+| After phase 4 | `devboard_log_decision(project_root, task_id, iter=N, phase="reflect", reasoning=<root_cause>, next_strategy=<...>, verdict_source="RCA_DONE"\|"RCA_ESCALATED")` |
+| Before phase 1 | `devboard_load_decisions(project_root, task_id)` — count prior RETRY phases on same symptom. If ≥ 2 prior, set `consecutive_failures >= 3` and escalate. |
+| On abstract lesson | `devboard_save_learning(project_root, name, content, tags=["debugging", <topic>], category="pattern", confidence=0.7)` |
+| On escalate | `devboard_checkpoint(project_root, run_id, "blocked", {reason: "RCA escalation — rethink needed"})` then STOP. |
+
+## Handoff
+
+1. If `escalate`: STOP. Hand to user with explicit "rethink needed" message.
+2. Otherwise hand `next_strategy` back to `devboard-tdd` as the next iteration's directive.

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import fcntl
 import json
+import os
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,6 +13,54 @@ import yaml
 
 from devboard.models import BoardState, Goal, GoalStatus, LockedPlan, Task, TaskStatus
 from devboard.storage.base import Repository
+
+
+def atomic_write(path: Path, content: str, encoding: str = "utf-8") -> None:
+    """Write `content` to `path` atomically (temp file + rename).
+
+    Safe under concurrent readers — they see either the old complete file
+    or the new complete file, never a partial write.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # NamedTemporaryFile on same dir to guarantee same-FS rename
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding=encoding) as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+@contextmanager
+def file_lock(path: Path, mode: str = "a+"):
+    """Advisory exclusive lock on `path` (creates empty file if needed).
+
+    Use around state.json writes to prevent two concurrent Claude Code
+    sessions from racing. Lock is released on context exit.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Use a dedicated lockfile to avoid blocking the real file
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    f = open(lock_path, mode)
+    try:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+        except Exception:
+            pass
+        f.close()
 
 
 class FileStore(Repository):
@@ -39,10 +91,9 @@ class FileStore(Repository):
 
     def save_board(self, state: BoardState) -> None:
         path = self._devboard / "state.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
         state.updated_at = datetime.now(timezone.utc)
-        with open(path, "w") as f:
-            f.write(state.model_dump_json(indent=2))
+        with file_lock(path):
+            atomic_write(path, state.model_dump_json(indent=2))
 
     # ── Goal ───────────────────────────────────────────────────────────────
 
@@ -55,10 +106,8 @@ class FileStore(Repository):
 
     def save_goal(self, goal: Goal) -> None:
         d = self._goals_dir(goal.id)
-        d.mkdir(parents=True, exist_ok=True)
         goal.updated_at = datetime.now(timezone.utc)
-        with open(d / "goal.json", "w") as f:
-            f.write(goal.model_dump_json(indent=2))
+        atomic_write(d / "goal.json", goal.model_dump_json(indent=2))
 
     # ── Task ───────────────────────────────────────────────────────────────
 
@@ -71,10 +120,8 @@ class FileStore(Repository):
 
     def save_task(self, task: Task) -> None:
         d = self._tasks_dir(task.goal_id, task.id)
-        d.mkdir(parents=True, exist_ok=True)
         task.updated_at = datetime.now(timezone.utc)
-        with open(d / "task.json", "w") as f:
-            f.write(task.model_dump_json(indent=2))
+        atomic_write(d / "task.json", task.model_dump_json(indent=2))
         self._write_task_md(task, d)
 
     def _write_task_md(self, task: Task, d: Path) -> None:
@@ -103,8 +150,7 @@ class FileStore(Repository):
         if task.iterations:
             lines += ["## Iterations", "", iter_blocks, ""]
 
-        with open(d / "task.md", "w") as f:
-            f.write("\n".join(lines))
+        atomic_write(d / "task.md", "\n".join(lines))
 
     def _render_iteration(self, it) -> str:
         lines = [

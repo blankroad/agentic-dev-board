@@ -56,6 +56,46 @@ def run_pytest(cmd: list[str], cwd: Path, timeout: int = 120) -> tuple[int, str,
         return 1, "", f"{type(e).__name__}: {e}"
 
 
+def detect_test_runner(project_root: Path) -> tuple[str, list[str]]:
+    """Detect the project's test runner. Returns (name, command_args).
+
+    Precedence:
+    1. package.json with test script → npm test
+    2. vitest.config.* → vitest run
+    3. jest.config.* → jest
+    4. go.mod → go test ./...
+    5. Cargo.toml → cargo test
+    6. default → pytest
+    """
+    if (project_root / "package.json").exists():
+        try:
+            pkg = __import__("json").loads((project_root / "package.json").read_text())
+            scripts = pkg.get("scripts", {})
+            if "test" in scripts:
+                return "npm test", ["npm", "test"]
+        except Exception:
+            pass
+
+    if any((project_root / n).exists() for n in (
+        "vitest.config.js", "vitest.config.ts", "vitest.config.mjs"
+    )):
+        return "vitest", ["npx", "vitest", "run"]
+
+    if any((project_root / n).exists() for n in (
+        "jest.config.js", "jest.config.ts", "jest.config.cjs", "jest.config.mjs"
+    )):
+        return "jest", ["npx", "jest"]
+
+    if (project_root / "go.mod").exists():
+        return "go test", ["go", "test", "./..."]
+
+    if (project_root / "Cargo.toml").exists():
+        return "cargo test", ["cargo", "test"]
+
+    # Default: pytest
+    return "pytest", ["pytest", "-v"]
+
+
 def _tail(text: str, lines: int = 30) -> str:
     parts = text.splitlines()
     return "\n".join(parts[-lines:]) if parts else ""
@@ -72,16 +112,25 @@ def verify_checklist(
     pytest_bin: str = "pytest",
     per_item_pattern: str | None = None,
     timeout: int = 120,
+    auto_detect: bool = True,
 ) -> VerificationReport:
-    """Run pytest and collect evidence for each checklist item.
+    """Run the project's test suite and collect evidence for each checklist item.
 
-    per_item_pattern: if given, format with item/test_name to select specific tests.
-                     If None, use the full suite and keyword-match against output.
+    auto_detect: if True (default), uses detect_test_runner() to pick the right
+    command (npm test / vitest / jest / go test / cargo test / pytest). This makes
+    devboard_verify work across languages. Pass auto_detect=False and pytest_bin
+    explicitly to force a specific runner.
     """
     report = VerificationReport()
 
+    # Decide command
+    if auto_detect and pytest_bin == "pytest":
+        runner_name, full_cmd = detect_test_runner(project_root)
+    else:
+        full_cmd = [pytest_bin, "-v"]
+        runner_name = pytest_bin
+
     # Full suite first — this is the ground truth
-    full_cmd = [pytest_bin, "-v"]
     exit_code, out, err = run_pytest(full_cmd, project_root, timeout)
     report.full_suite_cmd = " ".join(full_cmd)
     report.full_suite_exit = exit_code

@@ -42,6 +42,9 @@ app.add_typer(task_app, name="task")
 learnings_app = typer.Typer(help="Learnings library")
 app.add_typer(learnings_app, name="learnings")
 
+skills_app = typer.Typer(help="Manage skill packs (export/import)")
+app.add_typer(skills_app, name="skills")
+
 console = Console()
 
 
@@ -58,6 +61,7 @@ def _get_store(root: Optional[Path] = None) -> FileStore:
 def install(
     scope: str = typer.Option("project", "--scope", "-s", help="project | global"),
     overwrite: bool = typer.Option(False, "--overwrite", "-f"),
+    no_skills: bool = typer.Option(False, "--no-skills", help="Skip skill install (useful when skills are already global)"),
     no_hooks: bool = typer.Option(False, "--no-hooks"),
     no_mcp: bool = typer.Option(False, "--no-mcp"),
     python_bin: Optional[str] = typer.Option(None, "--python"),
@@ -67,15 +71,25 @@ def install(
     - scope=project (default): writes to ./.claude/{skills,hooks,settings.json} + ./.mcp.json
     - scope=global: writes skills to ~/.claude/skills/ only (hooks/MCP are per-project in Claude Code)
     """
-    from devboard.install import install_all
+    from devboard.install import install_all, emit_mcp_config, emit_settings_hooks, install_hooks
 
-    result = install_all(
-        scope=scope,
-        overwrite=overwrite,
-        with_hooks=not no_hooks,
-        with_mcp=not no_mcp,
-        python_bin=python_bin,
-    )
+    if no_skills and scope == "project":
+        # User wants just the project-level wiring (hooks + MCP), skills already global
+        proj = Path.cwd().resolve()
+        result = {"scope": "project", "installed_skills": [], "installed_hooks": [], "mcp_config": None, "settings": None}
+        if not no_hooks:
+            result["installed_hooks"] = [str(p) for p in install_hooks(proj / ".claude", overwrite=overwrite)]
+            result["settings"] = str(emit_settings_hooks(proj))
+        if not no_mcp:
+            result["mcp_config"] = str(emit_mcp_config(proj, python_bin=python_bin))
+    else:
+        result = install_all(
+            scope=scope,
+            overwrite=overwrite,
+            with_hooks=not no_hooks,
+            with_mcp=not no_mcp,
+            python_bin=python_bin,
+        )
     console.print(f"[green]✓[/green] scope=[bold]{scope}[/bold]")
     console.print(f"  Skills installed: [bold]{len(result['installed_skills'])}[/bold]")
     for p in result["installed_skills"][:3]:
@@ -260,74 +274,331 @@ def board() -> None:
 def watch(
     run_id: Optional[str] = typer.Option(None, "--run", "-r"),
     last_n: int = typer.Option(20, "--last-n", "-n"),
+    all_streams: bool = typer.Option(False, "--all", "-a", help="Tail runs AND decisions together"),
 ) -> None:
-    """Tail the latest run's state transitions from .devboard/runs/*.jsonl."""
+    """Tail .devboard/runs/*.jsonl and/or decisions.jsonl files live.
+
+    If no runs exist yet, falls back to tailing all decisions.jsonl so you
+    always see live skill activity, even before the first `devboard_start_task`.
+    """
     import json
     import time
+    import os
 
     store = _get_store()
     runs_dir = store.root / ".devboard" / "runs"
-    if not runs_dir.exists():
-        console.print("[red]No runs directory found.[/red]")
-        raise typer.Exit(1)
 
-    if run_id:
-        run_file = runs_dir / f"{run_id}.jsonl"
+    # Collect candidate files
+    files_to_tail: list[tuple[Path, str]] = []  # (path, kind)
+
+    if all_streams:
+        # Both runs and decisions
+        if runs_dir.exists():
+            files_to_tail.extend((p, "run") for p in runs_dir.glob("*.jsonl"))
+        for p in store.root.rglob(".devboard/goals/*/tasks/*/decisions.jsonl"):
+            files_to_tail.append((p, "decision"))
+    elif run_id:
+        rf = runs_dir / f"{run_id}.jsonl"
+        if not rf.exists():
+            console.print(f"[red]Run not found: {run_id}[/red]")
+            raise typer.Exit(1)
+        files_to_tail = [(rf, "run")]
     else:
-        files = sorted(runs_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not files:
-            console.print("[dim]No runs yet.[/dim]")
-            return
-        run_file = files[0]
+        # Prefer newest run; fallback to all decisions
+        run_files = sorted(runs_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True) \
+            if runs_dir.exists() else []
+        if run_files:
+            files_to_tail = [(run_files[0], "run")]
+        else:
+            # Fallback: all decisions across all tasks
+            for p in store.root.rglob(".devboard/goals/*/tasks/*/decisions.jsonl"):
+                files_to_tail.append((p, "decision"))
 
-    if not run_file.exists():
-        console.print(f"[red]Run file not found:[/red] {run_file}")
-        raise typer.Exit(1)
+    if not files_to_tail:
+        console.print("[dim]Nothing to watch yet — no runs or decisions.[/dim]")
+        console.print("[dim]Open Claude Code with devboard skills installed, then retry.[/dim]")
+        return
 
-    console.print(f"[dim]Watching {run_file.name}... Ctrl+C to exit[/dim]\n")
+    console.print(
+        f"[dim]Watching {len(files_to_tail)} file(s)... Ctrl+C to exit[/dim]\n"
+    )
 
-    # Show existing last N events
-    lines = run_file.read_text().splitlines()
-    for line in lines[-last_n:]:
-        _render_event(line)
+    # Show existing last N events across all files
+    combined = []
+    for path, kind in files_to_tail:
+        for line in path.read_text().splitlines():
+            combined.append((line, kind, path))
+    # Crude tail: show last N overall
+    for line, kind, path in combined[-last_n:]:
+        _render_stream_event(line, kind, path.name)
 
-    # Tail
+    # Live tail — poll all files
+    positions = {p: p.stat().st_size if p.exists() else 0 for p, _ in files_to_tail}
+    kinds = {p: k for p, k in files_to_tail}
     try:
-        with open(run_file) as f:
-            f.seek(0, 2)  # to end
-            while True:
-                line = f.readline()
-                if line:
-                    _render_event(line)
-                else:
-                    time.sleep(0.5)
+        while True:
+            for p in list(positions.keys()):
+                if not p.exists():
+                    continue
+                size = p.stat().st_size
+                if size > positions[p]:
+                    with open(p) as f:
+                        f.seek(positions[p])
+                        for line in f.read().splitlines():
+                            if line.strip():
+                                _render_stream_event(line, kinds[p], p.name)
+                    positions[p] = size
+            time.sleep(0.5)
     except KeyboardInterrupt:
         console.print("\n[dim]stopped.[/dim]")
 
 
-def _render_event(line: str) -> None:
+def _render_stream_event(line: str, kind: str, fname: str) -> None:
+    """Render a run event OR a decision entry in a unified stream."""
     import json
     line = line.strip()
     if not line:
         return
     try:
         entry = json.loads(line)
+    except json.JSONDecodeError:
+        console.print(f"  [dim]{line[:120]}[/dim]")
+        return
+
+    if kind == "run":
         event = entry.get("event", "?")
         ts = entry.get("ts", "")[:19]
-        state = entry.get("state", {})
+        state = entry.get("state", {}) or {}
         iter_n = state.get("iteration", "-") if isinstance(state, dict) else "-"
+        color = _EVENT_COLORS.get(event, "white")
+        console.print(f"  [dim]{ts}[/dim] [{color}][run][/{color}] [{color}]{event:<24}[/{color}] iter={iter_n}")
+    else:  # decision
+        ts = str(entry.get("ts", ""))[:19]
+        iter_n = entry.get("iter", "-")
+        phase = entry.get("phase", "?")
+        verdict = entry.get("verdict_source", "")
+        reason = entry.get("reasoning", "")[:60]
+        color = _PHASE_COLORS.get(phase, "cyan")
+        console.print(
+            f"  [dim]{ts}[/dim] [{color}][decision][/{color}] iter={iter_n} "
+            f"[{color}]{phase:<13}[/{color}] {verdict:<16} [dim]— {reason}[/dim]"
+        )
+
+
+_EVENT_COLORS = {
+    "converged": "bold green",
+    "blocked": "bold red",
+    "iteration_complete": "cyan",
+    "tdd_red_complete": "red",
+    "tdd_green_complete": "green",
+    "tdd_refactor_complete": "yellow",
+    "tdd_complete": "bright_green",
+    "plan_complete": "blue",
+    "gauntlet_complete": "bright_blue",
+    "review_complete": "magenta",
+    "cso_complete": "bright_magenta",
+    "redteam_complete": "bright_red",
+    "rca_complete": "yellow",
+    "run_start": "dim cyan",
+    "replay_resumed": "bright_cyan",
+}
+
+_PHASE_COLORS = {
+    "tdd_red": "red",
+    "tdd_green": "green",
+    "tdd_refactor": "yellow",
+    "review": "magenta",
+    "cso": "bright_magenta",
+    "redteam": "bright_red",
+    "reflect": "yellow",
+    "iron_law": "bright_yellow",
+    "approval": "bright_green",
+    "plan": "blue",
+}
+
+
+# ── Status ────────────────────────────────────────────────────────────────
+
+
+@app.command()
+def status() -> None:
+    """One-screen view of current board state — goals, active task, latest run."""
+    import json
+    store = _get_store()
+    board = store.load_board()
+    runs_dir = store.root / ".devboard" / "runs"
+
+    console.print(f"\n[bold]Board[/bold]  [dim]{board.board_id}[/dim]")
+
+    if not board.goals:
+        console.print("  [dim]No goals. Run: devboard goal add \"<description>\"[/dim]")
+        return
+
+    active = board.get_goal(board.active_goal_id) if board.active_goal_id else None
+    console.print(f"\n[bold]Goals ({len(board.goals)})[/bold]")
+    for g in board.goals:
+        marker = "●" if g.id == board.active_goal_id else " "
         color = {
-            "converged": "bold green",
-            "blocked": "bold red",
-            "iteration_complete": "cyan",
-            "tdd_red_complete": "red",
-            "tdd_green_complete": "green",
-            "plan_complete": "blue",
-            "review_complete": "magenta",
-        }.get(event, "white")
-        console.print(f"  [{color}]{event:<24}[/{color}] iter={iter_n}  [dim]{ts}[/dim]")
-    except Exception:
-        console.print(f"  [dim]{line[:120]}[/dim]")
+            GoalStatus.active: "green", GoalStatus.converged: "blue",
+            GoalStatus.awaiting_approval: "yellow", GoalStatus.pushed: "cyan",
+            GoalStatus.blocked: "red", GoalStatus.archived: "dim",
+        }.get(g.status, "white")
+        console.print(f"  {marker} [{color}]{g.status.value:<17}[/{color}] {g.title[:60]}  [dim]{g.id[:20]} · {len(g.task_ids)} task(s)[/dim]")
+
+    # Active goal detail
+    if active and active.task_ids:
+        console.print(f"\n[bold]Active Goal — Latest Task[/bold]")
+        latest_task_id = active.task_ids[-1]
+        task = store.load_task(active.id, latest_task_id)
+        if task:
+            console.print(f"  Title:     {task.title[:70]}")
+            console.print(f"  Status:    {task.status.value}")
+            console.print(f"  Converged: {task.converged}")
+
+            decisions = store.load_decisions(latest_task_id)
+            if decisions:
+                console.print(f"  Decisions: {len(decisions)} logged")
+                last = decisions[-1]
+                console.print(f"  Last:      iter {last.iter} [{last.phase}] {last.verdict_source}")
+
+    # Latest run
+    if runs_dir.exists():
+        run_files = sorted(runs_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if run_files:
+            rf = run_files[0]
+            lines = rf.read_text().splitlines()
+            console.print(f"\n[bold]Latest Run[/bold]  [dim]{rf.stem}[/dim]  [dim]({len(lines)} events)[/dim]")
+            events = []
+            for line in lines:
+                try:
+                    events.append(json.loads(line).get("event", "?"))
+                except Exception:
+                    pass
+            if events:
+                tail = events[-5:]
+                console.print(f"  Recent: {' → '.join(tail)}")
+        else:
+            console.print("\n[dim]No runs yet.[/dim]")
+
+
+# ── Skills / Learnings export-import ──────────────────────────────────────
+
+
+@skills_app.command("list")
+def skills_list() -> None:
+    """List installed devboard skills (project + global)."""
+    proj = Path.cwd() / ".claude" / "skills"
+    glob = Path.home() / ".claude" / "skills"
+
+    for label, d in [("project", proj), ("global", glob)]:
+        if not d.exists():
+            console.print(f"[dim]{label}: (not installed)[/dim]")
+            continue
+        skills = sorted(p.name for p in d.iterdir() if p.is_dir() and p.name.startswith("devboard-"))
+        if skills:
+            console.print(f"[bold]{label}[/bold] ({d}):")
+            for s in skills:
+                console.print(f"  {s}")
+
+
+@skills_app.command("export")
+def skills_export(
+    output: Path = typer.Option(Path("devboard-skills.zip"), "--output", "-o"),
+    scope: str = typer.Option("project", "--scope", help="project | global"),
+) -> None:
+    """Export installed skills as a zip — share with teammates or copy across machines."""
+    import zipfile
+
+    src_root = (Path.cwd() / ".claude" / "skills") if scope == "project" \
+        else (Path.home() / ".claude" / "skills")
+    if not src_root.exists():
+        console.print(f"[red]No skills installed at {src_root}[/red]")
+        raise typer.Exit(1)
+
+    skill_dirs = [p for p in src_root.iterdir() if p.is_dir() and p.name.startswith("devboard-")]
+    if not skill_dirs:
+        console.print(f"[red]No devboard-* skills at {src_root}[/red]")
+        raise typer.Exit(1)
+
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
+        for skill_dir in skill_dirs:
+            for f in skill_dir.rglob("*"):
+                if f.is_file():
+                    arcname = f.relative_to(src_root)
+                    zf.write(f, arcname)
+
+    console.print(f"[green]✓ exported {len(skill_dirs)} skills → {output}[/green]")
+
+
+@skills_app.command("import")
+def skills_import(
+    archive: Path = typer.Argument(...),
+    scope: str = typer.Option("project", "--scope", help="project | global"),
+    overwrite: bool = typer.Option(False, "--overwrite", "-f"),
+) -> None:
+    """Import a skills zip (produced by `devboard skills export`)."""
+    import zipfile
+    if not archive.exists():
+        console.print(f"[red]Not found: {archive}[/red]")
+        raise typer.Exit(1)
+
+    target = (Path.cwd() / ".claude" / "skills") if scope == "project" \
+        else (Path.home() / ".claude" / "skills")
+    target.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(archive, "r") as zf:
+        names = zf.namelist()
+        # Top-level skill names (first path component)
+        skill_names = sorted({n.split("/")[0] for n in names if "/" in n})
+        if not overwrite:
+            existing = {p.name for p in target.iterdir() if p.is_dir()}
+            collisions = [n for n in skill_names if n in existing]
+            if collisions:
+                console.print(f"[yellow]! Already installed (use --overwrite to replace):[/yellow] {collisions}")
+        zf.extractall(target)
+
+    console.print(f"[green]✓ imported {len(skill_names)} skills → {target}[/green]")
+
+
+@learnings_app.command("export")
+def learnings_export(
+    output: Path = typer.Option(Path("devboard-learnings.zip"), "--output", "-o"),
+) -> None:
+    """Export project learnings as a zip."""
+    import zipfile
+    store = _get_store()
+    src = store.root / ".devboard" / "learnings"
+    if not src.exists() or not any(src.iterdir()):
+        console.print("[dim]No learnings to export.[/dim]")
+        raise typer.Exit(0)
+
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in src.glob("*.md"):
+            zf.write(f, f.name)
+    console.print(f"[green]✓ exported → {output}[/green]")
+
+
+@learnings_app.command("import")
+def learnings_import(
+    archive: Path = typer.Argument(...),
+    overwrite: bool = typer.Option(False, "--overwrite", "-f"),
+) -> None:
+    """Import a learnings zip."""
+    import zipfile
+    store = _get_store()
+    target = store.root / ".devboard" / "learnings"
+    target.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(archive, "r") as zf:
+        names = zf.namelist()
+        if not overwrite:
+            existing = {p.name for p in target.glob("*.md")}
+            collisions = [n for n in names if n in existing]
+            if collisions:
+                console.print(f"[yellow]! Already present (use --overwrite):[/yellow] {collisions}")
+        zf.extractall(target)
+
+    console.print(f"[green]✓ imported {len(names)} learning(s) → {target}[/green]")
 
 
 # ── Retro ─────────────────────────────────────────────────────────────────
@@ -348,6 +619,33 @@ def retro(
     if save:
         path = save_retro(store, report)
         console.print(f"\n[green]✓ saved[/green] {path}")
+
+
+# ── Metrics & Diagnose (Phase M) ──────────────────────────────────────────
+
+
+@app.command()
+def metrics(
+    json_output: bool = typer.Option(False, "--json"),
+) -> None:
+    """Per-project metrics — skill activation counts, convergence rate, failure modes."""
+    from devboard.analytics.metrics import collect_metrics
+    import json as _json
+    store = _get_store()
+    m = collect_metrics(store)
+    if json_output:
+        console.print(_json.dumps(m.to_dict(), indent=2))
+    else:
+        console.print(m.to_markdown())
+
+
+@app.command()
+def diagnose() -> None:
+    """Skill activation diagnostic — did devboard skills actually fire?"""
+    from devboard.analytics.metrics import diagnose_activations
+    store = _get_store()
+    result = diagnose_activations(store)
+    console.print(result.to_markdown())
 
 
 # ── Replay (CLI shortcut for the MCP tool) ────────────────────────────────

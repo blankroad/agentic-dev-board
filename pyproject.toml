@@ -4,8 +4,20 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentic-dev-board"
-version = "0.1.0"
+version = "0.2.0"
+description = "Claude Code skills + MCP server for rigorous agentic dev — Planning Gauntlet, TDD Iron Law, CSO security review, 4-phase RCA"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "blankroad"}]
 requires-python = ">=3.11"
+keywords = ["claude-code", "mcp", "tdd", "agents", "devboard", "gauntlet"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = [
     "typer>=0.12",
     "textual>=0.61",
@@ -16,6 +28,11 @@ dependencies = [
     "python-frontmatter>=1.1",
     "mcp>=1.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/blankroad/agentic-dev-board"
+Repository = "https://github.com/blankroad/agentic-dev-board"
+Issues = "https://github.com/blankroad/agentic-dev-board/issues"
 
 [project.optional-dependencies]
 # For legacy LangGraph orchestration path (deprecated, kept for reference)
@@ -28,9 +45,17 @@ dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.4"]
 
 [project.scripts]
 devboard = "devboard.cli:app"
+devboard-mcp = "devboard.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/devboard"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"skills" = "share/devboard/skills"
+"hooks" = "share/devboard/hooks"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "skills", "hooks", "tests", "README.md", "QUICKSTART.md", "pyproject.toml"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -12,6 +12,9 @@ venv/
 .devboard/runs/
 .devboard/state.json
 .devboard/goals/
+.devboard/retros/
+.devboard/.iron-law-history.jsonl
+.devboard/state.json.lock
 
 # devboard config is tracked (intentional)
 !.devboard/config.yaml

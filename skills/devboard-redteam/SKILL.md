@@ -55,6 +55,14 @@ Find at least 3 scenarios where this implementation fails, crashes, returns wron
 1. Log decision with verdict_source='SURVIVED'
 2. Hand off to `devboard-approval`
 
+## Required MCP calls
+
+| When | Tool |
+|---|---|
+| After verdict | `devboard_checkpoint(project_root, run_id, "redteam_complete", {survived: bool, scenarios_count, most_severe})` |
+| After verdict | `devboard_log_decision(project_root, task_id, iter=N, phase="redteam", reasoning=<findings summary>, verdict_source="SURVIVED"\|"BROKEN")` |
+| On BROKEN with novel attack | `devboard_save_learning(project_root, name=<short>, content=<attack vector>, tags=["redteam", "edge-case"], category="pattern", confidence=0.7)` |
+
 ## Discipline
 
 Do not hedge. Either you found concrete breaking scenarios (BROKEN) or you didn't (SURVIVED). "Might possibly fail in some edge case" is not a finding — give exact inputs or it doesn't count.

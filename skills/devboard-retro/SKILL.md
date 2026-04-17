@@ -79,6 +79,14 @@ devboard_save_learning(
 )
 ```
 
+## Required MCP calls
+
+| When | Tool |
+|---|---|
+| Data gathering | `devboard_generate_retro(project_root, goal_id=None, last_n_goals=5, save=True)` — primary tool; returns markdown + saves to `.devboard/retros/` |
+| Context | `devboard_list_goals(project_root)` + `devboard_list_runs(project_root)` — if you need more than the aggregate |
+| On pattern detection | `devboard_save_learning(project_root, name, content, tags=["retrospective", <topic>], category="pattern", confidence=0.7)` |
+
 ## Tone
 
 Neutral, honest. Don't soften bad signals — the whole point of retro is to SEE the bad signals and act on them. But also call out what genuinely worked.

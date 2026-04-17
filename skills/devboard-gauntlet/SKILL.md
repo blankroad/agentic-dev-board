@@ -108,6 +108,18 @@ After Decide produces the JSON:
 
 The plan is now **immutable**. Implementation must follow it. Any drift triggers a `rethink`.
 
+## Required MCP calls
+
+You MUST call these in order. Missing a call leaves `.devboard/` incomplete and breaks retro/replay.
+
+| When | Tool | Purpose |
+|---|---|---|
+| After Decide step produces JSON | `devboard_lock_plan(project_root, goal_id, decide_json)` | Computes SHA256, writes plan.md + plan.json |
+| Right after lock | `devboard_start_task(project_root, goal_id)` | Creates Task + starts run. Returns `{task_id, run_id}` — SAVE BOTH. |
+| After lock + start_task | `devboard_checkpoint(project_root, run_id, "gauntlet_complete", {...})` | Record Gauntlet completion with locked_hash + atomic_steps count |
+
+The `task_id` and `run_id` you receive from `devboard_start_task` MUST be threaded through to `devboard-tdd` and all subsequent MCP calls in this session.
+
 ## Handoff
 
-After locking, hand off to `devboard-tdd`. The TDD skill reads `atomic_steps` and runs Red-Green-Refactor cycles for each.
+After locking + start_task + checkpoint, hand off to `devboard-tdd` with `{task_id, run_id}` in scope. The TDD skill reads `atomic_steps` and runs Red-Green-Refactor cycles for each.

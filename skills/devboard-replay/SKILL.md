@@ -56,6 +56,17 @@ Both runs (original and replay) coexist in `.devboard/runs/`:
 
 Retro reports surface both — variants become material for retrospective pattern analysis.
 
+## Required MCP calls
+
+| When | Tool |
+|---|---|
+| Discovery | `devboard_list_runs(project_root)` — show user the candidate runs |
+| Branch | `devboard_replay(project_root, source_run_id, from_iteration, variant_note)` — creates new run_id + initial state |
+| New task | `devboard_start_task(project_root, goal_id, title="[replay] <original>")` — independent task for the variant |
+| Resume point | `devboard_checkpoint(project_root, new_run_id, "replay_resumed", {from_iteration, variant_note})` |
+
+Then hand off to `devboard-tdd` with the new `{task_id, run_id}` and `variant_note` as the initial `previous_strategy`.
+
 ## Discipline
 
 - **Do NOT modify the source run** — replay creates a branch, never overwrites

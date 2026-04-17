@@ -66,6 +66,15 @@ Score each finding 0–10. Only report findings ≥ 7/10.
 
 Do NOT give "defensive programming" suggestions unless they fix a real vulnerability. This is not a code-style review. If the only findings are < 7/10 confidence, verdict is SECURE.
 
+## Required MCP calls
+
+| When | Tool |
+|---|---|
+| Before review | `devboard_get_diff_stats(project_root)` — to see what you're reviewing |
+| After verdict | `devboard_checkpoint(project_root, run_id, "cso_complete", {secure: bool, findings_count, critical_count, high_count})` |
+| After verdict | `devboard_log_decision(project_root, task_id, iter=N, phase="cso", reasoning=<summary>, verdict_source="SECURE"\|"VULNERABLE")` |
+| If findings worth remembering | `devboard_save_learning(project_root, name, content, tags=["security", ...], category="pattern", confidence=0.8)` |
+
 ## On VULNERABLE
 
 1. Call MCP tool `devboard_log_decision(iter, phase='cso', reasoning=<summary>, verdict_source='VULNERABLE', ...)`

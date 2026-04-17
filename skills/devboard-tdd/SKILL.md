@@ -72,6 +72,24 @@ For existing code without tests: add tests for existing behavior BEFORE modifyin
 - The LockedPlan's `out_of_scope_guard` paths: never touch them. If a change requires touching one, STOP and invoke `devboard-rca` — the plan may need to be revised.
 - The `goal_checklist` is authoritative. PASS requires every item verified, not just "tests pass".
 
+## Required MCP calls
+
+Per atomic_step, per cycle:
+
+| Phase | Tool | Purpose |
+|---|---|---|
+| After RED written + verified fails | `devboard_checkpoint(project_root, run_id, "tdd_red_complete", {iteration, current_step_id, test_file, status})` | Record RED confirmation |
+| After RED verified | `devboard_log_decision(project_root, task_id, iter=N, phase="tdd_red", reasoning="...", verdict_source="RED_CONFIRMED")` | Audit the "why" in decisions.jsonl |
+| After GREEN passes + suite green | `devboard_checkpoint(... "tdd_green_complete", {iteration, current_step_id, impl_file, status})` | Record GREEN |
+| After GREEN | `devboard_log_decision(... phase="tdd_green", verdict_source="GREEN_CONFIRMED")` | Audit |
+| After REFACTOR (or skip) | `devboard_checkpoint(... "tdd_refactor_complete", {iteration, current_step_id, status: SKIPPED\|REFACTORED})` | Record |
+| After REFACTOR | `devboard_log_decision(... phase="tdd_refactor", verdict_source="SKIPPED"\|"REFACTORED")` | Audit |
+| After each verify run | `devboard_verify(project_root, checklist)` | Fresh evidence (see output, use it) |
+| After each diff | `devboard_save_iter_diff(project_root, task_id, iter_n, diff)` | Per-iter diff archive |
+| On Iron Law suspicion | `devboard_check_iron_law(tool_calls=[...])` | Audit tool call sequence |
+
+Thread `task_id` + `run_id` through all calls.
+
 ## Loop termination
 
 After all atomic_steps are complete:
@@ -79,5 +97,6 @@ After all atomic_steps are complete:
 - All checklist items verified via `devboard_verify`
 - No regressions
 - No uncommitted changes
+- Call `devboard_checkpoint(... "tdd_complete", {total_iterations, checklist_verified: true})`
 
 Hand off to `devboard-cso` (if diff is security-sensitive) or `devboard-redteam` (adversarial review) or `devboard-approval` (final review + PR).

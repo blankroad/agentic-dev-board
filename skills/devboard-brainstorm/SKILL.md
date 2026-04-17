@@ -55,6 +55,13 @@ If ambiguous:
 
 Keep it under 5 questions. One-shot — user answers all at once, then you proceed to `devboard-gauntlet`.
 
+## Required MCP calls
+
+| When | Tool |
+|---|---|
+| If goal needs update | `devboard_add_goal(project_root, title, description)` (if new) OR update existing via `devboard_list_goals` + manual |
+| Record clarifications | `devboard_save_learning(project_root, name, content, tags=["brainstorm", <topic>], category="constraint", confidence=0.6)` — optional, only if the clarification surfaces a reusable constraint |
+
 ## Handoff
 
 After clarification, inject the answers into the goal statement before passing to `devboard-gauntlet`. Ensure the refined goal has: (a) testable success criteria, (b) explicit scope boundary, (c) runtime/language context.

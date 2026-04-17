@@ -15,10 +15,30 @@ def _repo_root() -> Path:
 
 
 def _skills_src() -> Path:
+    """Find skills/ — try repo layout first, then installed-wheel shared-data."""
+    candidates = [
+        _repo_root() / "skills",                                    # dev install (pip install -e .)
+        Path(__file__).resolve().parent.parent.parent.parent.parent / "share" / "devboard" / "skills",  # wheel
+        Path("/usr/local/share/devboard/skills"),                   # system install
+        Path.home() / ".local" / "share" / "devboard" / "skills",   # user install
+    ]
+    for c in candidates:
+        if c.exists() and any(c.iterdir()):
+            return c
+    # Fall back to repo layout even if missing — caller will get clear error
     return _repo_root() / "skills"
 
 
 def _hooks_src() -> Path:
+    candidates = [
+        _repo_root() / "hooks",
+        Path(__file__).resolve().parent.parent.parent.parent.parent / "share" / "devboard" / "hooks",
+        Path("/usr/local/share/devboard/hooks"),
+        Path.home() / ".local" / "share" / "devboard" / "hooks",
+    ]
+    for c in candidates:
+        if c.exists() and any(c.iterdir()):
+            return c
     return _repo_root() / "hooks"
 
 

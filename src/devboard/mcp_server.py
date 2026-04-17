@@ -18,6 +18,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from devboard.analytics.metrics import collect_metrics, diagnose_activations
 from devboard.analytics.retro import generate_retro, save_retro
 from devboard.agents.iron_law import check_iron_law
 from devboard.gauntlet.lock import build_locked_plan
@@ -29,6 +30,7 @@ from devboard.orchestrator.approval import (
     build_pr_body,
     get_diff_stats,
 )
+from devboard.orchestrator.checkpointer import Checkpointer
 from devboard.orchestrator.push import push_and_create_pr
 from devboard.orchestrator.verify import verify_checklist
 from devboard.replay.replay import branch_run, list_runs
@@ -101,6 +103,46 @@ async def list_tools() -> list[Tool]:
                 "required": ["project_root", "task_id", "status"],
             },
         ),
+        Tool(
+            name="devboard_start_task",
+            description="Create a new Task for a goal and start a new run. Returns {task_id, run_id}. The run_id is used for subsequent devboard_checkpoint calls. Call this ONCE per implementation session, after devboard_lock_plan but before the first TDD cycle.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                    "title": {"type": "string", "description": "Optional task title, defaults to goal title"},
+                    "branch": {"type": "string", "description": "Optional git branch for this task"},
+                },
+                "required": ["project_root", "goal_id"],
+            },
+        ),
+        Tool(
+            name="devboard_checkpoint",
+            description="Append a state-transition event to .devboard/runs/<run_id>.jsonl. Call this at EVERY major skill phase boundary (run_start, plan_complete, tdd_red_complete, tdd_green_complete, tdd_refactor_complete, verify_complete, review_complete, cso_complete, redteam_complete, iteration_complete, converged, blocked). The state dict should capture relevant context for replay/retro.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "run_id": {"type": "string"},
+                    "event": {"type": "string", "description": "Event name, e.g. tdd_green_complete, converged, blocked"},
+                    "state": {"type": "object", "description": "State snapshot for this transition (freeform dict — iteration, current_step_id, verdict, test outcomes, etc.)"},
+                },
+                "required": ["project_root", "run_id", "event"],
+            },
+        ),
+        Tool(
+            name="devboard_resume_run",
+            description="Load the last checkpoint of a run — used for crash recovery. Returns the most recent non-terminal state so skills can resume where they left off. If the run already has 'converged' or 'blocked' event, returns that instead with can_resume=false.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "run_id": {"type": "string"},
+                },
+                "required": ["project_root", "run_id"],
+            },
+        ),
 
         # ── State: plans ───────────────────────────────────────────────────────
         Tool(
@@ -119,6 +161,18 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="devboard_load_plan",
             description="Load the LockedPlan for a goal. Returns the full plan including goal_checklist, atomic_steps, out_of_scope_guard, locked_hash.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                },
+                "required": ["project_root", "goal_id"],
+            },
+        ),
+        Tool(
+            name="devboard_verify_plan_integrity",
+            description="Recompute the LockedPlan's SHA256 hash and compare against the stored locked_hash. Returns {integrity_ok: bool, stored_hash, computed_hash}. Skills should call this at Gauntlet start and before major iterations to detect tampering or accidental edits to plan.md.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -348,6 +402,24 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="devboard_metrics",
+            description="Per-project metrics dashboard: skill activation counts, convergence rate, iron-law hits, RCA escalations, failure modes. Reads all runs + decisions. Returns structured dict.",
+            inputSchema={
+                "type": "object",
+                "properties": {"project_root": {"type": "string"}},
+                "required": ["project_root"],
+            },
+        ),
+        Tool(
+            name="devboard_diagnose",
+            description="Diagnostic — did devboard skills actually fire? Compares expected events against observed. Returns skill_activation_score + missing events + suggestions.",
+            inputSchema={
+                "type": "object",
+                "properties": {"project_root": {"type": "string"}},
+                "required": ["project_root"],
+            },
+        ),
+        Tool(
             name="devboard_replay",
             description="Branch a past run from iteration N. Creates a new run_id, writes replay_start checkpoint, returns (new_run_id, initial_state) for the client to resume.",
             inputSchema={
@@ -436,6 +508,83 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
                     return _text({"task_id": task_id, "status": task.status.value})
         return _text({"error": f"task {task_id} not found"})
 
+    if name == "devboard_start_task":
+        import uuid
+        from devboard.models import Task
+        store = _store(args["project_root"])
+        board = store.load_board()
+        goal_id = args["goal_id"]
+        goal = board.get_goal(goal_id)
+        if goal is None:
+            return _text({"error": f"goal {goal_id} not found"})
+
+        task = Task(
+            goal_id=goal_id,
+            title=args.get("title") or goal.title,
+            branch=args.get("branch", ""),
+            status=TaskStatus.in_progress,
+        )
+        goal.task_ids.append(task.id)
+        store.save_task(task)
+        store.save_goal(goal)
+        store.save_board(board)
+
+        run_id = f"run_{uuid.uuid4().hex[:8]}"
+        run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
+        cp = Checkpointer(run_path)
+        cp.save("run_start", {
+            "run_id": run_id,
+            "goal_id": goal_id,
+            "task_id": task.id,
+            "title": task.title,
+        })
+        return _text({
+            "task_id": task.id,
+            "run_id": run_id,
+            "run_path": str(run_path),
+            "goal_id": goal_id,
+        })
+
+    if name == "devboard_checkpoint":
+        store = _store(args["project_root"])
+        run_id = args["run_id"]
+        run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
+        if not run_path.parent.exists():
+            run_path.parent.mkdir(parents=True, exist_ok=True)
+        cp = Checkpointer(run_path)
+        cp.save(args["event"], args.get("state", {}) or {})
+        return _text({"status": "saved", "run_id": run_id, "event": args["event"]})
+
+    if name == "devboard_resume_run":
+        store = _store(args["project_root"])
+        run_id = args["run_id"]
+        run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
+        if not run_path.exists():
+            return _text({"error": f"run {run_id} not found", "can_resume": False})
+        cp = Checkpointer(run_path)
+        entries = cp.load_all()
+        if not entries:
+            return _text({"can_resume": False, "last_event": None, "state": {}})
+        last = entries[-1]
+        event = last.get("event", "")
+        state = last.get("state", {})
+        can_resume = event not in ("converged", "blocked")
+        return _text({
+            "can_resume": can_resume,
+            "last_event": event,
+            "event_count": len(entries),
+            "state": state,
+            "resume_hint": {
+                "gauntlet_complete": "continue to devboard-tdd, start with first atomic step",
+                "tdd_red_complete": "GREEN phase next — write minimal impl",
+                "tdd_green_complete": "REFACTOR phase next (may skip)",
+                "tdd_refactor_complete": "move to next atomic step or verify",
+                "iteration_complete": "next iteration",
+                "review_complete": "proceed to CSO/redteam based on verdict",
+                "cso_complete": "proceed to redteam or commit based on verdict",
+            }.get(event, "check last event and resume the natural next phase"),
+        })
+
     # ── plans ─────────────────────────────────────────────────────────────────
     if name == "devboard_lock_plan":
         store = _store(args["project_root"])
@@ -455,6 +604,20 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         if plan is None:
             return _text({"error": f"no plan for goal {args['goal_id']}"})
         return _text(plan.model_dump())
+
+    if name == "devboard_verify_plan_integrity":
+        store = _store(args["project_root"])
+        plan = store.load_locked_plan(args["goal_id"])
+        if plan is None:
+            return _text({"error": f"no plan for goal {args['goal_id']}"})
+        stored = plan.locked_hash
+        computed = plan.compute_hash()
+        return _text({
+            "integrity_ok": stored == computed,
+            "stored_hash": stored,
+            "computed_hash": computed,
+            "goal_id": args["goal_id"],
+        })
 
     # ── decisions & diffs ─────────────────────────────────────────────────────
     if name == "devboard_log_decision":
@@ -625,12 +788,26 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         runs = list_runs(store)
         return _text(runs)
 
+    if name == "devboard_metrics":
+        store = _store(args["project_root"])
+        m = collect_metrics(store)
+        return _text({"dict": m.to_dict(), "markdown": m.to_markdown()})
+
+    if name == "devboard_diagnose":
+        store = _store(args["project_root"])
+        result = diagnose_activations(store)
+        return _text({
+            "skill_activation_score": result.skill_activation_score,
+            "missing_events": result.missing_events,
+            "suggestions": result.suggestions,
+            "markdown": result.to_markdown(),
+        })
+
     if name == "devboard_replay":
         store = _store(args["project_root"])
         # Need a plan to branch against — assume the source run referenced a goal
         board = store.load_board()
         # Find the goal from the run's first state
-        from devboard.orchestrator.checkpointer import Checkpointer
         source_path = store.root / ".devboard" / "runs" / f"{args['source_run_id']}.jsonl"
         cp = Checkpointer(source_path)
         entries = cp.load_all()
