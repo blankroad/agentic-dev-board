@@ -32,29 +32,38 @@ Influences:
 
 ## TL;DR — get running
 
+**One-line installer** (clones to `~/.local/share/agentic-dev-board`, adds `devboard` alias to your shell rc, installs 9 skills globally):
+
 ```bash
-# One-time install of agentic-dev-board itself
+curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/mcp-migration/install.sh | bash
+```
+
+Then:
+```bash
+source ~/.zshrc    # or open a new terminal
+
+cd ~/my-project
+devboard init            # .devboard/ scaffold
+devboard install         # writes .claude/{hooks,settings.json} + .mcp.json (Python auto-detected)
+
+claude                   # open Claude Code — skills + MCP tools auto-load
+# You: "build calculator.py with add/sub/mul/div and pytest, div-by-zero raises"
+# Claude Code: devboard-gauntlet → locks plan → devboard-tdd → R-G-R → devboard-approval
+```
+
+**Manual install** (if you prefer not to curl|bash):
+```bash
 git clone https://github.com/blankroad/agentic-dev-board.git
 cd agentic-dev-board
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
-
-# Install skills + MCP + hooks into any project
-cd ~/my-project
-devboard init         # scaffolds .devboard/
-devboard install      # writes .claude/{skills,hooks,settings.json} + .mcp.json
-
-# Open Claude Code in that project — skills + tools are auto-loaded
-claude
-# You: "build calculator.py with add/sub/mul/div and pytest, div-by-zero raises"
-# Claude Code: auto-loads devboard-gauntlet → locks plan → devboard-tdd → R-G-R ... → devboard-approval
+devboard install --scope global     # skills → ~/.claude/skills/
+echo "alias devboard=\"$PWD/.venv/bin/devboard\"" >> ~/.zshrc
 ```
 
-For **global install** (skills available in every Claude Code project):
+**Update** (re-run the one-liner — it's idempotent):
 ```bash
-devboard install --scope global    # → ~/.claude/skills/devboard-*
-# Then in each project: devboard init && devboard install --no-skills
-# (only writes hooks + .mcp.json since skills are already global)
+curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/mcp-migration/install.sh | bash
 ```
 
 ---

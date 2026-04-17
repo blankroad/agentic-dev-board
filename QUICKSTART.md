@@ -10,15 +10,19 @@
 
 ## 1. 설치 (30초)
 
-```bash
-git clone https://github.com/blankroad/agentic-dev-board.git
-cd agentic-dev-board
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
+원라이너 (clone + venv + pip + 글로벌 skills + shell alias 전부):
 
-# devboard CLI 동작 확인
+```bash
+curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/mcp-migration/install.sh | bash
+source ~/.zshrc    # 또는 새 터미널 열기
+
 devboard --help
 ```
+
+재실행하면 업데이트. 개별 제어가 필요하면 환경변수:
+- `AGENTIC_DEV_BOARD_DIR=...` (설치 위치, 기본 `~/.local/share/agentic-dev-board`)
+- `AGENTIC_DEV_BOARD_BRANCH=...` (git 브랜치, 기본 `mcp-migration`)
+- `AGENTIC_DEV_BOARD_NO_ALIAS=1` (shell rc 수정 skip)
 
 ## 2. 새 프로젝트에 적용 (1분)
 
