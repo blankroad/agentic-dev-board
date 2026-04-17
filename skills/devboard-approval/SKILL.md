@@ -1,0 +1,73 @@
+---
+name: devboard-approval
+description: Final approval gate before git push — summarizes diff + decisions, prompts for squash policy (squash/semantic/preserve/interactive), creates PR via gh with auto-generated body from LockedPlan + decisions.
+when_to_use: Loop has converged (reviewer PASS, tests green, CSO SECURE, red-team SURVIVED, all checklist items verified). User has signaled readiness to push (or it's a direct request to "open a PR").
+---
+
+You are the **Approval Gate**. Loop converged → present to user → push on approval.
+
+## Step 1 — Summarize for user
+
+Present, in this order:
+
+### Diff stats
+Call MCP tool `devboard_get_diff_stats(project_root)` → show file/lines summary.
+
+### Checklist verification
+Load LockedPlan via `devboard_load_plan(goal_id)`. For each checklist item, mark ✓ (verified by `devboard_verify`) or ✗ (must block PR).
+
+### Iteration stats
+Call `devboard_load_decisions(task_id)`:
+- Iterations completed
+- Retries count
+- RETRY reasons (top 3)
+- RED-GREEN cycles completed
+- CSO verdict (if ran)
+- Red-team verdict (if ran)
+
+### Key decisions
+Last 3 `reflect` phase entries from decisions — what was learned.
+
+## Step 2 — Squash policy prompt
+
+Offer the user 4 options:
+
+| # | Policy | Effect |
+|---|---|---|
+| 1 | **squash** (default) | All iter commits → 1 clean commit on push. PR body has decisions summary. |
+| 2 | **semantic** | Keep iter commits as-is (often already one-per-task). |
+| 3 | **preserve** | All iter commits kept. Full audit trail in git. |
+| 4 | **interactive** | User runs `git rebase -i` manually before push. |
+
+Default = squash. Ask: "Policy? [1/2/3/4]"
+
+## Step 3 — Final confirmation
+
+Show the constructed PR body (call `devboard_build_pr_body(plan, decisions, iterations)`). Ask: "Approve and push? [y/N]"
+
+If N: task stays in `awaiting_approval` state. User can edit manually.
+
+## Step 4 — Push
+
+On y:
+
+1. Call `devboard_apply_squash_policy(project_root, branch, base_branch, policy, squash_message)` to reshape commits per policy
+2. Call `devboard_push_pr(project_root, branch, pr_title, pr_body, base_branch, draft)` which:
+   - `git push -u origin <branch>`
+   - `gh pr create --title ... --body "<body>" --base <base_branch>`
+3. Update task status to `pushed` via `devboard_update_task_status(task_id, 'pushed')`
+4. Report the PR URL to the user
+
+## Failure modes
+
+- **Push fails**: network / auth issues. Report error. Task remains in `awaiting_approval`.
+- **gh not installed**: fall back — push only, tell user to open PR manually with the pre-built body.
+- **Checklist has ✗ items**: refuse to push. Hand back to `devboard-tdd`.
+- **Uncommitted changes**: refuse — must be clean working tree first.
+
+## Discipline
+
+- NEVER `git push --force`
+- NEVER skip the checklist verification
+- NEVER push if CSO returned VULNERABLE
+- Always save the PR URL to the decisions log for future retros
