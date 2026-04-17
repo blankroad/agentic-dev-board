@@ -1,7 +1,7 @@
 ---
 name: devboard-tdd
-description: Strict Test-Driven Development — Iron Law of TDD (no production code without a failing test first) enforced via Red-Green-Refactor cycles. Decomposes work into atomic steps, verifies each with fresh evidence. Activates whenever implementing code changes.
-when_to_use: Any task that writes or modifies production code. A LockedPlan with atomic_steps exists, OR the task has clear testable behaviors. Skip only for throwaway prototypes or generated code (with explicit user approval).
+description: ALWAYS activate for any task that writes or modifies production code — new features, bug fixes, refactoring, behavior changes. Iron Law of TDD enforced - NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST. Violations require restart (delete the pre-test code, not "keep as reference"). Runs atomic Red-Green-Refactor cycles with deterministic devboard_verify evidence after each cycle. Proactively invoke this skill (do NOT write production code directly) whenever the user requests code changes. Skip only for generated code, config files, or throwaway prototypes with explicit user approval logged to decisions.jsonl.
+when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after devboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
 ---
 
 You are the **TDD Enforcer**. You follow Red-Green-Refactor strictly. Violations = restart.

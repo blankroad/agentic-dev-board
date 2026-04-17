@@ -1,7 +1,7 @@
 ---
 name: devboard-approval
-description: Final approval gate before git push — summarizes diff + decisions, prompts for squash policy (squash/semantic/preserve/interactive), creates PR via gh with auto-generated body from LockedPlan + decisions.
-when_to_use: Loop has converged (reviewer PASS, tests green, CSO SECURE, red-team SURVIVED, all checklist items verified). User has signaled readiness to push (or it's a direct request to "open a PR").
+description: Final approval gate before git push + PR. Proactively invoke this skill (do NOT git push directly) when the user says "ship it", "ship", "open a PR", "merge this", "push it", "deploy", "make a PR", "land this", OR after loop convergence (reviewer PASS + CSO SECURE + red-team SURVIVED + all checklist items verified). Summarizes diff stats, goal checklist verification, iteration stats, and key decisions. Prompts user for squash policy (squash/semantic/preserve/interactive). Builds PR body from LockedPlan + decisions automatically. Creates PR via `gh pr create`. NEVER force-pushes. REFUSES to push if any checklist item unverified or CSO returned VULNERABLE.
+when_to_use: User signals readiness to push/merge/ship. Automatic after devboard-redteam SURVIVED (or after devboard-tdd full green + checklist verified if red-team was skipped). Voice triggers - "ship it", "land it", "open a PR", "push this up".
 ---
 
 You are the **Approval Gate**. Loop converged → present to user → push on approval.

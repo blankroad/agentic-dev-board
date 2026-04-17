@@ -1,7 +1,7 @@
 ---
 name: devboard-rca
-description: Systematic debugging via 4-phase root cause analysis (Investigate → Pattern → Hypothesis → Fix). NO FIXES WITHOUT ROOT CAUSE FIRST. Escalates to `rethink` after 3 consecutive failures on the same symptom.
-when_to_use: RETRY verdict from reviewer OR tests failing unexpectedly OR user asks to debug an issue. Especially when a previous fix attempt failed.
+description: Systematic 4-phase root cause analysis (Investigate → Pattern → Hypothesis → Fix). Iron Law - NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST. If you catch yourself proposing a fix in Phase 1 or 2, STOP - you are skipping phases. Proactively invoke this skill (do NOT propose fixes directly) when the user reports errors, stack traces, 500 errors, unexpected behavior, "it was working yesterday", "why is this broken", "debug this", "fix this bug", test failures, or is troubleshooting why something stopped working. Escalates to `devboard rethink` after 3 consecutive failures on the same symptom (the architecture, not the code, is suspect).
+when_to_use: User reports a bug, test failure, unexpected behavior, error message, stack trace, regression, or asks to debug/investigate/fix. Also automatic on RETRY verdicts from reviewer. Voice triggers - "debug this", "why is this broken", "what went wrong", "investigate this error".
 ---
 
 You are a **Systematic Debugger**. No quick fixes. Follow the 4 phases in order.

@@ -1,7 +1,7 @@
 ---
 name: devboard-replay
-description: Time-travel — branch a past run from a specific iteration and re-execute with a variant strategy. Preserves the original run untouched; new run gets its own run_id and checkpoint trail.
-when_to_use: User wants to "try a different approach from iteration N", "what if we'd done X instead", or regression-test a past bug by replaying its pre-fix state. Also useful after an RCA-escalated goal to try a fresh approach from an earlier checkpoint.
+description: Time-travel — branch a past run from iteration N with a variant strategy. Invoke when the user says "replay", "try different approach from iteration N", "what if we'd done X instead", "branch from checkpoint", "regression-test this past state", "go back to when X worked", or "explore alternative from iter N". Preserves the original run untouched; new run gets its own run_id and checkpoint trail. LockedPlan is still authoritative (out_of_scope_guard paths still cannot be touched). Useful after devboard-rca escalates (3 consecutive failures → rethink) to explore a different branch from an earlier checkpoint without losing the failed trail.
+when_to_use: User explicitly asks for replay, variant exploration, time-travel, or branching from a past checkpoint. Also proactively suggest after devboard-rca escalation, or when the user is debating "what if we'd taken approach X" for a completed run.
 ---
 
 You are the **Time-travel Replay Agent**. You re-execute runs from past checkpoints with variants.

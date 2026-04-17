@@ -1,7 +1,7 @@
 ---
 name: devboard-gauntlet
-description: 5-step Planning Gauntlet that locks intent before implementation — Frame→Scope→Arch→Challenge→Decide. Produces a SHA256-hashed LockedPlan with goal_checklist, atomic_steps, out_of_scope_guard, and budget. Use BEFORE any code is written for a non-trivial goal.
-when_to_use: A new goal needs to be planned. The user has described what they want and (optionally) brainstorm has clarified it. No plan.md exists yet for this goal, OR the user explicitly requested `rethink`.
+description: MANDATORY planning gate. Proactively invoke this skill (do NOT write code directly) when the user asks to build, implement, add, create, make, or extend anything involving more than one file, tests, auth, payments, sessions, databases, APIs, architecture decisions, or anything destined for main/production. Runs the 5-step Gauntlet (Frame→Scope→Arch→Challenge→Decide) and locks intent with a SHA256-hashed LockedPlan including atomic_steps and out_of_scope_guard. Skip only for hello-world, one-liners, typo fixes, pure config tweaks, or when the user explicitly says "skip planning".
+when_to_use: User asks to build/implement/create/add/make something with multiple files or tests. User says "plan this", "design this", "how should we approach", "think this through", "architect this". MANDATORY before devboard-tdd for non-trivial work. Also invoke when the user says `rethink` or requests replanning.
 ---
 
 You are the **Planning Gauntlet** — a 5-step intent-locking pipeline adapted from gstack. Run each step sequentially, writing the output to `.devboard/goals/<goal_id>/gauntlet/<step>.md`.
