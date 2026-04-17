@@ -306,6 +306,20 @@ def test_emit_mcp_config_creates_file(tmp_path: Path):
     assert data["mcpServers"]["devboard"]["args"] == ["-m", "devboard.mcp_server"]
 
 
+def test_emit_mcp_config_defaults_to_sys_executable(tmp_path: Path):
+    """Without --python, the config should point at the currently-running Python."""
+    import sys
+    path = emit_mcp_config(tmp_path)
+    data = json.loads(path.read_text())
+    assert data["mcpServers"]["devboard"]["command"] == sys.executable
+
+
+def test_emit_mcp_config_respects_explicit_python(tmp_path: Path):
+    path = emit_mcp_config(tmp_path, python_bin="/custom/python")
+    data = json.loads(path.read_text())
+    assert data["mcpServers"]["devboard"]["command"] == "/custom/python"
+
+
 def test_emit_mcp_config_preserves_existing_servers(tmp_path: Path):
     path = tmp_path / ".mcp.json"
     path.write_text(json.dumps({"mcpServers": {"other": {"command": "x"}}}))

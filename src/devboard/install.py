@@ -83,7 +83,17 @@ def install_hooks(target: Path, overwrite: bool = False) -> list[Path]:
 
 
 def emit_mcp_config(target_dir: Path, python_bin: str | None = None) -> Path:
-    """Write .mcp.json so Claude Code loads the devboard MCP server."""
+    """Write .mcp.json so Claude Code loads the devboard MCP server.
+
+    Defaults `python_bin` to `sys.executable` — the Python currently running
+    `devboard install`. This means:
+      - pip install -e . inside a venv → venv python
+      - pipx install → pipx's managed venv python
+      - system install → system python
+    In all cases the Python has the `mcp` + `devboard` packages available.
+    Users can override explicitly via --python flag.
+    """
+    import sys
     config_path = target_dir / ".mcp.json"
     existing: dict = {}
     if config_path.exists():
@@ -94,7 +104,7 @@ def emit_mcp_config(target_dir: Path, python_bin: str | None = None) -> Path:
 
     servers = existing.setdefault("mcpServers", {})
     servers["devboard"] = {
-        "command": python_bin or "python",
+        "command": python_bin or sys.executable,
         "args": ["-m", "devboard.mcp_server"],
     }
     config_path.write_text(json.dumps(existing, indent=2) + "\n")

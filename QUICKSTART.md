@@ -26,9 +26,13 @@ devboard --help
 mkdir ~/my-first-devboard-project && cd ~/my-first-devboard-project
 
 devboard init              # .devboard/ 스캐폴드
-devboard install           # skills + hooks + .mcp.json 설치
+devboard install           # skills + hooks + .mcp.json — Python 경로 자동 감지
 devboard audit             # 준비 상태 확인 — 모두 초록불이어야 함
 ```
+
+> **Python 경로는 자동**: `devboard install`은 지금 실행 중인 Python(`sys.executable`)을
+> `.mcp.json`의 `command`에 자동으로 넣음. venv든, pipx든, 시스템 Python이든
+> 그대로 동작. 명시적으로 다른 Python을 쓰고 싶을 때만 `--python /path/to/python` 사용.
 
 **글로벌 설치** (모든 프로젝트에서 skill 자동 사용):
 ```bash
