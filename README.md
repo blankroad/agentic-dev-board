@@ -1,13 +1,13 @@
 # agentic-dev-board
 
 > **Claude Code Skills + MCP server + hooks** that enforce a rigorous agentic dev workflow:
-> Brainstorm → Planning Gauntlet → Plan Approval → TDD Red-Green-Refactor → Review → Approval.
+> Brainstorm → Planning Gauntlet → Eng Review → TDD → CSO → Dep Audit → Red-Team → Approval → Retro.
 
 <p align="center">
-  <img alt="tests" src="https://img.shields.io/badge/tests-292%20passed-brightgreen" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-345%20passed-brightgreen" />
   <img alt="python" src="https://img.shields.io/badge/python-3.11%2B-blue" />
-  <img alt="skills" src="https://img.shields.io/badge/skills-9-purple" />
-  <img alt="mcp tools" src="https://img.shields.io/badge/MCP%20tools-30-purple" />
+  <img alt="skills" src="https://img.shields.io/badge/skills-11-purple" />
+  <img alt="mcp tools" src="https://img.shields.io/badge/MCP%20tools-32-purple" />
   <img alt="hooks" src="https://img.shields.io/badge/hooks-3-orange" />
   <img alt="ci" src="https://github.com/blankroad/agentic-dev-board/actions/workflows/ci.yml/badge.svg" />
 </p>
@@ -20,8 +20,8 @@ Uses your **Claude Max subscription** (not per-token API billing). Works in Clau
 
 Two years of "how do I make an LLM actually ship good code?" compressed into:
 
-- **9 Skills** — markdown playbooks Claude Code auto-loads per context
-- **30 MCP tools** — deterministic state/verify/approval operations (zero LLM calls)
+- **11 Skills** — markdown playbooks Claude Code auto-loads per context
+- **32 MCP tools** — deterministic state/verify/approval operations (zero LLM calls)
 - **3 Hooks** — Iron Law + DangerGuard + Activity Log, always-on safety
 - **CLI** — observability (TUI, retro, watch, audit), installer, time-travel replay
 - **Analytics** — Kanban board, Confluence/JIRA/wiki doc generation, PR descriptions, metrics
@@ -114,18 +114,20 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 
 ---
 
-## The 9 Skills
+## The 11 Skills
 
 | Skill | Activates when | Enforces |
 |---|---|---|
-| `devboard-brainstorm` | Goal is short/vague | Up to 5 Socratic questions + saves brainstorm output via `devboard_save_brainstorm` |
-| `devboard-gauntlet` | New goal needs planning | Frame → Scope → Arch → Challenge → Decide, **Plan Review gate**, locks with SHA256 hash |
+| `devboard-brainstorm` | Goal is short/vague | 4 sequential forcing questions (who/status-quo/pain/wedge) via AskUserQuestion, 3× push on vague answers, saves `brainstorm.md` |
+| `devboard-gauntlet` | New goal needs planning | Frame → Scope → Arch (with **Complexity Check**) → Challenge → Decide, **Plan Review gate**, locks with SHA256 hash |
+| `devboard-eng-review` | Gauntlet flags `ENG_REVIEW_NEEDED` (>8 new files or ≥2 new abstractions) | 4 checks: architecture coherence, test strategy, integration risks, edge case coverage |
 | `devboard-tdd` | Code changes | Iron Law of TDD + Red-Green-Refactor + atomic_steps |
-| `devboard-cso` | Diff touches auth/crypto/sql/subprocess | OWASP Top 10 + STRIDE at 7/10 confidence gate |
-| `devboard-redteam` | After PASS, before commit | Adversarial QA — 3+ breaking scenarios |
+| `devboard-cso` | `task.metadata.security_sensitive_plan=true` or diff contains security keywords | OWASP Top 10 + STRIDE at 7/10 confidence gate |
+| `devboard-dep-audit` | Approval Step 0 or user says "check vulns" | Runs `pip-audit` / `npm audit`, verdicts CLEAN/VULNERABLE on CRITICAL/HIGH findings |
+| `devboard-redteam` | `task.metadata.production_destined=true`, after PASS | Adversarial QA — 3+ breaking scenarios |
 | `devboard-rca` | RETRY verdict or test failure | 4-phase root cause (no quick fixes) |
-| `devboard-approval` | Loop converged | Diff summary + squash policy + PR body + `gh pr create` |
-| `devboard-retro` | Periodic / on request | Aggregate decisions across goals + runs |
+| `devboard-approval` | Loop converged | **4-gate guard** (TDD complete + CSO not VULNERABLE + dep audit CLEAN) → smoke gate (`integration_test_command`) → squash policy → PR body → `gh pr create` |
+| `devboard-retro` | Periodic / on request | Aggregate decisions across goals + **auto-proposes learnings** from ≥3× recurring failure modes |
 | `devboard-replay` | "try different approach from iter N" | Time-travel branch from checkpoint |
 
 ### Skill flow
@@ -134,31 +136,39 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 User prompt
     │
     ▼
-devboard-brainstorm   ← vague goal? up to 5 Socratic questions
+devboard-brainstorm   ← 4 sequential forcing questions (push 3× on vague answers)
     │                    saves brainstorm.md + brainstorm-{ts}.md (versioned)
     ▼
-devboard-gauntlet     ← 5-step planning (Frame→Scope→Arch→Challenge→Decide)
+devboard-gauntlet     ← 5-step planning; Arch step runs Complexity Check
+    │                    ([NEW]/[MODIFY] tags, >8 files → scope creep OR new-system flag)
     │                    presents plan for review
     ▼
 devboard_approve_plan ← user signs off (or requests revision of specific step)
     │
 devboard_lock_plan    ← SHA256 hash locked — immutable from here
     │
+devboard_update_task_status ← sets task.metadata {production_destined, security_sensitive_plan}
+    │
+    ├── ENG_REVIEW_NEEDED → devboard-eng-review (4 checks)
+    │
     ▼
 devboard-tdd          ← Red-Green-Refactor per atomic_step
     │                    logs RED/GREEN/RETRY decisions + checkpoints
     ▼
-devboard-cso (if security-sensitive diff)
-devboard-redteam (adversarial QA)
-devboard-rca (if 3× same symptom)
+devboard-cso           ← if metadata.security_sensitive_plan=true
+devboard-dep-audit     ← CVE gate (pip-audit / npm audit)
+devboard-redteam       ← if metadata.production_destined=true
+devboard-rca           ← if 3× same symptom
     │
     ▼
-devboard-approval     ← squash policy → push → PR URL
+devboard-approval     ← 4-gate Step 0 guard + smoke gate + squash → push → PR URL
+    │
+devboard-retro         ← periodic; auto-proposes learnings from recurring modes
 ```
 
 ---
 
-## The 30 MCP Tools
+## The 32 MCP Tools
 
 ### State — init, goals, plans
 | Tool | Purpose |
@@ -189,6 +199,8 @@ devboard-approval     ← squash policy → push → PR URL
 | `devboard_verify` | Run pytest, match checklist items to test output |
 | `devboard_check_iron_law` | Detect production file write without prior test write |
 | `devboard_check_command_safety` | DangerGuard pattern match on shell commands |
+| `devboard_check_security_sensitive` | Classify a diff as security-sensitive (auth/crypto/sql/subprocess/network/deserialization/filesystem) |
+| `devboard_check_dependencies` | Audit dependencies for known CVEs via `pip-audit` / `npm audit` |
 
 ### Approval & push
 | Tool | Purpose |
