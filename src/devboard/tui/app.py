@@ -103,11 +103,16 @@ class DevBoardApp(App):
             self.query_one(LiveStreamView).set_empty_state(
                 f"Ready — {len(self._board.goals)} goals. Type ':' for commands, '?' for help."
             )
-        # Move focus off the Input so printable-key bindings (1-5, /, ?) work.
-        try:
-            self.query_one("#resources-goals").focus()
-        except Exception:
-            pass
+        # Pre-populate Resources sidebar so users see content on launch
+        # (spec required ':goals'/':runs' to populate on demand, but empty
+        # sidebar on startup reads as broken). goals dispatched last so its
+        # list is focused — which also moves focus off the CommandLine Input
+        # so printable-key bindings (1-5, /, ?) fire.
+        for cmd in ("runs", "goals"):
+            try:
+                self.commands.dispatch(cmd)
+            except Exception:
+                pass
         # Wire tail worker to live-stream + health-bar via 100ms interval.
         from devboard.tui.tail_worker import RunTailWorker
 
