@@ -361,3 +361,23 @@ def test_approval_documents_smoke_gate():
     assert "integration_test_command" in content, (
         "Approval must document integration_test_command gate"
     )
+
+
+# ── P1-2b: dep-audit skill + approval CVE gate ──────────────────────────────
+
+def test_dep_audit_skill_exists_with_frontmatter():
+    skill_md = SKILLS_DIR / "devboard-dep-audit" / "SKILL.md"
+    assert skill_md.exists(), "devboard-dep-audit skill must exist"
+    content = skill_md.read_text()
+    assert "name: devboard-dep-audit" in content
+    assert "devboard_check_dependencies" in content, (
+        "Skill must call devboard_check_dependencies"
+    )
+
+
+def test_approval_documents_dep_audit_gate():
+    skill_md = SKILLS_DIR / "devboard-approval" / "SKILL.md"
+    content = skill_md.read_text()
+    assert "devboard_check_dependencies" in content, (
+        "Approval must invoke dep audit tool"
+    )

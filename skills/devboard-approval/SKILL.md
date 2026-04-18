@@ -18,8 +18,12 @@ You are the **Approval Gate**. Loop converged → present to user → push on ap
    - 없으면 **거부**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso를 먼저 실행하세요." → 스킬 종료
 3. **CSO verdict 확인** — `phase="cso"` 항목이 있으면 verdict가 `VULNERABLE`이 아닌지 확인.
    - `VULNERABLE`이면 **거부**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → 스킬 종료
+4. **Dep audit 확인** — `devboard_check_dependencies(project_root)` 호출.
+   - `skipped_reason`이 있으면 통과 (감사 불가)
+   - `severity_counts.CRITICAL ≥ 1` 또는 `severity_counts.HIGH ≥ 1` → **거부**: "Dep audit VULNERABLE: CRITICAL={c}, HIGH={h}. devboard-dep-audit를 실행해서 세부 확인 후 업그레이드 필요." → 스킬 종료
+   - 그 외 → 통과
 
-세 조건 모두 통과하면 Step 1로 진행.
+네 조건 모두 통과하면 Step 1로 진행.
 
 ## Step 1 — Summarize for user
 
