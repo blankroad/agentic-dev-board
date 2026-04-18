@@ -362,7 +362,7 @@ def test_install_all_project_scope(tmp_path: Path):
     result = install_all(scope="project", project_root=tmp_path, overwrite=True)
     assert result["scope"] == "project"
     assert len(result["installed_skills"]) == 9
-    assert len(result["installed_hooks"]) == 2
+    assert len(result["installed_hooks"]) == 3  # iron-law.sh + danger-guard.sh + activity-log.py
     assert result["mcp_config"] is not None
     assert result["settings"] is not None
     assert (tmp_path / ".claude" / "skills" / "devboard-tdd" / "SKILL.md").exists()

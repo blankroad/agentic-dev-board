@@ -64,7 +64,7 @@ def install_skills(target: Path, overwrite: bool = False) -> list[Path]:
 
 
 def install_hooks(target: Path, overwrite: bool = False) -> list[Path]:
-    """Copy hook shell scripts to target/hooks/."""
+    """Copy hook scripts (.sh and .py) to target/hooks/."""
     hooks_dest = target / "hooks"
     hooks_dest.mkdir(parents=True, exist_ok=True)
     installed: list[Path] = []
@@ -72,13 +72,14 @@ def install_hooks(target: Path, overwrite: bool = False) -> list[Path]:
     if not src.exists():
         return []
 
-    for hook_file in sorted(src.glob("*.sh")):
-        dest = hooks_dest / hook_file.name
-        if dest.exists() and not overwrite:
-            continue
-        shutil.copy2(hook_file, dest)
-        dest.chmod(0o755)
-        installed.append(dest)
+    for ext in ("*.sh", "*.py"):
+        for hook_file in sorted(src.glob(ext)):
+            dest = hooks_dest / hook_file.name
+            if dest.exists() and not overwrite:
+                continue
+            shutil.copy2(hook_file, dest)
+            dest.chmod(0o755)
+            installed.append(dest)
     return installed
 
 
@@ -150,6 +151,18 @@ def emit_settings_hooks(target_dir: Path) -> Path:
             "hooks": [{
                 "type": "command",
                 "command": ".claude/hooks/iron-law-check.sh",
+            }],
+        })
+    # Activity log for ALL tools — gives devboard activity the full trial-and-error trail
+    if not any(
+        any(h.get("command", "").endswith("activity-log.py") for h in entry.get("hooks", []))
+        for entry in post_use
+    ):
+        post_use.append({
+            "matcher": ".*",
+            "hooks": [{
+                "type": "command",
+                "command": ".claude/hooks/activity-log.py",
             }],
         })
 

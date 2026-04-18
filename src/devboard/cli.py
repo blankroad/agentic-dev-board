@@ -903,6 +903,92 @@ def diff(
 
 
 @app.command()
+def activity(
+    tool: Optional[str] = typer.Option(None, "--tool", "-t", help="Filter by tool (Write/Edit/Bash/Read/mcp...)"),
+    failures_only: bool = typer.Option(False, "--failures", "-f", help="Show only errored calls"),
+    last_n: int = typer.Option(50, "--last-n", "-n"),
+    session: Optional[str] = typer.Option(None, "--session", "-s", help="Filter by Claude Code session_id"),
+) -> None:
+    """Show the trial-and-error trail — every tool call (Write/Edit/Bash/MCP) with outcomes.
+
+    Captured by the activity-log PostToolUse hook. Reveals what Claude actually
+    did moment-by-moment, including failed pytest runs, rewrites, and retries —
+    things that don't surface in decisions.jsonl (which only records phase outcomes).
+    """
+    import json as _json
+    store = _get_store()
+    log = store.root / ".devboard" / "activity.jsonl"
+    if not log.exists():
+        console.print("[dim]No activity log yet. The activity-log hook must be installed.[/dim]")
+        console.print("[dim]Run: devboard install  (or re-install with --overwrite)[/dim]")
+        return
+
+    entries = []
+    for line in log.read_text().splitlines():
+        if line.strip():
+            try:
+                entries.append(_json.loads(line))
+            except Exception:
+                pass
+
+    # Filter
+    if tool:
+        entries = [e for e in entries if tool.lower() in (e.get("tool") or "").lower()]
+    if session:
+        entries = [e for e in entries if (e.get("session_id") or "").startswith(session)]
+    if failures_only:
+        entries = [e for e in entries if e.get("is_error")]
+
+    if not entries:
+        console.print("[dim]No matching activity.[/dim]")
+        return
+
+    entries = entries[-last_n:]
+
+    console.print(f"\n[bold]Activity[/bold]  ({len(entries)} shown)\n")
+    for i, e in enumerate(entries, 1):
+        ts = (e.get("ts") or "")[11:19]  # HH:MM:SS
+        t = e.get("tool", "?")
+        err = e.get("is_error")
+        icon = "[red]✗[/red]" if err else "[green]·[/green]"
+
+        # Pick most informative field
+        detail = ""
+        if "path" in e:
+            detail = e["path"]
+            if "wrote_bytes" in e:
+                detail += f" ({e['wrote_bytes']}B)"
+        elif "command" in e:
+            detail = e["command"][:70]
+            if "result_tail" in e:
+                detail += f"  [dim]→ {e['result_tail']}[/dim]"
+        elif "mcp_tool" in e:
+            detail = e["mcp_tool"]
+            if "event" in e:
+                detail += f"  [dim]→ {e['event']}[/dim]"
+            if "warnings" in e:
+                detail += f"  [yellow]⚠ {len(e['warnings'])} warning(s)[/yellow]"
+            if "mcp_error" in e:
+                detail += f"  [red]error: {e['mcp_error'][:60]}[/red]"
+        elif "exit_code" in e:
+            detail = f"exit={e['exit_code']}"
+
+        tool_color = {
+            "Write": "blue", "Edit": "cyan", "Bash": "magenta",
+            "Read": "dim", "MultiEdit": "cyan",
+        }.get(t, "white")
+        if t.startswith("mcp__") or "devboard" in t.lower():
+            tool_color = "bright_magenta"
+
+        console.print(f"  {icon} [dim]{ts}[/dim] [{tool_color}]{t:<14}[/{tool_color}] {detail}")
+
+    # Summary stats
+    total_errors = sum(1 for e in entries if e.get("is_error"))
+    if total_errors:
+        console.print(f"\n[yellow]⚠ {total_errors} error(s) in shown range[/yellow]")
+
+
+@app.command()
 def violations(
     goal: Optional[str] = typer.Option(None, "--goal", "-g"),
 ) -> None:
