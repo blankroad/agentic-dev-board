@@ -29,6 +29,7 @@ class RetroReport:
     generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     goal_stats: list[GoalStats] = field(default_factory=list)
     top_failure_modes: list[tuple[str, int]] = field(default_factory=list)
+    learning_proposals: list[dict] = field(default_factory=list)
     learnings_promoted: int = 0
     total_runs: int = 0
     converged_runs: int = 0
@@ -123,6 +124,25 @@ def _collect_failure_modes(store: FileStore, goal_ids: list[str]) -> Counter:
     return counter
 
 
+_LEARNING_PROPOSAL_THRESHOLD = 3
+
+
+def _suggest_learnings(counter: Counter) -> list[dict]:
+    proposals: list[dict] = []
+    for mode, count in counter.most_common():
+        if count < _LEARNING_PROPOSAL_THRESHOLD:
+            break  # most_common is sorted desc
+        proposals.append({
+            "name": mode[:60].strip(),
+            "content": f"Recurring failure mode observed {count}× across tasks: {mode}",
+            "tags": ["retro", "reflect"],
+            "category": "failure_mode",
+            "confidence": 0.7,
+            "count": count,
+        })
+    return proposals
+
+
 def _collect_run_outcomes(store: FileStore) -> tuple[int, int, int]:
     runs_dir = store.root / ".devboard" / "runs"
     if not runs_dir.exists():
@@ -153,7 +173,9 @@ def generate_retro(
 
     report = RetroReport()
     report.goal_stats = [_collect_goal_stats(store, g.id, g.title) for g in goals]
-    report.top_failure_modes = _collect_failure_modes(store, [g.id for g in goals]).most_common(10)
+    failure_mode_counter = _collect_failure_modes(store, [g.id for g in goals])
+    report.top_failure_modes = failure_mode_counter.most_common(10)
+    report.learning_proposals = _suggest_learnings(failure_mode_counter)
     report.learnings_promoted = len(store.list_learnings())
     report.total_runs, report.converged_runs, report.blocked_runs = _collect_run_outcomes(store)
     return report

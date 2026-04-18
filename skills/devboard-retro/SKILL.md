@@ -66,18 +66,24 @@ Write a markdown report including:
 
 Save to `.devboard/retros/retro_<timestamp>.md` via the MCP tool (or ask user to confirm).
 
-## On repeating patterns
+## On repeating patterns — automatic proposals
 
-If you notice the same failure mode across 3+ goals, PROMOTE it as a learning:
-```
-devboard_save_learning(
-  name="<short_identifier>",
-  content="<1-3 sentence abstract lesson>",
-  tags=["retrospective", <topic>],
-  category="pattern",
-  confidence=0.7
-)
-```
+`devboard_generate_retro` response now includes `learning_proposals` — a list of candidates whose failure-mode key appeared ≥3 times. Each entry contains `{name, content, tags, category, confidence, count}`.
+
+워크플로우:
+
+1. 프로포절이 있으면 사용자에게 요약 출력:
+   ```
+   Learning proposals (threshold: 3 occurrences):
+   - "test pollution: global state not reset" × 5 occurrences
+   - "flaky timing race in X" × 4 occurrences
+   ```
+2. AskUserQuestion: "위 프로포절을 학습으로 저장할까요? [모두 저장 / 개별 선택 / 건너뜀]"
+3. "모두 저장" → 각 proposal에 대해 `devboard_save_learning(name=proposal['name'], content=proposal['content'], tags=proposal['tags'], category=proposal['category'], confidence=proposal['confidence'])` 호출
+4. "개별 선택" → 각 proposal 하나씩 y/N 질문
+5. "건너뜀" → 저장 없이 종료
+
+Manual promotion은 여전히 허용 — AI가 proposal 외 패턴을 감지하면 직접 `devboard_save_learning` 호출.
 
 ## Required MCP calls
 

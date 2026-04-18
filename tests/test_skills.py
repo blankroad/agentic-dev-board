@@ -381,3 +381,16 @@ def test_approval_documents_dep_audit_gate():
     assert "devboard_check_dependencies" in content, (
         "Approval must invoke dep audit tool"
     )
+
+
+# ── P1-5: retro auto-proposes learnings ─────────────────────────────────────
+
+def test_retro_skill_documents_learning_proposals():
+    skill_md = SKILLS_DIR / "devboard-retro" / "SKILL.md"
+    content = skill_md.read_text()
+    assert "learning_proposals" in content, (
+        "Retro skill must document the learning_proposals field"
+    )
+    assert "devboard_save_learning" in content, (
+        "Retro skill must describe save_learning invocation for proposals"
+    )

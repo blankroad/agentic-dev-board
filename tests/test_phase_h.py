@@ -188,6 +188,49 @@ def test_retro_empty_board(tmp_path: Path):
     assert report.goal_stats == []
 
 
+# ── P1-5: learning proposals from recurring failure modes ───────────────────
+
+def test_retro_proposes_learnings_for_recurring_failure_modes(tmp_path: Path):
+    """A failure mode appearing in ≥3 decisions becomes a learning proposal."""
+    from devboard.models import DecisionEntry, Goal, GoalStatus, Task
+    store = FileStore(tmp_path)
+    (tmp_path / ".devboard").mkdir()
+    board = BoardState()
+    goal = Goal(title="x", description="", status=GoalStatus.converged)
+    board.goals.append(goal)
+
+    # Create tasks + record task_ids on goal first, then persist board
+    recurring = "test pollution: global state not reset between tests"
+    task_ids = []
+    for i in range(3):
+        task = Task(goal_id=goal.id, title=f"t{i}")
+        goal.task_ids.append(task.id)
+        task_ids.append(task.id)
+        store.save_task(task)
+    task_once = Task(goal_id=goal.id, title="t_once")
+    goal.task_ids.append(task_once.id)
+    store.save_task(task_once)
+
+    store.save_goal(goal)
+    store.save_board(board)
+
+    # append_decision uses _find_goal_for_task → board must exist first
+    for tid in task_ids:
+        store.append_decision(tid, DecisionEntry(
+            iter=1, phase="reflect", reasoning=recurring, verdict_source="",
+        ))
+    store.append_decision(task_once.id, DecisionEntry(
+        iter=1, phase="reflect", reasoning="flaky CI only once", verdict_source="",
+    ))
+
+    report = generate_retro(store)
+    assert len(report.learning_proposals) == 1
+    proposal = report.learning_proposals[0]
+    assert "test pollution" in proposal["name"]
+    assert proposal["count"] == 3
+    assert "reflect" in proposal["tags"]
+
+
 def test_retro_counts_goals_and_tasks(tmp_path: Path):
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
