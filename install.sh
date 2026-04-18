@@ -2,19 +2,19 @@
 #
 # agentic-dev-board — one-line installer
 #
-#   curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/mcp-migration/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/install.sh | bash
 #
 # Idempotent: re-running updates to latest + refreshes skills.
 # Customizable via env vars:
 #   AGENTIC_DEV_BOARD_DIR    — install location (default ~/.local/share/agentic-dev-board)
-#   AGENTIC_DEV_BOARD_BRANCH — git branch (default mcp-migration)
+#   AGENTIC_DEV_BOARD_BRANCH — git branch (default main)
 #   AGENTIC_DEV_BOARD_NO_ALIAS=1 — skip shell rc modification
 
 set -euo pipefail
 
 INSTALL_DIR="${AGENTIC_DEV_BOARD_DIR:-$HOME/.local/share/agentic-dev-board}"
 REPO_URL="${AGENTIC_DEV_BOARD_REPO:-https://github.com/blankroad/agentic-dev-board.git}"
-BRANCH="${AGENTIC_DEV_BOARD_BRANCH:-mcp-migration}"
+BRANCH="${AGENTIC_DEV_BOARD_BRANCH:-main}"
 
 say()  { printf "\033[1;36m→\033[0m %s\n" "$1"; }
 ok()   { printf "\033[1;32m✓\033[0m %s\n" "$1"; }
