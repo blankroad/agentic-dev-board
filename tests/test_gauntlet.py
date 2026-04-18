@@ -157,6 +157,30 @@ def test_build_locked_plan():
     assert "src/payments/" in plan.out_of_scope_guard
 
 
+def test_locked_plan_integration_command_defaults_empty():
+    from devboard.models import LockedPlan
+    plan = LockedPlan(goal_id="g_x")
+    assert plan.integration_test_command == ""
+
+
+def test_hash_excludes_integration_command():
+    from devboard.models import LockedPlan
+    plan_empty = LockedPlan(goal_id="g_x", problem="p", atomic_steps=[])
+    plan_with = LockedPlan(
+        goal_id="g_x", problem="p", atomic_steps=[],
+        integration_test_command="pytest tests/e2e",
+    )
+    assert plan_empty.compute_hash() == plan_with.compute_hash()
+
+
+def test_build_locked_plan_reads_integration_command():
+    parsed = parse_decide_output(DECIDE_OUTPUT)
+    parsed.pop("borderline_decisions", None)
+    parsed["integration_test_command"] = "make smoke"
+    plan = build_locked_plan("g_x", parsed)
+    assert plan.integration_test_command == "make smoke"
+
+
 def test_locked_plan_hash_deterministic():
     parsed = parse_decide_output(DECIDE_OUTPUT)
     parsed.pop("borderline_decisions", None)

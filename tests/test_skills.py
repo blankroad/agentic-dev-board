@@ -341,3 +341,23 @@ def test_redteam_preamble_reads_task_metadata():
     assert "production_destined" in content, (
         "Redteam must check production_destined marker"
     )
+
+
+# ── P1-3: integration_test_command (smoke gate) ─────────────────────────────
+
+def test_gauntlet_documents_integration_test_command():
+    """Gauntlet SKILL must reference integration_test_command in Decide schema."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    assert "integration_test_command" in content, (
+        "Gauntlet must document integration_test_command field"
+    )
+
+
+def test_approval_documents_smoke_gate():
+    """Approval SKILL must describe smoke gate with integration_test_command."""
+    skill_md = SKILLS_DIR / "devboard-approval" / "SKILL.md"
+    content = skill_md.read_text()
+    assert "integration_test_command" in content, (
+        "Approval must document integration_test_command gate"
+    )

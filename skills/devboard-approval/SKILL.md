@@ -62,6 +62,17 @@ Show the constructed PR body (call `devboard_build_pr_body(plan, decisions, iter
 
 If N: task stays in `awaiting_approval` state. User can edit manually.
 
+## Step 3.5 — Smoke gate (if integration_test_command present)
+
+진입 시점에 `devboard_load_plan`으로 `integration_test_command` 확인:
+
+- 빈 문자열이면 이 단계 생략 ("No smoke test defined — skipping gate." 한 줄 출력)
+- 명령어가 있으면:
+  1. `devboard_check_command_safety(command)`로 안전 검사 먼저
+  2. Bash tool로 실행, exit code 확인
+  3. exit=0 → smoke PASS, Step 4로 진행
+  4. exit≠0 → smoke FAIL, push 거부, task는 `awaiting_approval` 유지, stderr 요약 출력
+
 ## Step 4 — Push
 
 On y:

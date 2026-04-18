@@ -121,6 +121,7 @@ class LockedPlan(BaseModel):
     token_ceiling: int = 500_000
     max_iterations: int = 10
     gauntlet_steps: list[GauntletStep] = Field(default_factory=list)
+    integration_test_command: str = ""
 
     def next_step(self) -> AtomicStep | None:
         for s in self.atomic_steps:

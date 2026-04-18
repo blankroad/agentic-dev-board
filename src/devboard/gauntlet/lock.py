@@ -31,6 +31,7 @@ def build_locked_plan(goal_id: str, decide_json: dict) -> LockedPlan:
         atomic_steps=atomic_steps,
         token_ceiling=decide_json.get("token_ceiling", 300_000),
         max_iterations=min(max(decide_json.get("max_iterations", 5), 2), 10),
+        integration_test_command=decide_json.get("integration_test_command", ""),
     )
     return plan.lock()
 

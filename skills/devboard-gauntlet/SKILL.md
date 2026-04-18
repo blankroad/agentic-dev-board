@@ -131,11 +131,14 @@ Synthesize the prior 4 into a JSON matching this schema:
   ],
   "token_ceiling": 100000,
   "max_iterations": 5,
+  "integration_test_command": "",
   "borderline_decisions": [
     {"question": "...", "option_a": "...", "option_b": "...", "recommendation": "A"}
   ]
 }
 ```
+
+**`integration_test_command` (optional)**: shell command that approval runs before push as a smoke gate. Non-zero exit refuses push. Empty string skips the gate. Example: `"pytest tests/e2e -x"` or `"make smoke"`. Not included in `compute_hash` — changing the command after lock does not re-hash the plan.
 
 ## atomic_steps guidance (TDD mode)
 
