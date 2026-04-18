@@ -273,6 +273,15 @@ async def list_tools() -> list[Tool]:
                 "required": ["command"],
             },
         ),
+        Tool(
+            name="devboard_check_security_sensitive",
+            description="Classify a git diff as security-sensitive using a deterministic category→keyword dictionary (auth, crypto, subprocess, sql, network, deserialization, filesystem). Scans + and - lines, case-insensitive substring match. Returns {sensitive, categories, matches}. Advisory output — used by CSO and approval skills for auto-entry decisions.",
+            inputSchema={
+                "type": "object",
+                "properties": {"diff": {"type": "string"}},
+                "required": ["diff"],
+            },
+        ),
 
         # ── Approval & Push ────────────────────────────────────────────────────
         Tool(
@@ -810,6 +819,10 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "pattern": verdict.pattern,
             "reason": verdict.reason,
         })
+
+    if name == "devboard_check_security_sensitive":
+        from devboard.security.sensitivity import check_security_sensitive
+        return _text(check_security_sensitive(args["diff"]))
 
     # ── approval & push ───────────────────────────────────────────────────────
     if name == "devboard_get_diff_stats":

@@ -275,8 +275,8 @@ def test_install_skills_copies_all(tmp_path: Path):
     installed = install_skills(tmp_path, overwrite=True)
     names = {p.name for p in installed}
     expected = {
-        "devboard-brainstorm", "devboard-gauntlet", "devboard-tdd",
-        "devboard-cso", "devboard-redteam", "devboard-rca",
+        "devboard-brainstorm", "devboard-gauntlet", "devboard-eng-review",
+        "devboard-tdd", "devboard-cso", "devboard-redteam", "devboard-rca",
         "devboard-approval", "devboard-retro", "devboard-replay",
     }
     assert names == expected
@@ -366,7 +366,7 @@ def test_emit_settings_hooks_idempotent(tmp_path: Path):
 def test_install_all_project_scope(tmp_path: Path):
     result = install_all(scope="project", project_root=tmp_path, overwrite=True)
     assert result["scope"] == "project"
-    assert len(result["installed_skills"]) == 9
+    assert len(result["installed_skills"]) == 10
     assert len(result["installed_hooks"]) == 3  # iron-law.sh + danger-guard.sh + activity-log.py
     assert result["mcp_config"] is not None
     assert result["settings"] is not None
@@ -384,7 +384,7 @@ def test_install_all_global_scope_no_hooks_or_mcp(tmp_path: Path, monkeypatch):
 
     result = install_all(scope="global", overwrite=True)
     assert result["scope"] == "global"
-    assert len(result["installed_skills"]) == 9
+    assert len(result["installed_skills"]) == 10
     assert result["installed_hooks"] == []
     assert result["mcp_config"] is None
     assert (tmp_path / ".claude" / "skills" / "devboard-gauntlet" / "SKILL.md").exists()
@@ -403,7 +403,7 @@ def test_all_skills_have_required_frontmatter():
     import frontmatter
     skills_dir = Path(__file__).parent.parent / "skills"
     skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir()]
-    assert len(skill_dirs) == 9
+    assert len(skill_dirs) == 10
 
     for sd in skill_dirs:
         skill_md = sd / "SKILL.md"
