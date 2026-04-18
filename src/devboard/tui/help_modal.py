@@ -21,25 +21,30 @@ class HelpEntry:
         return f"{self.key} {self.name} {self.summary}"
 
 
-DEFAULT_ENTRIES: tuple[HelpEntry, ...] = (
-    HelpEntry(":", ":goals", "focus goals list in sidebar"),
-    HelpEntry(":", ":runs", "show 5 most-recent runs"),
-    HelpEntry(":", ":diff <task>", "load iter diff into diff tab"),
-    HelpEntry(":", ":decisions <task>", "load decisions into decisions tab"),
-    HelpEntry(":", ":goto <prefix>", "select a goal by id/title prefix"),
-    HelpEntry(":", ":learn <query>", "search learnings"),
-    HelpEntry("1", "tab diff", "switch context viewer to diff tab"),
-    HelpEntry("2", "tab decisions", "switch context viewer to decisions tab"),
-    HelpEntry("3", "tab learnings", "switch context viewer to learnings tab"),
-    HelpEntry("4", "tab gauntlet", "switch context viewer to gauntlet tab"),
-    HelpEntry("5", "tab plan", "switch context viewer to plan tab"),
-    HelpEntry("[", "prev tab", "cycle context viewer tabs backward"),
-    HelpEntry("]", "next tab", "cycle context viewer tabs forward"),
-    HelpEntry("/", "filter", "filter current viewer content"),
-    HelpEntry("?", "help", "open this help modal"),
-    HelpEntry("esc", "close", "close command line or modal"),
-    HelpEntry("ctrl+q", "quit", "exit devboard"),
-)
+from devboard.tui.goal_status_legend import entries as _legend_entries
+
+
+def _compose_default_entries() -> tuple["HelpEntry", ...]:
+    base: tuple[HelpEntry, ...] = (
+        HelpEntry(":", ":goals", "focus goals list in sidebar"),
+        HelpEntry(":", ":runs", "show 5 most-recent runs"),
+        HelpEntry(":", ":diff <task>", "load iter diff into diff tab"),
+        HelpEntry(":", ":decisions <task>", "load decisions into decisions tab"),
+        HelpEntry(":", ":goto <prefix>", "select a goal by id/title prefix"),
+        HelpEntry(":", ":learn <query>", "search learnings"),
+        HelpEntry("g", "toggle gauntlet", "expand/collapse the Gauntlet section in PlanMarkdown"),
+        HelpEntry("?", "help", "open this help modal"),
+        HelpEntry("esc", "close", "close command line or modal"),
+        HelpEntry("ctrl+q", "quit", "exit devboard"),
+    )
+    legend = tuple(
+        HelpEntry(marker, f"legend: {label}", summary)
+        for marker, label, summary in _legend_entries()
+    )
+    return base + legend
+
+
+DEFAULT_ENTRIES: tuple[HelpEntry, ...] = _compose_default_entries()
 
 
 def fuzzy_filter(entries: Iterable[HelpEntry], query: str, threshold: int = 70) -> list[HelpEntry]:

@@ -4,12 +4,14 @@ from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
+from textual.reactive import reactive
 from textual.widgets import Footer
 
 from devboard.config import DevBoardConfig, load_config
 from devboard.models import BoardState
 from devboard.storage.file_store import FileStore
+from devboard.tui.activity_timeline import ActivityTimeline
 from devboard.tui.command_line import CommandLine
 from devboard.tui.command_registry import (
     CommandRegistry,
@@ -24,40 +26,42 @@ from devboard.tui.commands import (
     learn_cmd,
     runs_cmd,
 )
-from devboard.tui.context_viewer import ContextViewer
-from devboard.tui.health_bar import HealthBar
-from devboard.tui.live_stream_view import LiveStreamView
-from devboard.tui.resources_view import ResourcesView
+from devboard.tui.files_changed_pane import FilesChangedPane
+from devboard.tui.goal_side_list import GoalSideList
+from devboard.tui.meta_pane import MetaPane
+from devboard.tui.plan_markdown import PlanMarkdown
+from devboard.tui.session_derive import SessionContext
+from devboard.tui.status_bar import StatusBar
 
 
 class DevBoardApp(App):
-    """Three-pane glass cockpit for devboard v2.0.
+    """v2.1 Linear issue-style cockpit.
 
-    Layout: HealthBar / Horizontal(Resources | LiveStream | ContextViewer)
-    / CommandLine / Footer. Read-only — writes go through MCP tools.
+    Layout:
+      StatusBar (1 line)
+      Horizontal(GoalSideList 15% | Vertical(PlanMarkdown, ActivityTimeline) 65% | Vertical(MetaPane, FilesChangedPane) 20%)
+      CommandLine (dock bottom, 1 line)
+      Footer
+
+    Read-only — writes go through MCP tools. v2.0 commands (:goto/:diff/
+    :decisions/:learn/:goals/:runs) still dispatch for backward compat.
     """
 
     CSS = """
     Screen { layout: vertical; }
     #main-row { height: 1fr; }
-    #live-stream { height: 3; border-top: solid $primary-darken-3; }
-    #live-stream.expanded { height: 18; }
+    #center-col { width: 65%; }
+    #right-col { width: 20%; border-left: solid $primary-darken-3; }
     #command-line { dock: bottom; height: 1; }
     """
 
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit"),
         Binding("colon", "open_command_line", "Cmd"),
-        Binding("1", "switch_tab('diff')", show=False),
-        Binding("2", "switch_tab('decisions')", show=False),
-        Binding("3", "switch_tab('learnings')", show=False),
-        Binding("4", "switch_tab('gauntlet')", show=False),
-        Binding("5", "switch_tab('plan')", show=False),
-        Binding("right_square_bracket", "cycle_tab(1)", show=False),
-        Binding("left_square_bracket", "cycle_tab(-1)", show=False),
-        Binding("backslash", "toggle_livestream", "Toggle live stream"),
         Binding("question_mark", "help", "Help"),
     ]
+
+    selected_iter: reactive[int | None] = reactive(None)
 
     def __init__(self, store_root: Path) -> None:
         super().__init__()
@@ -72,6 +76,8 @@ class DevBoardApp(App):
         except Exception:
             self._config = DevBoardConfig()
         self.commands = CommandRegistry()
+        self._session = SessionContext(store_root)
+        self._task_id: str | None = self._pick_task_id()
 
     @property
     def board(self) -> BoardState:
@@ -85,73 +91,120 @@ class DevBoardApp(App):
     def store(self) -> FileStore:
         return self._store
 
+    @property
+    def session(self) -> SessionContext:
+        return self._session
+
+    def _pick_task_id(self) -> str | None:
+        gid = self._session.active_goal_id
+        if not gid:
+            return None
+        tasks_dir = self._store_root / ".devboard" / "goals" / gid / "tasks"
+        if not tasks_dir.exists():
+            return None
+        dirs = [p for p in tasks_dir.iterdir() if p.is_dir()]
+        if not dirs:
+            return None
+        latest = max(dirs, key=lambda p: p.stat().st_mtime)
+        return latest.name
+
     def compose(self) -> ComposeResult:
-        yield HealthBar(id="health-bar")
+        yield StatusBar(id="status-bar")
         with Horizontal(id="main-row"):
-            yield ResourcesView(id="resources")
-            yield ContextViewer(id="context-viewer")
-        yield LiveStreamView(id="live-stream")
+            yield GoalSideList(self._session, id="goal-side-list")
+            with Vertical(id="center-col"):
+                yield PlanMarkdown(self._session, id="plan-markdown")
+                yield ActivityTimeline(self._session, task_id=self._task_id, id="activity-timeline")
+            with Vertical(id="right-col"):
+                initial_iter = self._initial_iter()
+                yield MetaPane(
+                    self._session, task_id=self._task_id, selected_iter=initial_iter, id="meta-pane"
+                )
+                yield FilesChangedPane(
+                    self._session, task_id=self._task_id, selected_iter=initial_iter, id="files-changed-pane"
+                )
         yield CommandLine(id="command-line", placeholder=":")
         yield Footer()
+
+    def _initial_iter(self) -> int | None:
+        if not self._task_id:
+            return None
+        rows = self._session.decisions_for_task(self._task_id)
+        return rows[0].get("iter") if rows else None
 
     def on_mount(self) -> None:
         for mod in (goals_cmd, runs_cmd, diff_cmd, decisions_cmd, goto_cmd, learn_cmd):
             mod.register(self)
-        devboard_dir = self._store_root / ".devboard"
-        if not devboard_dir.exists():
-            self.query_one(LiveStreamView).set_empty_state(
-                "No devboard state. Run `devboard init` and reopen."
-            )
-        else:
-            self.query_one(LiveStreamView).set_empty_state(
-                f"Ready — {len(self._board.goals)} goals. Type ':' for commands, '?' for help."
-            )
-        # Pre-populate Resources sidebar so users see content on launch
-        # (spec required ':goals'/':runs' to populate on demand, but empty
-        # sidebar on startup reads as broken). goals dispatched last so its
-        # list is focused — which also moves focus off the CommandLine Input
-        # so printable-key bindings (1-5, /, ?) fire.
-        for cmd in ("runs", "goals"):
-            try:
-                self.commands.dispatch(cmd)
-            except Exception:
-                pass
-        # Auto-load active goal's plan + gauntlet into the Context tabs
+        # initialize selected_iter AFTER mount so the watcher fires normally
+        self.selected_iter = self._initial_iter()
+        # set initial StatusBar summary
+        self._refresh_status_bar()
+        # move focus off the Input so printable-key bindings (?, g) fire
         try:
-            self.query_one("#context-viewer", ContextViewer).load_active_goal_artifacts(
-                self._store_root, self._board.active_goal_id
-            )
+            self.query_one("#resources-goals").focus()
         except Exception:
             pass
-        # Wire tail worker to live-stream + health-bar via 100ms interval.
-        from devboard.tui.tail_worker import RunTailWorker
+        # wire tail worker for live updates (throttled single-line StatusBar only)
+        devboard_dir = self._store_root / ".devboard"
+        if devboard_dir.exists():
+            from devboard.tui.tail_worker import RunTailWorker
 
-        self._tail_worker = RunTailWorker(self, devboard_dir / "runs")
-        self.set_interval(0.1, self._tail_worker.poll_once)
+            self._tail_worker = RunTailWorker(self, devboard_dir / "runs")
+            self.set_interval(0.1, self._tail_worker.poll_once)
 
     def on_stream_event(self, text: str, color: str | None) -> None:
-        """Main-thread callback invoked by RunTailWorker.poll_once for every
-        new JSONL line. Adds the line to LiveStreamView and flashes HealthBar
-        when the classifier found an anomaly."""
-        self.query_one(LiveStreamView).append_line(text, color=color)
-        if color:
-            try:
-                self.query_one(HealthBar).flash(color)
-            except Exception:
-                pass
+        """RunTailWorker callback. v2.1 repurposes this to refresh the
+        StatusBar 'phase' segment instead of streaming every line into a
+        widget (that role was reduced to one line)."""
+        self._refresh_status_bar(latest_line=text)
+
+    def _refresh_status_bar(self, latest_line: str | None = None) -> None:
+        try:
+            sb = self.query_one("#status-bar", StatusBar)
+        except Exception:
+            return
+        gid = self._session.active_goal_id
+        title = ""
+        if gid:
+            for g in self._session.all_goals():
+                if g.get("id") == gid:
+                    title = str(g.get("title", gid))
+                    break
+        iter_n = self.selected_iter
+        phase = ""
+        redteam = ""
+        tests: int | None = None
+        if self._task_id:
+            decisions = self._session.decisions_for_task(self._task_id)
+            if iter_n is not None:
+                for d in decisions:
+                    if d.get("iter") == iter_n:
+                        phase = str(d.get("phase", ""))
+                        break
+            for d in decisions:
+                if d.get("phase") == "redteam":
+                    redteam = str(d.get("verdict_source", ""))
+                    break
+        sb.set_segments(
+            goal_title=title, iter_n=iter_n, phase=phase, redteam=redteam, tests=tests
+        )
+
+    def watch_selected_iter(self, _old: int | None, new: int | None) -> None:
+        try:
+            fc = self.query_one("#files-changed-pane", FilesChangedPane)
+            fc.refresh_body(self._task_id, new)
+        except Exception:
+            pass
+        try:
+            mp = self.query_one("#meta-pane", MetaPane)
+            mp.refresh_body(self._task_id, new)
+        except Exception:
+            pass
+        self._refresh_status_bar()
 
     def action_open_command_line(self) -> None:
         cl = self.query_one("#command-line", CommandLine)
         cl.open(return_to=self.focused)
-
-    def action_switch_tab(self, name: str) -> None:
-        self.query_one("#context-viewer", ContextViewer).action_switch(name)
-
-    def action_cycle_tab(self, step: int) -> None:
-        self.query_one("#context-viewer", ContextViewer).action_cycle(step)
-
-    def action_toggle_livestream(self) -> None:
-        self.query_one("#live-stream", LiveStreamView).toggle_class("expanded")
 
     def action_help(self) -> None:
         from devboard.tui.help_modal import HelpModal
@@ -175,9 +228,6 @@ class DevBoardApp(App):
         cl.styles.background = None
 
     def _show_error(self, cl: CommandLine, message: str) -> None:
-        """Display a 1-second error hint. Later clears ONLY if the input
-        still holds exactly this error string (red-team round 3 — stale
-        timers must not wipe a user's subsequent typing)."""
         cl.styles.background = "red"
         cl.value = message
 

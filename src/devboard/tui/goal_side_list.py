@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from textual.app import ComposeResult
+from textual.widget import Widget
+from textual.widgets import Label, ListItem, ListView, Static
+
+from devboard.tui.goal_status_legend import LEGEND_INLINE
+from devboard.tui.session_derive import SessionContext
+
+
+_TASK_RANK = [
+    "failed", "blocked", "todo", "planning", "in_progress",
+    "reviewing", "awaiting_approval", "converged", "pushed",
+]
+
+_STATUS_MARKER: dict[str, str] = {
+    "pushed": "✓", "converged": "●", "awaiting_approval": "?",
+    "reviewing": "?", "in_progress": "▶", "planning": "·",
+    "todo": "○", "blocked": "✗", "failed": "✗",
+    "active": "·", "archived": "-",
+}
+
+
+def _derive_marker(goal_dir: Path, declared: str) -> str:
+    tasks_dir = goal_dir / "tasks"
+    statuses: list[str] = []
+    if tasks_dir.exists():
+        for t_dir in tasks_dir.iterdir():
+            task_json = t_dir / "task.json"
+            if not task_json.is_file():
+                continue
+            try:
+                data = json.loads(task_json.read_text())
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            s = data.get("status")
+            if isinstance(s, str):
+                statuses.append(s)
+    if statuses:
+        picked = max(statuses, key=lambda s: _TASK_RANK.index(s) if s in _TASK_RANK else -1)
+        return _STATUS_MARKER.get(picked, "·")
+    return _STATUS_MARKER.get(declared, "·")
+
+
+class GoalSideList(Widget):
+    """Left sidebar: inline legend line + scrollable goal list with derived
+    status markers."""
+
+    DEFAULT_CSS = """
+    GoalSideList { width: 15%; border-right: solid $primary-darken-3; }
+    GoalSideList #goal-side-legend {
+        padding: 0 1; color: $text-muted; height: 1;
+    }
+    GoalSideList ListView { height: 1fr; }
+    """
+
+    def __init__(self, session: SessionContext, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self._session = session
+
+    def compose(self) -> ComposeResult:
+        yield Static(LEGEND_INLINE, id="goal-side-legend", markup=False)
+        yield ListView(id="resources-goals")
+
+    def on_mount(self) -> None:
+        lv = self.query_one("#resources-goals", ListView)
+        lv.clear()
+        for goal in self._session.all_goals():
+            goal_dir = (
+                self._session.store_root / ".devboard" / "goals" / goal["id"]
+            )
+            marker = _derive_marker(goal_dir, goal.get("status", "active"))
+            lv.append(ListItem(Label(f"{marker} {goal.get('title', goal['id'])}")))
