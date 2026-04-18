@@ -92,13 +92,14 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="devboard_update_task_status",
-            description="Update a task's status. Valid: todo, planning, in_progress, reviewing, converged, awaiting_approval, pushed, blocked, failed.",
+            description="Update a task's status and optionally merge metadata. Valid statuses: todo, planning, in_progress, reviewing, converged, awaiting_approval, pushed, blocked, failed. Optional `metadata` dict is merged into task.metadata (existing keys preserved, same keys overwritten, absent param leaves metadata untouched).",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "project_root": {"type": "string"},
                     "task_id": {"type": "string"},
                     "status": {"type": "string"},
+                    "metadata": {"type": "object", "additionalProperties": True},
                 },
                 "required": ["project_root", "task_id", "status"],
             },
@@ -544,8 +545,14 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
                 task = store.load_task(goal.id, task_id)
                 if task:
                     task.status = TaskStatus(args["status"])
+                    if args.get("metadata"):
+                        task.metadata = {**task.metadata, **args["metadata"]}
                     store.save_task(task)
-                    return _text({"task_id": task_id, "status": task.status.value})
+                    return _text({
+                        "task_id": task_id,
+                        "status": task.status.value,
+                        "metadata": task.metadata,
+                    })
         return _text({"error": f"task {task_id} not found"})
 
     if name == "devboard_start_task":

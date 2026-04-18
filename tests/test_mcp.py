@@ -554,3 +554,102 @@ def test_mcp_lock_plan_with_approval_succeeds(tmp_path: Path):
     })
     payload = _json_payload(result)
     assert payload.get("locked_hash")
+
+
+# ── Task.metadata + update_task_status merge semantics ───────────────────────
+
+def test_task_metadata_defaults_to_empty_dict():
+    from devboard.models import Task
+    t = Task(goal_id="g", title="t")
+    assert t.metadata == {}
+
+
+def _make_task_for_metadata_test(tmp_path: Path, initial_metadata: dict | None = None):
+    """Helper — initialize a board with one goal + one persisted task."""
+    from devboard.models import Task
+    from devboard.storage.file_store import FileStore
+
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync(
+        "devboard_add_goal",
+        {"project_root": str(tmp_path), "title": "x"},
+    )
+    goal_id = _json_payload(add)["goal_id"]
+
+    store = FileStore(tmp_path)
+    board = store.load_board()
+    task = Task(goal_id=goal_id, title="t", metadata=dict(initial_metadata or {}))
+    board.goals[0].task_ids.append(task.id)
+    store.save_task(task)
+    store.save_board(board)
+    return store, goal_id, task.id
+
+
+def test_update_task_status_absent_metadata_preserves_existing(tmp_path: Path):
+    store, goal_id, task_id = _make_task_for_metadata_test(tmp_path, {"security_sensitive": True})
+    _dispatch_sync(
+        "devboard_update_task_status",
+        {"project_root": str(tmp_path), "task_id": task_id, "status": "in_progress"},
+    )
+    reloaded = store.load_task(goal_id, task_id)
+    assert reloaded.metadata == {"security_sensitive": True}
+
+
+def test_update_task_status_sets_metadata(tmp_path: Path):
+    store, goal_id, task_id = _make_task_for_metadata_test(tmp_path)
+    _dispatch_sync(
+        "devboard_update_task_status",
+        {
+            "project_root": str(tmp_path),
+            "task_id": task_id,
+            "status": "in_progress",
+            "metadata": {"security_sensitive": True},
+        },
+    )
+    reloaded = store.load_task(goal_id, task_id)
+    assert reloaded.metadata == {"security_sensitive": True}
+
+
+def test_metadata_merges_distinct_keys(tmp_path: Path):
+    store, goal_id, task_id = _make_task_for_metadata_test(tmp_path, {"a": 1})
+    _dispatch_sync(
+        "devboard_update_task_status",
+        {
+            "project_root": str(tmp_path),
+            "task_id": task_id,
+            "status": "in_progress",
+            "metadata": {"b": 2},
+        },
+    )
+    reloaded = store.load_task(goal_id, task_id)
+    assert reloaded.metadata == {"a": 1, "b": 2}
+
+
+def test_metadata_overwrites_same_key(tmp_path: Path):
+    store, goal_id, task_id = _make_task_for_metadata_test(tmp_path, {"a": 1})
+    _dispatch_sync(
+        "devboard_update_task_status",
+        {
+            "project_root": str(tmp_path),
+            "task_id": task_id,
+            "status": "in_progress",
+            "metadata": {"a": 2},
+        },
+    )
+    reloaded = store.load_task(goal_id, task_id)
+    assert reloaded.metadata == {"a": 2}
+
+
+def test_task_metadata_roundtrips_through_file_store(tmp_path: Path):
+    from devboard.models import Task
+    from devboard.storage.file_store import FileStore
+
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("devboard_add_goal", {"project_root": str(tmp_path), "title": "x"})
+    goal_id = _json_payload(add)["goal_id"]
+
+    store = FileStore(tmp_path)
+    task = Task(goal_id=goal_id, title="t", metadata={"production_destined": True, "note": "x"})
+    store.save_task(task)
+    reloaded = store.load_task(goal_id, task.id)
+    assert reloaded.metadata == {"production_destined": True, "note": "x"}

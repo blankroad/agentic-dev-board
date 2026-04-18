@@ -79,6 +79,7 @@ class Task(BaseModel):
     iterations: list[Iteration] = Field(default_factory=list)
     converged: bool = False
     retry_count: int = 0
+    metadata: dict[str, object] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
