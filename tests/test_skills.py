@@ -244,3 +244,62 @@ def test_gauntlet_step_review_proceed_to_lock():
     assert "proceed to lock" in review_body.lower(), (
         "Step Quality Review all-clear path must contain 'proceed to lock'"
     )
+
+
+# ── sr_001: Single Responsibility rule in Step 3 ─────────────────────────────
+
+def test_gauntlet_arch_single_responsibility_rule():
+    """sr_001: Step 3 Architecture section must contain Single Responsibility rule."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    step3_idx = content.find("## Step 3 — Architecture")
+    step4_idx = content.find("## Step 4 — Challenge")
+    assert step3_idx != -1, "## Step 3 — Architecture section missing"
+    assert step4_idx != -1, "## Step 4 — Challenge section missing"
+    step3_body = content[step3_idx:step4_idx]
+    assert "Single Responsibility" in step3_body, (
+        "Step 3 Architecture section must contain Single Responsibility rule"
+    )
+
+
+# ── sr_002: bad example in Critical Files guidance ───────────────────────────
+
+def test_gauntlet_arch_critical_files_bad_example():
+    """sr_002: Step 3 Critical Files guidance must contain a bad example."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    step3_idx = content.find("## Step 3 — Architecture")
+    step4_idx = content.find("## Step 4 — Challenge")
+    step3_body = content[step3_idx:step4_idx]
+    assert "Bad:" in step3_body or "❌" in step3_body, (
+        "Step 3 Critical Files guidance must contain a bad example (Bad: or ❌)"
+    )
+
+
+# ── sr_003: good example in Critical Files guidance ──────────────────────────
+
+def test_gauntlet_arch_critical_files_good_example():
+    """sr_003: Step 3 Critical Files guidance must contain a good example."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    step3_idx = content.find("## Step 3 — Architecture")
+    step4_idx = content.find("## Step 4 — Challenge")
+    step3_body = content[step3_idx:step4_idx]
+    assert "Good:" in step3_body or "✅" in step3_body, (
+        "Step 3 Critical Files guidance must contain a good example (Good: or ✅)"
+    )
+
+
+# ── sr_004: out_of_scope_guard intent annotation pattern ─────────────────────
+
+def test_gauntlet_out_of_scope_guard_intent_annotation():
+    """sr_004: Out-of-scope Guard guidance must contain intent annotation pattern."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    step3_idx = content.find("## Step 3 — Architecture")
+    step4_idx = content.find("## Step 4 — Challenge")
+    step3_body = content[step3_idx:step4_idx]
+    assert "out_of_scope_guard" in step3_body, "out_of_scope_guard example missing from Step 3"
+    assert " — " in step3_body, (
+        "out_of_scope_guard must show intent annotation pattern (path — intent)"
+    )

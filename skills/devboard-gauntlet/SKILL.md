@@ -36,11 +36,22 @@ Write → `.devboard/goals/<goal_id>/gauntlet/scope.md`
 
 - **Architecture Overview**: 2-4 sentence technical approach
 - **Data Flow**: input → transformation → output
-- **Critical Files**: `path: {purpose}` for each file to create/modify
+- **Critical Files**: `path: {purpose}` for each file to create/modify — apply Single Responsibility: one file = one feature unit. If a file's purpose statement contains "and", split it.
+
+  ❌ Bad: `src/auth.py: handles login, session management, and token refresh`
+  ✅ Good: `src/auth_login.py: login flow`, `src/auth_session.py: session management`, `src/auth_token.py: token refresh`
+
 - **Edge Cases**: list, each with expected behavior
 - **Test Strategy**: what must be tested, what to NOT mock, what's safe to skip
 - **Critical Path**: the one thing that MUST work for everything else
-- **Out-of-scope Guard**: exact paths/modules the implementation must NOT touch
+- **Out-of-scope Guard**: exact paths/modules the implementation must NOT touch. Optionally annotate each entry with intent — what must NOT happen there:
+
+  ```
+  out_of_scope_guard: [
+    "src/auth.py — auth only, no session logic",
+    "src/models.py — new models go in separate files"
+  ]
+  ```
 
 Write → `.devboard/goals/<goal_id>/gauntlet/arch.md`
 
