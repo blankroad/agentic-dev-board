@@ -57,15 +57,24 @@ Write → `.devboard/goals/<goal_id>/gauntlet/arch.md`
 
 ### Complexity Check (run after Critical Files list is complete)
 
-Count the Critical Files list and new classes/services introduced:
+Critical Files를 나열할 때 각 파일에 `[NEW]` / `[MODIFY]` 태그를 명시:
+- `[NEW]` — 새로 생성할 파일
+- `[MODIFY]` — 기존 파일 수정
 
-- **Critical Files > 8** OR **new classes/services > 2** → complexity smell detected
-  - AskUserQuestion: "이 계획은 {N}개 파일을 건드립니다. 같은 목표를 더 적은 범위로 달성할 수 있을까요? 줄일 수 있는 부분을 제안해드릴게요 — 진행할까요, 아니면 scope를 줄일까요?"
-  - 사용자가 scope 축소 선택 → Arch 재작성 후 다시 Complexity Check 실행
-  - 사용자가 그대로 진행 선택 → 아래 Note 출력 후 Challenge로 이동:
-    `⚠️ Complexity: {N} files. Proceeding as-is — high complexity increases integration risk.`
-- **Critical Files ≤ 8 AND new classes/services ≤ 2** → 한 줄 출력 후 즉시 Challenge로 이동:
-  `✅ Complexity OK: {N} files, {M} new abstractions.`
+그런 다음 아래 분기를 적용:
+
+**Case 1: 파일 수 ≤ 8** → 한 줄 출력 후 즉시 Challenge로 이동:
+`✅ Complexity OK: {N} files ({NEW_COUNT} new, {MODIFY_COUNT} modified).`
+
+**Case 2: 파일 수 > 8 AND [MODIFY] 파일이 절반 이상** → scope creep 가능성:
+- AskUserQuestion: "이 계획은 기존 파일 {MODIFY_COUNT}개를 포함해 총 {N}개를 건드립니다. 같은 목표를 더 적은 변경으로 달성할 수 있을까요? scope를 줄이거나 그대로 진행할 수 있습니다."
+- scope 축소 선택 → Arch 재작성 후 Complexity Check 재실행
+- 그대로 진행 → `⚠️ Scope creep risk: {N} files modified. Proceeding as-is.` 출력 후 Challenge로 이동
+
+**Case 3: 파일 수 > 8 AND [NEW] 파일이 절반 초과** → 새 시스템 고유 복잡도:
+- `⚠️ New system: {NEW_COUNT} new files. Engineering review recommended.` 출력
+- `ENG_REVIEW_NEEDED = true` 플래그 설정 (Finalize에서 참조)
+- 즉시 Challenge로 이동 (scope 축소 제안 없음)
 
 ## Step 4 — Challenge (red-team the plan)
 
@@ -180,4 +189,12 @@ The `task_id` and `run_id` you receive from `devboard_start_task` MUST be thread
 
 ## Handoff
 
-After locking + start_task + checkpoint, hand off to `devboard-tdd` with `{task_id, run_id}` in scope. The TDD skill reads `atomic_steps` and runs Red-Green-Refactor cycles for each.
+After locking + start_task + checkpoint:
+
+- **ENG_REVIEW_NEEDED = false** → 즉시 `devboard-tdd` 호출
+- **ENG_REVIEW_NEEDED = true** → AskUserQuestion:
+  "이 계획은 {NEW_COUNT}개의 새 파일을 포함합니다. TDD 시작 전 engineering review를 실행할까요? (권장) [y/N]"
+  - y → Skill tool로 `devboard-eng-review` 호출. eng-review 완료 후 `devboard-tdd` 호출.
+  - N → 즉시 `devboard-tdd` 호출.
+
+`{task_id, run_id}`는 모든 후속 MCP 호출에 전달.
