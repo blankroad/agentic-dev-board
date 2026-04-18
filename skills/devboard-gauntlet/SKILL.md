@@ -191,6 +191,24 @@ After Decide produces the JSON:
 
 The plan is now **immutable**. Implementation must follow it. Any drift triggers a `rethink`.
 
+### Task metadata markers (run after start_task)
+
+`devboard_start_task`로 task_id를 받은 직후, 아래 마커를 자동 설정 — CSO/redteam이 결정적으로 진입 판단 가능:
+
+1. **production_destined**: 기본값 `true`. User가 명시적으로 "throwaway" 또는 "prototype"이라고 말한 경우에만 `false`.
+2. **security_sensitive_plan**: arch.md + decide.json의 architecture/atomic_steps 텍스트를 하나의 문자열로 합친 뒤 `devboard_check_security_sensitive(diff=<plan_text>)` 호출. 반환된 `sensitive` 값을 그대로 사용.
+
+두 값을 아래처럼 저장:
+
+```
+devboard_update_task_status(
+  project_root, task_id, status="planning",
+  metadata={"production_destined": <bool>, "security_sensitive_plan": <bool>}
+)
+```
+
+CSO/redteam 스킬은 이 마커를 읽어 자동 실행 여부를 결정합니다.
+
 ## Required MCP calls
 
 You MUST call these in order. Missing a call leaves `.devboard/` incomplete and breaks retro/replay.

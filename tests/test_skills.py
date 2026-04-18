@@ -303,3 +303,41 @@ def test_gauntlet_out_of_scope_guard_intent_annotation():
     assert " — " in step3_body, (
         "out_of_scope_guard must show intent annotation pattern (path — intent)"
     )
+
+
+# ── P1-1b: task metadata markers for CSO / redteam entry ────────────────────
+
+def test_gauntlet_finalize_sets_task_metadata():
+    """Finalize must set production_destined and security_sensitive_plan via update_task_status."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    finalize_idx = content.find("## Finalize")
+    handoff_idx = content.find("## Handoff")
+    body = content[finalize_idx:handoff_idx]
+    assert "devboard_update_task_status" in body, "Finalize must call update_task_status"
+    assert "production_destined" in body, "Finalize must set production_destined marker"
+    assert "security_sensitive_plan" in body, "Finalize must set security_sensitive_plan marker"
+    assert "devboard_check_security_sensitive" in body, (
+        "Finalize must call check_security_sensitive on plan text"
+    )
+
+
+def test_cso_preamble_reads_task_metadata():
+    """CSO must check task.metadata.security_sensitive_plan to decide auto-entry."""
+    skill_md = SKILLS_DIR / "devboard-cso" / "SKILL.md"
+    content = skill_md.read_text()
+    assert "task.metadata" in content or "metadata" in content, (
+        "CSO must reference task metadata"
+    )
+    assert "security_sensitive_plan" in content, (
+        "CSO must check security_sensitive_plan marker"
+    )
+
+
+def test_redteam_preamble_reads_task_metadata():
+    """Redteam must check task.metadata.production_destined to decide auto-entry."""
+    skill_md = SKILLS_DIR / "devboard-redteam" / "SKILL.md"
+    content = skill_md.read_text()
+    assert "production_destined" in content, (
+        "Redteam must check production_destined marker"
+    )
