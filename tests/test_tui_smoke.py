@@ -170,6 +170,26 @@ async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_help_modal_opens_without_crash(tmp_path: Path) -> None:
+    """Post-ship bug report: pressing '?' raised
+    'HelpModal._render() missing 1 required positional argument: entries'
+    because Textual's Widget._render is an internal render-pipeline hook
+    and our method overrode it with an incompatible signature. Unit test
+    on fuzzy_filter missed this — the modal was never actually mounted."""
+    from devboard.tui.help_modal import HelpModal
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        await pilot.press("question_mark")
+        await pilot.pause(0.2)
+        assert any(isinstance(s, HelpModal) for s in app.screen_stack), (
+            f"HelpModal did not mount; screen stack: "
+            f"{[type(s).__name__ for s in app.screen_stack]}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_live_stream_colors_redteam_broken_red(tmp_path: Path) -> None:
     from devboard.tui.anomaly import AnomalyClassifier
     from devboard.tui.live_stream_view import LiveStreamView

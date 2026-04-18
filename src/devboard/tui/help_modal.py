@@ -91,14 +91,14 @@ class HelpModal(ModalScreen):
         yield ListView(id="help-list")
 
     def on_mount(self) -> None:
-        self._render(self._entries)
+        self._refresh_list(self._entries)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id != "help-search":
             return
-        self._render(fuzzy_filter(self._entries, event.value))
+        self._refresh_list(fuzzy_filter(self._entries, event.value))
 
-    def _render(self, entries: Iterable[HelpEntry]) -> None:
+    def _refresh_list(self, entries: Iterable[HelpEntry]) -> None:
         lv = self.query_one("#help-list", ListView)
         lv.clear()
         for e in entries:
