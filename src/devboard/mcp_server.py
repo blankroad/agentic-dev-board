@@ -283,6 +283,15 @@ async def list_tools() -> list[Tool]:
                 "required": ["diff"],
             },
         ),
+        Tool(
+            name="devboard_check_dependencies",
+            description="Audit project dependencies for known CVEs. Detects ecosystem (python via pyproject.toml/requirements.txt, node via package.json), runs pip-audit or npm audit with timeout, parses JSON output. Returns {ecosystem, auditor, severity_counts, findings, skipped_reason}. Severity keys normalized to CRITICAL/HIGH/MEDIUM/LOW. Never raises — controlled errors surface as skipped_reason.",
+            inputSchema={
+                "type": "object",
+                "properties": {"project_root": {"type": "string"}},
+                "required": ["project_root"],
+            },
+        ),
 
         # ── Approval & Push ────────────────────────────────────────────────────
         Tool(
@@ -830,6 +839,10 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
     if name == "devboard_check_security_sensitive":
         from devboard.security.sensitivity import check_security_sensitive
         return _text(check_security_sensitive(args["diff"]))
+
+    if name == "devboard_check_dependencies":
+        from devboard.security.dependencies import check_dependencies
+        return _text(check_dependencies(Path(args["project_root"]).resolve()))
 
     # ── approval & push ───────────────────────────────────────────────────────
     if name == "devboard_get_diff_stats":
