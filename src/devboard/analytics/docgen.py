@@ -121,9 +121,13 @@ def _render_md(doc: DesignDoc) -> str:
     if p and p.goal_checklist:
         lines.append("## Success Criteria")
         all_decisions = [d for ds in doc.decisions_by_task.values() for d in ds]
-        converged = any(d.phase == "review" and "PASS" in (d.verdict_source or "") for d in all_decisions)
+        done = (
+            any(d.phase == "approval" and d.verdict_source == "PUSHED" for d in all_decisions)
+            or any(d.phase == "review" and "PASS" in (d.verdict_source or "") for d in all_decisions)
+            or any(t.status.value in ("pushed", "converged") for t in doc.tasks)
+        )
         for item in p.goal_checklist:
-            mark = "x" if converged else " "
+            mark = "x" if done else " "
             lines.append(f"- [{mark}] {item}")
         lines.append("")
 

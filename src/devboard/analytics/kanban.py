@@ -72,17 +72,36 @@ def collect_board(store: FileStore) -> KanbanBoard:
             if review_decs:
                 card.last_verdict = review_decs[-1].verdict_source or ""
 
-        # Slot into column
-        placed = False
-        for col_name, statuses in _COLUMN_ORDER:
-            if goal.status in statuses:
-                board.columns[col_name].append(card)
-                placed = True
-                break
-        if not placed:
-            board.columns["Backlog"].append(card)
+        # Derive effective column from task statuses (overrides goal.status)
+        col_name = _effective_column(store, goal)
+        board.columns[col_name].append(card)
 
     return board
+
+
+def _effective_column(store: FileStore, goal: Goal) -> str:
+    """Derive kanban column from task statuses, falling back to goal.status."""
+    from devboard.models import TaskStatus
+    task_statuses = []
+    for tid in goal.task_ids:
+        t = store.load_task(goal.id, tid)
+        if t:
+            task_statuses.append(t.status)
+
+    if any(s == TaskStatus.pushed for s in task_statuses):
+        return "Pushed"
+    if any(s == TaskStatus.converged for s in task_statuses):
+        return "Converged"
+    if any(s == TaskStatus.awaiting_approval for s in task_statuses):
+        return "Awaiting Approval"
+    if any(s == TaskStatus.blocked for s in task_statuses):
+        return "Blocked"
+
+    # Fall back to goal.status
+    for col_name, statuses in _COLUMN_ORDER:
+        if goal.status in statuses:
+            return col_name
+    return "Backlog"
 
 
 def render_terminal(board: KanbanBoard) -> str:
