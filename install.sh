@@ -89,13 +89,15 @@ if [ "${AGENTIC_DEV_BOARD_NO_ALIAS:-0}" != "1" ]; then
         if grep -Fq "$MARKER" "$RC" 2>/dev/null; then
             # Update existing line in place
             ok "alias already registered in $RC (updated if path changed)"
-            # Replace line after marker — safer via sed
-            python3 - <<PY
-import pathlib, re
-rc = pathlib.Path("$RC")
+            # Replace line after marker — pass values via env to avoid quoting bugs
+            RC="$RC" MARKER="$MARKER" ALIAS_LINE="$ALIAS_LINE" python3 - <<'PY'
+import os, pathlib, re
+rc = pathlib.Path(os.environ["RC"])
+marker = os.environ["MARKER"]
+alias_line = os.environ["ALIAS_LINE"]
 txt = rc.read_text()
-pattern = re.escape("$MARKER") + r"\n[^\n]*"
-new = "$MARKER\n$ALIAS_LINE"
+pattern = re.escape(marker) + r"\n[^\n]*"
+new = f"{marker}\n{alias_line}"
 txt = re.sub(pattern, new, txt)
 rc.write_text(txt)
 PY
