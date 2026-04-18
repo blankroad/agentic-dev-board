@@ -98,6 +98,8 @@ class RunTailWorker:
             return
 
     def _poll_once_inner(self) -> None:
+        from devboard.tui.live_stream_format import format_event_line
+
         if not self._runs_dir.exists():
             return
         for path in sorted(self._runs_dir.glob("*.jsonl")):
@@ -109,4 +111,4 @@ class RunTailWorker:
                     continue
                 anomaly = self._classifier.classify(record)
                 color = anomaly[0] if anomaly is not None else None
-                self._app.on_stream_event(raw, color)
+                self._app.on_stream_event(format_event_line(record), color)

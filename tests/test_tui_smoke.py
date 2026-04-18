@@ -170,6 +170,83 @@ async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_context_viewer_diff_tab_default_is_action_prompt(tmp_path: Path) -> None:
+    """Placeholders like '(diff)' teach nothing. Each tab must tell the
+    user what to type to populate it."""
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        body = app.query_one("#tab-diff-body")
+        text = str(body.render())
+        assert ":diff" in text, f"diff tab should hint at :diff command; got {text!r}"
+
+
+@pytest.mark.asyncio
+async def test_context_viewer_plan_tab_loads_active_goal_plan(tmp_path: Path) -> None:
+    """If there is an active goal with a plan.md, the Plan tab should
+    show the plan on launch — not a placeholder."""
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    store = FileStore(tmp_path)
+    (tmp_path / ".devboard").mkdir()
+    board = BoardState(active_goal_id="g_test")
+    board.goals.append(Goal(id="g_test", title="my-goal", status=GoalStatus.active))
+    store.save_board(board)
+    plan_dir = tmp_path / ".devboard" / "goals" / "g_test"
+    plan_dir.mkdir(parents=True)
+    (plan_dir / "plan.md").write_text("# Plan for my-goal\n\nStep 1: do thing\n")
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        body = app.query_one("#tab-plan-body")
+        text = str(body.render())
+        assert "my-goal" in text or "Step 1" in text, (
+            f"Plan tab should load active goal's plan.md; got {text!r}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_live_stream_renders_human_line_not_raw_json(tmp_path: Path) -> None:
+    """LiveStream currently dumps raw JSON. Surface a human line via
+    format_event_line so users can scan events at a glance."""
+    import json
+
+    _bootstrap_board(tmp_path, ("g_1", "goal-one"))
+    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    run_file = runs_dir / "run_fmt.jsonl"
+    run_file.write_text(
+        json.dumps(
+            {
+                "ts": "2026-04-19T10:11:12+00:00",
+                "event": "tdd_green_complete",
+                "state": {"iteration": 2, "status": "GREEN_CONFIRMED"},
+            }
+        )
+        + "\n"
+    )
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        for _ in range(20):
+            await pilot.pause(0.1)
+            body = app.query_one("#live-stream-body")
+            if "10:11:12" in str(body.render()):
+                break
+        body = app.query_one("#live-stream-body")
+        rendered = str(body.render())
+        assert "10:11:12" in rendered, f"expected formatted time; got {rendered!r}"
+        assert "tdd_green_complete" in rendered, rendered
+        # Raw JSON braces MUST NOT appear for this event
+        assert "{\"ts\"" not in rendered and '"state":' not in rendered, (
+            f"raw JSON leaked into live stream: {rendered!r}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_help_modal_opens_without_crash(tmp_path: Path) -> None:
     """Post-ship bug report: pressing '?' raised
     'HelpModal._render() missing 1 required positional argument: entries'

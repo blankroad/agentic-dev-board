@@ -113,6 +113,13 @@ class DevBoardApp(App):
                 self.commands.dispatch(cmd)
             except Exception:
                 pass
+        # Auto-load active goal's plan + gauntlet into the Context tabs
+        try:
+            self.query_one("#context-viewer", ContextViewer).load_active_goal_artifacts(
+                self._store_root, self._board.active_goal_id
+            )
+        except Exception:
+            pass
         # Wire tail worker to live-stream + health-bar via 100ms interval.
         from devboard.tui.tail_worker import RunTailWorker
 
