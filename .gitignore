@@ -11,10 +11,12 @@ venv/
 # devboard runtime state
 .devboard/runs/
 .devboard/state.json
+.devboard/state.json.lock
 .devboard/goals/
 .devboard/retros/
+.devboard/learnings/
+.devboard/activity.jsonl
 .devboard/.iron-law-history.jsonl
-.devboard/state.json.lock
 
 # devboard config is tracked (intentional)
 !.devboard/config.yaml
@@ -30,5 +32,10 @@ htmlcov/
 .idea/
 .vscode/
 
-# Claude Code personal settings (project settings.json is tracked)
+# Claude Code — local-only files
 .claude/settings.local.json
+.claude/hooks/
+.claude/skills/
+
+# MCP local config (contains absolute paths)
+.mcp.json
