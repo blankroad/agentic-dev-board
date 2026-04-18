@@ -8,6 +8,19 @@ when_to_use: User signals readiness to push/merge/ship. Automatic after devboard
 
 You are the **Approval Gate**. Loop converged → present to user → push on approval.
 
+## Step 0 — Pre-approval Guard (MANDATORY before Step 1)
+
+진입 즉시 `devboard_load_decisions(project_root, task_id)`를 호출해 아래 조건을 검증:
+
+1. **TDD 완료 확인** — `phase="reflect"` 또는 `phase="review_complete"` 항목이 존재하는가?
+   - 없으면 **거부**: "TDD가 완료되지 않았습니다. devboard-tdd를 먼저 실행하세요." → 스킬 종료
+2. **CSO 필요성 판단** — diff 또는 LockedPlan에 security-sensitive 키워드(auth, password, token, crypto, SQL, subprocess, eval, exec)가 포함되면 `phase="cso"` 항목 존재 확인.
+   - 없으면 **거부**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso를 먼저 실행하세요." → 스킬 종료
+3. **CSO verdict 확인** — `phase="cso"` 항목이 있으면 verdict가 `VULNERABLE`이 아닌지 확인.
+   - `VULNERABLE`이면 **거부**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → 스킬 종료
+
+세 조건 모두 통과하면 Step 1로 진행.
+
 ## Step 1 — Summarize for user
 
 Present, in this order:

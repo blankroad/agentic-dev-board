@@ -36,10 +36,10 @@ Write → `.devboard/goals/<goal_id>/gauntlet/scope.md`
 
 - **Architecture Overview**: 2-4 sentence technical approach
 - **Data Flow**: input → transformation → output
-- **Critical Files**: `path: {purpose}` for each file to create/modify — apply Single Responsibility: one file = one feature unit. If a file's purpose statement contains "and", split it.
+- **Critical Files**: `path [NEW|MODIFY]: {purpose}` for each file to create/modify — apply Single Responsibility: one file = one feature unit. If a file's purpose statement contains "and", split it.
 
-  ❌ Bad: `src/auth.py: handles login, session management, and token refresh`
-  ✅ Good: `src/auth_login.py: login flow`, `src/auth_session.py: session management`, `src/auth_token.py: token refresh`
+  ❌ Bad: `src/auth.py [MODIFY]: handles login, session management, and token refresh`
+  ✅ Good: `src/auth_login.py [NEW]: login flow`, `src/auth_session.py [NEW]: session management`, `src/auth_token.py [NEW]: token refresh`
 
 - **Edge Cases**: list, each with expected behavior
 - **Test Strategy**: what must be tested, what to NOT mock, what's safe to skip
@@ -63,18 +63,35 @@ Critical Files를 나열할 때 각 파일에 `[NEW]` / `[MODIFY]` 태그를 명
 
 그런 다음 아래 분기를 적용:
 
-**Case 1: 파일 수 ≤ 8** → 한 줄 출력 후 즉시 Challenge로 이동:
-`✅ Complexity OK: {N} files ({NEW_COUNT} new, {MODIFY_COUNT} modified).`
+계수: `N = 전체 파일 수`, `NEW_COUNT = [NEW] 개수`, `MODIFY_COUNT = [MODIFY] 개수`, `NEW_ABSTRACTIONS = 새로 만들 클래스/서비스/모듈 수`.
 
-**Case 2: 파일 수 > 8 AND [MODIFY] 파일이 절반 이상** → scope creep 가능성:
-- AskUserQuestion: "이 계획은 기존 파일 {MODIFY_COUNT}개를 포함해 총 {N}개를 건드립니다. 같은 목표를 더 적은 변경으로 달성할 수 있을까요? scope를 줄이거나 그대로 진행할 수 있습니다."
+Trigger 조건: `N > 8` OR `NEW_ABSTRACTIONS ≥ 2`.
+
+**Case 1: Trigger 없음** → 한 줄 출력 후 즉시 Challenge로 이동:
+`✅ Complexity OK: {N} files ({NEW_COUNT} new, {MODIFY_COUNT} modified, {NEW_ABSTRACTIONS} new abstractions).`
+
+**Case 2: Trigger 발생 AND MODIFY_COUNT ≥ NEW_COUNT** → scope creep 가능성:
+- AskUserQuestion: "이 계획은 기존 파일 {MODIFY_COUNT}개를 포함해 총 {N}개를 건드립니다 (새 abstraction {NEW_ABSTRACTIONS}개). 같은 목표를 더 적은 변경으로 달성할 수 있을까요? scope를 줄이거나 그대로 진행할 수 있습니다."
 - scope 축소 선택 → Arch 재작성 후 Complexity Check 재실행
 - 그대로 진행 → `⚠️ Scope creep risk: {N} files modified. Proceeding as-is.` 출력 후 Challenge로 이동
 
-**Case 3: 파일 수 > 8 AND [NEW] 파일이 절반 초과** → 새 시스템 고유 복잡도:
-- `⚠️ New system: {NEW_COUNT} new files. Engineering review recommended.` 출력
-- `ENG_REVIEW_NEEDED = true` 플래그 설정 (Finalize에서 참조)
+**Case 3: Trigger 발생 AND NEW_COUNT > MODIFY_COUNT** → 새 시스템 고유 복잡도:
+- `⚠️ New system: {NEW_COUNT} new files, {NEW_ABSTRACTIONS} new abstractions. Engineering review recommended.` 출력
 - 즉시 Challenge로 이동 (scope 축소 제안 없음)
+
+### arch.md footer (플래그 영속화)
+
+arch.md 마지막에 아래 machine-readable 섹션을 반드시 추가. Finalize 단계에서 이 파일을 다시 읽어 분기.
+
+```
+---
+## Meta (machine-readable, do not edit)
+COMPLEXITY_CASE: 1 | 2 | 3
+ENG_REVIEW_NEEDED: true | false    # Case 3일 때만 true
+NEW_COUNT: {NEW_COUNT}
+MODIFY_COUNT: {MODIFY_COUNT}
+NEW_ABSTRACTIONS: {NEW_ABSTRACTIONS}
+```
 
 ## Step 4 — Challenge (red-team the plan)
 
@@ -191,10 +208,12 @@ The `task_id` and `run_id` you receive from `devboard_start_task` MUST be thread
 
 After locking + start_task + checkpoint:
 
-- **ENG_REVIEW_NEEDED = false** → 즉시 `devboard-tdd` 호출
-- **ENG_REVIEW_NEEDED = true** → AskUserQuestion:
-  "이 계획은 {NEW_COUNT}개의 새 파일을 포함합니다. TDD 시작 전 engineering review를 실행할까요? (권장) [y/N]"
-  - y → Skill tool로 `devboard-eng-review` 호출. eng-review 완료 후 `devboard-tdd` 호출.
-  - N → 즉시 `devboard-tdd` 호출.
+1. arch.md의 Meta 섹션을 읽어 `ENG_REVIEW_NEEDED` 값 확인
+2. 분기:
+   - **ENG_REVIEW_NEEDED = false** → Skill tool로 `devboard-tdd` 즉시 호출
+   - **ENG_REVIEW_NEEDED = true** → AskUserQuestion:
+     "이 계획은 {NEW_COUNT}개의 새 파일 + {NEW_ABSTRACTIONS}개 새 abstraction을 포함합니다. TDD 시작 전 engineering review를 실행할까요? (권장) [Y/n]"
+     - Y (default) → Skill tool로 `devboard-eng-review` 호출. **이후 tdd는 gauntlet이 직접 호출하지 않음** — eng-review가 완료 후 본인이 tdd를 호출.
+     - n → Skill tool로 `devboard-tdd` 즉시 호출.
 
 `{task_id, run_id}`는 모든 후속 MCP 호출에 전달.
