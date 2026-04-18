@@ -170,6 +170,44 @@ async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_context_viewer_auto_loads_latest_task_diff_on_launch(tmp_path: Path) -> None:
+    """User should not have to type ':diff <id>' to see the active goal's
+    latest iter diff. If there is an active goal with tasks on disk, the
+    Diff tab must already be populated when the app mounts."""
+    import json
+
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    store = FileStore(tmp_path)
+    (tmp_path / ".devboard").mkdir()
+    board = BoardState(active_goal_id="g_auto")
+    board.goals.append(Goal(id="g_auto", title="auto-goal", status=GoalStatus.active))
+    store.save_board(board)
+    task_dir = tmp_path / ".devboard" / "goals" / "g_auto" / "tasks" / "t_auto"
+    (task_dir / "changes").mkdir(parents=True)
+    (task_dir / "task.json").write_text(json.dumps({"id": "t_auto", "status": "pushed"}))
+    (task_dir / "changes" / "iter_3.diff").write_text("+++ auto-loaded diff body\n")
+    (task_dir / "decisions.jsonl").write_text(
+        json.dumps({"phase": "tdd_green", "reasoning": "auto-loaded decision"}) + "\n"
+    )
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        diff_body = app.query_one("#tab-diff-body")
+        decisions_body = app.query_one("#tab-decisions-body")
+        diff_text = str(diff_body.render())
+        dec_text = str(decisions_body.render())
+        assert "auto-loaded diff body" in diff_text, (
+            f"Diff tab should pre-load active task's latest iter diff; got {diff_text!r}"
+        )
+        assert "auto-loaded decision" in dec_text or "tdd_green" in dec_text, (
+            f"Decisions tab should pre-load active task's decisions; got {dec_text!r}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_goals_list_prefix_reflects_task_status(tmp_path: Path) -> None:
     """Goal.status stays 'active' in state.json even after its tasks finish.
     The goals list must show derived status (from task files) so a pushed

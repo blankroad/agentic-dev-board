@@ -42,9 +42,9 @@ class ContextViewer(Widget):
                     yield Static(_DEFAULT_PROMPTS[name], id=f"tab-{name}-body", markup=False)
 
     def load_active_goal_artifacts(self, store_root: Path, active_goal_id: str | None) -> None:
-        """Populate Plan + Gauntlet tabs from the active goal's files. No-op
-        if there's no active goal or the files don't exist — the default
-        action-prompt stays in place."""
+        """Populate Plan + Gauntlet tabs from the active goal's files, and
+        Diff + Decisions tabs from the most-recent task under that goal.
+        No-op for missing files — the default action-prompt stays in place."""
         if not active_goal_id:
             return
         goal_dir = store_root / ".devboard" / "goals" / active_goal_id
@@ -66,6 +66,46 @@ class ContextViewer(Widget):
                         continue
             if parts:
                 self.set_tab_body("gauntlet", "\n\n".join(parts))
+
+        # Most-recent task under this goal: pick by task dir mtime
+        tasks_dir = goal_dir / "tasks"
+        if not tasks_dir.exists():
+            return
+        task_dirs = [p for p in tasks_dir.iterdir() if p.is_dir()]
+        if not task_dirs:
+            return
+        latest = max(task_dirs, key=lambda p: p.stat().st_mtime)
+
+        diffs = sorted((latest / "changes").glob("iter_*.diff")) if (latest / "changes").exists() else []
+        if diffs:
+            try:
+                self.set_tab_body("diff", diffs[-1].read_text())
+            except (OSError, UnicodeDecodeError):
+                pass
+
+        decisions_file = latest / "decisions.jsonl"
+        if decisions_file.exists():
+            import json
+
+            lines: list[str] = []
+            try:
+                raw = decisions_file.read_text()
+            except (OSError, UnicodeDecodeError):
+                raw = ""
+            for raw_line in raw.splitlines():
+                if not raw_line.strip():
+                    continue
+                try:
+                    d = json.loads(raw_line)
+                except json.JSONDecodeError:
+                    continue
+                itr = d.get("iter", "?")
+                phase = d.get("phase", "?")
+                verdict = d.get("verdict_source", "")
+                reasoning = str(d.get("reasoning", ""))[:80]
+                lines.append(f"[iter {itr}] {phase} — {verdict}: {reasoning}")
+            if lines:
+                self.set_tab_body("decisions", "\n".join(lines))
 
     def action_switch(self, name: str) -> None:
         self.query_one("#context-tabs", TabbedContent).active = f"tab-{name}"
