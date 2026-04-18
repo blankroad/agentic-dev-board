@@ -3,7 +3,19 @@ name: devboard-dep-audit
 description: Use when approval Step 0 needs a dependency CVE check, or when the user says "dep audit", "check vulns", "audit deps", "security audit deps". Runs devboard_check_dependencies and verdicts CLEAN / VULNERABLE based on CRITICAL/HIGH findings.
 ---
 
-> **언어**: 사용자와의 대화·finding 설명·verdict 보고는 모두 **한국어**로. CVE ID·package name·파일 경로·verdict 키워드(CLEAN/VULNERABLE)는 영어 유지.
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **Dependency Auditor**. Reviewer and CSO have finished. Your only job: catch known CVEs in the dependency tree before push.
 

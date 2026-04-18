@@ -4,26 +4,38 @@ description: Final approval gate before git push + PR. Proactively invoke this s
 when_to_use: User signals readiness to push/merge/ship. Automatic after devboard-redteam SURVIVED (or after devboard-tdd full green + checklist verified if red-team was skipped). Voice triggers - "ship it", "land it", "open a PR", "push this up".
 ---
 
-> **언어**: 사용자와의 대화·diff 요약·checklist 보고·squash 정책 프롬프트는 모두 **한국어**로. PR title·PR body·commit message·branch 이름·`gh` CLI 출력은 영어 유지(외부 GitHub에 남는 것).
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **Approval Gate**. Loop converged → present to user → push on approval.
 
 ## Step 0 — Pre-approval Guard (MANDATORY before Step 1)
 
-진입 즉시 `devboard_load_decisions(project_root, task_id)`를 호출해 아래 조건을 검증:
+On entry, call `devboard_load_decisions(project_root, task_id)` and verify these conditions:
 
-1. **TDD 완료 확인** — `phase="reflect"` 또는 `phase="review_complete"` 항목이 존재하는가?
-   - 없으면 **거부**: "TDD가 완료되지 않았습니다. devboard-tdd를 먼저 실행하세요." → 스킬 종료
-2. **CSO 필요성 판단** — diff 또는 LockedPlan에 security-sensitive 키워드(auth, password, token, crypto, SQL, subprocess, eval, exec)가 포함되면 `phase="cso"` 항목 존재 확인.
-   - 없으면 **거부**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso를 먼저 실행하세요." → 스킬 종료
-3. **CSO verdict 확인** — `phase="cso"` 항목이 있으면 verdict가 `VULNERABLE`이 아닌지 확인.
-   - `VULNERABLE`이면 **거부**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → 스킬 종료
-4. **Dep audit 확인** — `devboard_check_dependencies(project_root)` 호출.
-   - `skipped_reason`이 있으면 통과 (감사 불가)
-   - `severity_counts.CRITICAL ≥ 1` 또는 `severity_counts.HIGH ≥ 1` → **거부**: "Dep audit VULNERABLE: CRITICAL={c}, HIGH={h}. devboard-dep-audit를 실행해서 세부 확인 후 업그레이드 필요." → 스킬 종료
-   - 그 외 → 통과
+1. **TDD complete check** — does a `phase="reflect"` or `phase="review_complete"` entry exist?
+   - If missing, **refuse**: "TDD가 완료되지 않았습니다. devboard-tdd를 먼저 실행하세요." → exit skill
+2. **CSO necessity check** — if the diff or LockedPlan contains security-sensitive keywords (auth, password, token, crypto, SQL, subprocess, eval, exec), verify a `phase="cso"` entry exists.
+   - If missing, **refuse**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso를 먼저 실행하세요." → exit skill
+3. **CSO verdict check** — if a `phase="cso"` entry exists, verify its verdict is not `VULNERABLE`.
+   - If `VULNERABLE`, **refuse**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → exit skill
+4. **Dep audit check** — call `devboard_check_dependencies(project_root)`.
+   - If `skipped_reason` is set → pass (audit unavailable)
+   - If `severity_counts.CRITICAL ≥ 1` or `severity_counts.HIGH ≥ 1` → **refuse**: "Dep audit VULNERABLE: CRITICAL={c}, HIGH={h}. devboard-dep-audit를 실행해서 세부 확인 후 업그레이드 필요." → exit skill
+   - Otherwise → pass
 
-네 조건 모두 통과하면 Step 1로 진행.
+If all four conditions pass, proceed to Step 1.
 
 ## Step 1 — Summarize for user
 
@@ -68,14 +80,14 @@ If N: task stays in `awaiting_approval` state. User can edit manually.
 
 ## Step 3.5 — Smoke gate (if integration_test_command present)
 
-진입 시점에 `devboard_load_plan`으로 `integration_test_command` 확인:
+At entry, check `integration_test_command` via `devboard_load_plan`:
 
-- 빈 문자열이면 이 단계 생략 ("No smoke test defined — skipping gate." 한 줄 출력)
-- 명령어가 있으면:
-  1. `devboard_check_command_safety(command)`로 안전 검사 먼저
-  2. Bash tool로 실행, exit code 확인
-  3. exit=0 → smoke PASS, Step 4로 진행
-  4. exit≠0 → smoke FAIL, push 거부, task는 `awaiting_approval` 유지, stderr 요약 출력
+- If empty string, skip this step (output one line: "No smoke test defined — skipping gate.")
+- If a command is present:
+  1. Call `devboard_check_command_safety(command)` first for safety
+  2. Run via Bash tool and check the exit code
+  3. exit=0 → smoke PASS, proceed to Step 4
+  4. exit≠0 → smoke FAIL, refuse push, task stays in `awaiting_approval`, output a stderr summary
 
 ## Step 4 — Push
 

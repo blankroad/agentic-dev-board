@@ -3,15 +3,27 @@ name: devboard-eng-review
 description: Use when gauntlet flags ENG_REVIEW_NEEDED (>8 new files or ≥2 new abstractions in a greenfield system). Validates gauntlet plan before TDD begins — reads arch/challenge/frame outputs and checks architecture coherence, test strategy, integration risks, and edge case coverage.
 ---
 
-> **언어**: 사용자와의 대화·결과 요약은 **한국어**로. 코드·파일 경로·verdict 출력은 영어 유지.
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **Engineering Reviewer** — a pre-TDD gate for complex new systems. Your job is to catch design problems in the plan before any code is written.
 
 ## Preamble (MANDATORY before Step 1)
 
-1. `devboard_list_goals(project_root)` → identify the active goal. 현재 goal이 없으면 에러: "No active goal. devboard-brainstorm 또는 devboard-gauntlet을 먼저 실행하세요."
-2. `devboard_load_plan(project_root, goal_id)` → plan이 없으면 에러: "Plan not locked yet. devboard-gauntlet을 먼저 완료하세요."
-3. gauntlet Finalize에서 전달된 `task_id`, `run_id`를 받아 scope에 저장. 만약 전달되지 않았다면 `devboard_list_runs(project_root)` → 최근 active run의 task_id/run_id 사용.
+1. `devboard_list_goals(project_root)` → identify the active goal. If no active goal, error out: "No active goal. devboard-brainstorm 또는 devboard-gauntlet을 먼저 실행하세요."
+2. `devboard_load_plan(project_root, goal_id)` → if plan is missing, error out: "Plan not locked yet. devboard-gauntlet을 먼저 완료하세요."
+3. Receive `task_id`, `run_id` passed from gauntlet Finalize and save to scope. If not passed, use `devboard_list_runs(project_root)` and take task_id/run_id from the most recent active run.
 
 Output: `Plan: {goal title} ({goal_id}) — {N} atomic steps, {M} critical files, task={task_id}`
 
@@ -28,35 +40,35 @@ Read the three gauntlet outputs via `Read` tool:
 
 ## Step 2 — Four Checks (run ALL before output)
 
-Run all four checks against the loaded plan. Do NOT ask questions between checks. 각 체크에 대해 PASS/FAIL과 증거(구체적 인용)를 기록.
+Run all four checks against the loaded plan. Do NOT ask questions between checks. For each check, record PASS/FAIL with evidence (concrete quotes).
 
 ### Check 1: Architecture Coherence
 
-- 각 Critical File의 purpose에 "and" / "," / "+" 같은 복수 책임 시그널이 없는가?
-- 한 파일이 3개 이상 역할을 담당하는 "god file"이 없는가?
-- Data Flow가 단방향인가? (A → B → C 형태, 순환 없음)
+- Does any Critical File's purpose contain multi-responsibility signals like "and" / "," / "+"?
+- Is there a "god file" responsible for 3+ roles?
+- Is the Data Flow unidirectional? (A → B → C, no cycles)
 
 ### Check 2: Test Strategy
 
-- 모든 atomic_step에 `test_file`과 `test_name`이 채워져 있는가?
-- 외부 의존성(DB, API, 네트워크, 파일 IO)이 있으면 mock 여부가 Test Strategy에 명시됐는가?
-- 단위 테스트로 커버 가능한 behavior가 "integration만"으로 밀려있지 않은가?
+- Does every atomic_step have `test_file` and `test_name` filled in?
+- For external dependencies (DB, API, network, file IO), is the mocking decision stated in Test Strategy?
+- Are behaviors that could be unit-tested being pushed into "integration only"?
 
 ### Check 3: Integration Risks
 
-- Critical Files 간 순환 의존성 의심 패턴 (A.purpose가 B 언급 + B.purpose가 A 언급) 없는가?
-- 새 abstractions(클래스/서비스)이 기존 코드베이스와 어떻게 연결되는지 arch.md에 명시됐는가?
-- out_of_scope_guard가 "건드리면 안 되는" 경계를 명확히 포함하는가?
+- Any suspected circular-dependency pattern between Critical Files (A.purpose mentions B + B.purpose mentions A)?
+- Is it stated in arch.md how new abstractions (classes/services) connect to the existing codebase?
+- Does out_of_scope_guard clearly enumerate the "do-not-touch" boundary?
 
 ### Check 4: Edge Case Coverage
 
-- challenge.md에 실패 모드가 ≥ 4개 있는가?
-- CRITICAL 레벨 항목 모두 mitigation이 제시됐는가?
-- `warrants replan? yes` 항목이 Decide JSON의 `known_failure_modes` 또는 `goal_checklist`에 반영됐는가?
+- Are there ≥ 4 failure modes in challenge.md?
+- Does every CRITICAL-level item have a mitigation?
+- Are `warrants replan? yes` items reflected in the Decide JSON's `known_failure_modes` or `goal_checklist`?
 
 ---
 
-## Step 3 — Output (항상 4개 체크 전부 표시)
+## Step 3 — Output (always show all 4 checks)
 
 ### Verdict 템플릿
 
@@ -71,20 +83,20 @@ Check 4 — Edge Case Coverage:     ✅ PASS | ❌ FAIL
 Overall: PASS | NEEDS REVISION
 ```
 
-실패 항목이 있으면 그 아래에 상세 섹션 추가:
+If any check fails, add a detail section below:
 
 ```
-### Details (FAIL 항목만)
+### Details (FAIL items only)
 
-❌ Check {N}: {한 줄 요약}
-   Evidence: {arch.md 또는 challenge.md 인용}
-   Suggestion: {구체적 수정안}
+❌ Check {N}: {one-line summary}
+   Evidence: {quote from arch.md or challenge.md}
+   Suggestion: {concrete fix}
    Gauntlet step to redo: arch | challenge | decide
 ```
 
-### 분기
+### Branching
 
-**Overall = PASS** → checkpoint + log_decision + Skill tool로 `devboard-tdd` 즉시 호출.
+**Overall = PASS** → checkpoint + log_decision + invoke `devboard-tdd` via Skill tool immediately.
 
 **Overall = NEEDS REVISION** → AskUserQuestion:
 ```
@@ -93,8 +105,8 @@ Engineering review에서 {N}개 항목이 수정을 권장합니다.
 [진행] — 이슈를 known_risk로 기록하고 TDD 시작
 ```
 
-- 수정 선택 → `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` 호출 후 Skill tool로 `devboard-gauntlet` 재실행. tdd 호출 금지.
-- 진행 선택 → 모든 FAIL 항목을 `devboard_log_decision`에 `known_risk`로 누적 기록 → Skill tool로 `devboard-tdd` 호출.
+- User picks revise → call `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` then invoke `devboard-gauntlet` via Skill tool. Do NOT call tdd.
+- User picks proceed → log every FAIL item to `devboard_log_decision` as `known_risk`, then invoke `devboard-tdd` via Skill tool.
 
 ---
 
@@ -104,17 +116,17 @@ Engineering review에서 {N}개 항목이 수정을 권장합니다.
 |---|---|
 | Preamble | `devboard_list_goals(project_root)` |
 | Preamble | `devboard_load_plan(project_root, goal_id)` |
-| Preamble (task_id 누락 시) | `devboard_list_runs(project_root)` |
-| Overall = PASS 직후 | `devboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "PASS", checks: {1: "PASS", 2: "PASS", 3: "PASS", 4: "PASS"}})` |
-| Overall = NEEDS REVISION 직후 | `devboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "NEEDS_REVISION", failed_checks: [...]})` |
-| 진행 선택 시 FAIL 항목마다 | `devboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="known_risk: {issue}", verdict_source="ENG_REVIEW")` |
-| 수정 선택 시 | `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` |
-| 최종 (PASS or 진행) | `devboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="{overall_verdict}", verdict_source="ENG_REVIEW")` |
+| Preamble (when task_id missing) | `devboard_list_runs(project_root)` |
+| Right after Overall = PASS | `devboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "PASS", checks: {1: "PASS", 2: "PASS", 3: "PASS", 4: "PASS"}})` |
+| Right after Overall = NEEDS REVISION | `devboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "NEEDS_REVISION", failed_checks: [...]})` |
+| For each FAIL item when user picks proceed | `devboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="known_risk: {issue}", verdict_source="ENG_REVIEW")` |
+| When user picks revise | `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` |
+| Final (PASS or proceed) | `devboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="{overall_verdict}", verdict_source="ENG_REVIEW")` |
 
 ## Handoff
 
-- PASS → Skill tool로 `devboard-tdd` 호출 (task_id, run_id를 args로 전달)
-- NEEDS REVISION + 수정 → Skill tool로 `devboard-gauntlet` 호출 (revision_target=<step>)
-- NEEDS REVISION + 진행 → Skill tool로 `devboard-tdd` 호출
+- PASS → invoke `devboard-tdd` via Skill tool (pass task_id, run_id in args)
+- NEEDS REVISION + revise → invoke `devboard-gauntlet` via Skill tool (revision_target=<step>)
+- NEEDS REVISION + proceed → invoke `devboard-tdd` via Skill tool
 
-eng-review가 tdd를 호출하는 **단일 책임**이다. gauntlet은 eng-review를 호출한 뒤 tdd를 직접 호출하지 않음.
+eng-review owns the **single responsibility** of invoking tdd. After gauntlet hands off to eng-review, gauntlet does NOT call tdd directly.

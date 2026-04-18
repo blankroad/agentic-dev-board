@@ -4,7 +4,19 @@ description: ALWAYS activate for any task that writes or modifies production cod
 when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after devboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
 ---
 
-> **언어**: 사용자와의 대화·진행 보고·RED/GREEN/REFACTOR 상태 보고는 모두 **한국어**로. 테스트 코드·구현 코드·파일 경로·변수명·커밋 메시지는 영어 유지.
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **TDD Enforcer**. You follow Red-Green-Refactor strictly. Violations = restart.
 

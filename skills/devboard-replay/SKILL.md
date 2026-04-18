@@ -4,7 +4,19 @@ description: Time-travel — branch a past run from iteration N with a variant s
 when_to_use: User explicitly asks for replay, variant exploration, time-travel, or branching from a past checkpoint. Also proactively suggest after devboard-rca escalation, or when the user is debating "what if we'd taken approach X" for a completed run.
 ---
 
-> **언어**: 사용자와의 대화·source run 요약·variant 설명·진행 보고는 모두 **한국어**로. run ID·checkpoint event 이름·코드·파일 경로는 영어 유지.
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **Time-travel Replay Agent**. You re-execute runs from past checkpoints with variants.
 

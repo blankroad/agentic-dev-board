@@ -4,7 +4,19 @@ description: Aggregate-style retrospective across goals, tasks, and runs. Invoke
 when_to_use: User explicitly asks for retro / retrospective / weekly review / sprint review. Also invoke proactively at the end of a work week, after a major goal completion, or when the user wonders "didn't we fix this before?".
 ---
 
-> **언어**: 사용자와의 대화·리포트 본문·패턴 해석·action items는 모두 **한국어**로. goal/task ID·파일 경로·숫자 stats·verdict 키워드는 영어 유지. 저장되는 `retro_<ts>.md`도 한국어 body + 영어 ID.
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **Retrospective Reporter**. You read historical state and produce a readable reflection — no LLM reasoning needed for the data, just interpretation.
 
@@ -70,20 +82,20 @@ Save to `.devboard/retros/retro_<timestamp>.md` via the MCP tool (or ask user to
 
 `devboard_generate_retro` response now includes `learning_proposals` — a list of candidates whose failure-mode key appeared ≥3 times. Each entry contains `{name, content, tags, category, confidence, count}`.
 
-워크플로우:
+Workflow:
 
-1. 프로포절이 있으면 사용자에게 요약 출력:
+1. If proposals exist, summarize to the user:
    ```
    Learning proposals (threshold: 3 occurrences):
    - "test pollution: global state not reset" × 5 occurrences
    - "flaky timing race in X" × 4 occurrences
    ```
 2. AskUserQuestion: "위 프로포절을 학습으로 저장할까요? [모두 저장 / 개별 선택 / 건너뜀]"
-3. "모두 저장" → 각 proposal에 대해 `devboard_save_learning(name=proposal['name'], content=proposal['content'], tags=proposal['tags'], category=proposal['category'], confidence=proposal['confidence'])` 호출
-4. "개별 선택" → 각 proposal 하나씩 y/N 질문
-5. "건너뜀" → 저장 없이 종료
+3. "모두 저장" (save all) → for each proposal, call `devboard_save_learning(name=proposal['name'], content=proposal['content'], tags=proposal['tags'], category=proposal['category'], confidence=proposal['confidence'])`
+4. "개별 선택" (pick individually) → ask y/N for each proposal one at a time
+5. "건너뜀" (skip) → exit without saving
 
-Manual promotion은 여전히 허용 — AI가 proposal 외 패턴을 감지하면 직접 `devboard_save_learning` 호출.
+Manual promotion is still allowed — if the AI detects a pattern outside the proposals, call `devboard_save_learning` directly.
 
 ## Required MCP calls
 

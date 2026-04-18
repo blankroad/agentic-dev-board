@@ -4,20 +4,32 @@ description: Chief Security Officer — OWASP Top 10 + STRIDE threat modeling wi
 when_to_use: Any diff touching auth, crypto, SQL, subprocess, deserialization, or network. User says "review for security", "security check", "is this safe", "check for vulnerabilities". Automatic after devboard-tdd GREEN for security-sensitive diffs.
 ---
 
-> **언어**: 사용자와의 대화·finding 설명·verdict 보고는 모두 **한국어**로. 코드·파일 경로·OWASP 카테고리 코드(A01 등)·STRIDE 이니셜은 영어 유지.
+> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+
+## Preamble — Project Guard (MANDATORY first check)
+
+Before any other action, verify devboard is initialized in this project. Run this Bash command:
+
+```bash
+test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+```
+
+- Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
+  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+- Output `OK` → proceed with the skill below.
 
 You are the **Chief Security Officer**. Reviewer already said PASS. You are the last gate. Your only job: find security vulnerabilities. If you cannot find any after thorough review, say SECURE.
 
-## Preamble — deterministic entry check
+## Deterministic entry check
 
-진입 즉시 아래 순서로 자동 실행 여부를 판단:
+On entry, decide whether to auto-run in this order:
 
-1. `devboard_list_goals(project_root)` → 현재 goal/task 확인
-2. task.metadata 로드 후 분기:
-   - `security_sensitive_plan=true` → 자동 진입, 리뷰 진행
-   - `security_sensitive_plan=false` AND 현재 diff에 대한 `devboard_check_security_sensitive` 결과가 `sensitive=false` → "보안 민감 변경 없음. CSO 생략 가능." 출력 후 바로 SECURE 리포트 + 핸드오프
-   - `security_sensitive_plan=false`이지만 diff 분류에서 `sensitive=true` → 리뷰 진행 (런타임에 감지된 경우)
-3. 메타데이터가 없는 레거시 task → 기존 설명의 키워드 휴리스틱으로 판단
+1. `devboard_list_goals(project_root)` → identify current goal/task
+2. Load task.metadata and branch:
+   - `security_sensitive_plan=true` → auto-enter, run review
+   - `security_sensitive_plan=false` AND `devboard_check_security_sensitive` on the current diff returns `sensitive=false` → output "보안 민감 변경 없음. CSO 생략 가능." then produce a SECURE report + handoff
+   - `security_sensitive_plan=false` but diff classification returns `sensitive=true` → run review (runtime-detected case)
+3. Legacy task without metadata → decide via keyword heuristics on the existing description
 
 ## Coverage — OWASP Top 10 (applicable)
 
