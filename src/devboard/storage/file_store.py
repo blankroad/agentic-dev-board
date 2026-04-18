@@ -15,6 +15,17 @@ from devboard.models import BoardState, Goal, GoalStatus, LockedPlan, Task, Task
 from devboard.storage.base import Repository
 
 
+def _sanitize_id(id_: str) -> str:
+    """Reject path traversal attempts in user-supplied IDs.
+
+    Raises ValueError if the ID contains '..' segments or path separators.
+    Returns the ID unchanged if safe.
+    """
+    if ".." in Path(id_).parts or "/" in id_ or "\\" in id_:
+        raise ValueError(f"Unsafe id: {id_!r}")
+    return id_
+
+
 def atomic_write(path: Path, content: str, encoding: str = "utf-8") -> None:
     """Write `content` to `path` atomically (temp file + rename).
 
@@ -69,10 +80,10 @@ class FileStore(Repository):
         self._devboard = root / ".devboard"
 
     def _goals_dir(self, goal_id: str) -> Path:
-        return self._devboard / "goals" / goal_id
+        return self._devboard / "goals" / _sanitize_id(goal_id)
 
     def _tasks_dir(self, goal_id: str, task_id: str) -> Path:
-        return self._goals_dir(goal_id) / "tasks" / task_id
+        return self._goals_dir(goal_id) / "tasks" / _sanitize_id(task_id)
 
     def _runs_dir(self) -> Path:
         return self._devboard / "runs"
@@ -278,6 +289,54 @@ max_iterations: {plan.max_iterations}
         d.mkdir(parents=True, exist_ok=True)
         with open(d / f"{step_name}.md", "w") as f:
             f.write(content)
+
+    # ── Brainstorm ─────────────────────────────────────────────────────────
+
+    def save_brainstorm(
+        self,
+        goal_id: str,
+        premises: list[str],
+        risks: list[str],
+        alternatives: list[str],
+        existing_code_notes: str,
+    ) -> None:
+        now = datetime.now(timezone.utc)
+        ts = now.isoformat()
+        ts_slug = now.strftime("%Y%m%d_%H%M%S_%f")
+        premises_lines = "\n".join(f"- {p}" for p in premises)
+        risks_lines = "\n".join(f"- {r}" for r in risks)
+        alts_lines = "\n".join(f"- {a}" for a in alternatives)
+        content = (
+            f"---\ngoal_id: {goal_id}\nts: {ts}\n---\n"
+            f"## Premises\n{premises_lines}\n\n"
+            f"## Risks\n{risks_lines}\n\n"
+            f"## Alternatives\n{alts_lines}\n\n"
+            f"## Existing Code Notes\n{existing_code_notes}\n"
+        )
+        d = self._goals_dir(goal_id)
+        atomic_write(d / f"brainstorm-{ts_slug}.md", content)
+        atomic_write(d / "brainstorm.md", content)
+
+    # ── Plan Review ────────────────────────────────────────────────────────
+
+    def save_plan_review(
+        self,
+        goal_id: str,
+        approved: bool,
+        revision_target: str | None = None,
+    ) -> None:
+        status = "approved" if approved else "revision_pending"
+        payload: dict = {"status": status, "ts": datetime.now(timezone.utc).isoformat()}
+        if revision_target is not None:
+            payload["revision_target"] = revision_target
+        d = self._goals_dir(goal_id)
+        atomic_write(d / "plan_review.json", json.dumps(payload, indent=2))
+
+    def load_plan_review(self, goal_id: str) -> dict | None:
+        path = self._goals_dir(goal_id) / "plan_review.json"
+        if not path.exists():
+            return None
+        return json.loads(path.read_text())
 
     # ── Helpers ────────────────────────────────────────────────────────────
 

@@ -37,6 +37,7 @@ def test_mcp_server_lists_tools():
         "devboard_apply_squash_policy", "devboard_push_pr",
         "devboard_save_learning", "devboard_search_learnings", "devboard_relevant_learnings",
         "devboard_generate_retro", "devboard_list_runs", "devboard_replay",
+        "devboard_save_brainstorm", "devboard_approve_plan",
     }
     missing = expected_minimum - names
     assert not missing, f"MCP tools missing: {missing}"
@@ -110,6 +111,10 @@ def test_mcp_lock_plan_computes_hash(tmp_path: Path):
         "title": "calc", "description": "Build a calculator",
     })
     goal_id = _json_payload(add)["goal_id"]
+
+    _dispatch_sync("devboard_approve_plan", {
+        "project_root": str(tmp_path), "goal_id": goal_id, "approved": True,
+    })
 
     result = _dispatch_sync("devboard_lock_plan", {
         "project_root": str(tmp_path),
@@ -407,3 +412,145 @@ def test_all_skills_have_required_frontmatter():
         assert post.metadata.get("name"), f"{sd.name} missing 'name'"
         assert post.metadata.get("description"), f"{sd.name} missing 'description'"
         assert len(post.content) > 200, f"{sd.name} body too short"
+
+
+# ── devboard_save_brainstorm ──────────────────────────────────────────────────
+
+def test_mcp_save_brainstorm_happy_path(tmp_path: Path):
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path),
+        "title": "Brainstorm goal",
+    })
+    goal_id = _json_payload(add)["goal_id"]
+
+    result = _dispatch_sync("devboard_save_brainstorm", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "premises": ["Users need fast search"],
+        "risks": ["Over-engineering"],
+        "alternatives": ["Use existing lib"],
+        "existing_code_notes": "see search.py",
+    })
+    payload = _json_payload(result)
+    assert payload.get("status") == "saved"
+
+    bs_path = tmp_path / ".devboard" / "goals" / goal_id / "brainstorm.md"
+    assert bs_path.exists()
+    assert "Users need fast search" in bs_path.read_text()
+
+
+def test_mcp_save_brainstorm_goal_not_found(tmp_path: Path):
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    result = _dispatch_sync("devboard_save_brainstorm", {
+        "project_root": str(tmp_path),
+        "goal_id": "g_nonexistent",
+        "premises": [],
+        "risks": [],
+        "alternatives": [],
+        "existing_code_notes": "",
+    })
+    payload = _json_payload(result)
+    assert "error" in payload
+
+
+# ── devboard_approve_plan ─────────────────────────────────────────────────────
+
+def test_mcp_approve_plan_approved_true(tmp_path: Path):
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path),
+        "title": "Approval goal",
+    })
+    goal_id = _json_payload(add)["goal_id"]
+
+    result = _dispatch_sync("devboard_approve_plan", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "approved": True,
+    })
+    payload = _json_payload(result)
+    assert payload["status"] == "approved"
+
+    review_path = tmp_path / ".devboard" / "goals" / goal_id / "plan_review.json"
+    import json as _json
+    data = _json.loads(review_path.read_text())
+    assert data["status"] == "approved"
+
+
+def test_mcp_approve_plan_false_without_target_errors(tmp_path: Path):
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path),
+        "title": "Approval goal 2",
+    })
+    goal_id = _json_payload(add)["goal_id"]
+
+    result = _dispatch_sync("devboard_approve_plan", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "approved": False,
+    })
+    payload = _json_payload(result)
+    assert "error" in payload
+
+
+# ── devboard_lock_plan approval gate ─────────────────────────────────────────
+
+_DECIDE_JSON = {
+    "problem": "Build a calculator",
+    "non_goals": [],
+    "scope_decision": "HOLD",
+    "architecture": "Single calculator.py",
+    "known_failure_modes": [],
+    "goal_checklist": ["add works"],
+    "out_of_scope_guard": [],
+    "atomic_steps": [
+        {"id": "s_001", "behavior": "add(1,2)==3",
+         "test_file": "tests/test_calc.py", "test_name": "test_add",
+         "impl_file": "calc.py"},
+    ],
+    "token_ceiling": 100_000,
+    "max_iterations": 3,
+}
+
+
+def test_mcp_lock_plan_without_approval_errors(tmp_path: Path):
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path),
+        "title": "Gate test goal",
+    })
+    goal_id = _json_payload(add)["goal_id"]
+
+    result = _dispatch_sync("devboard_lock_plan", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "decide_json": _DECIDE_JSON,
+    })
+    payload = _json_payload(result)
+    assert "error" in payload
+    assert "approval" in payload["error"].lower()
+
+
+def test_mcp_lock_plan_with_approval_succeeds(tmp_path: Path):
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path),
+        "title": "Gate approved goal",
+    })
+    goal_id = _json_payload(add)["goal_id"]
+
+    _dispatch_sync("devboard_approve_plan", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "approved": True,
+    })
+
+    result = _dispatch_sync("devboard_lock_plan", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "decide_json": _DECIDE_JSON,
+    })
+    payload = _json_payload(result)
+    assert payload.get("locked_hash")

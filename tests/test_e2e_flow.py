@@ -81,7 +81,8 @@ def test_e2e_full_flow(tmp_path: Path):
     goal_id = r["goal_id"]
     assert goal_id
 
-    # Step 3 — lock plan (gauntlet ouput)
+    # Step 3 — approve plan then lock
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     r = _mcp("devboard_lock_plan", project_root=root,
              goal_id=goal_id, decide_json=_decide_json("Calculator"))
     locked_hash = r["locked_hash"]
@@ -203,6 +204,7 @@ def test_e2e_replay_flow(tmp_path: Path):
     _mcp("devboard_init", project_root=root)
     r = _mcp("devboard_add_goal", project_root=root, title="T", description="x")
     goal_id = r["goal_id"]
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json=_decide_json())
     r = _mcp("devboard_start_task", project_root=root, goal_id=goal_id)
     task_id, run_id = r["task_id"], r["run_id"]
@@ -237,6 +239,7 @@ def test_e2e_rca_escalation(tmp_path: Path):
     _mcp("devboard_init", project_root=root)
     r = _mcp("devboard_add_goal", project_root=root, title="Stuck", description="y")
     goal_id = r["goal_id"]
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json=_decide_json())
     r = _mcp("devboard_start_task", project_root=root, goal_id=goal_id)
     task_id, run_id = r["task_id"], r["run_id"]
@@ -291,6 +294,7 @@ def test_e2e_watch_sees_run(tmp_path: Path):
     _mcp("devboard_init", project_root=root)
     r = _mcp("devboard_add_goal", project_root=root, title="W", description="x")
     goal_id = r["goal_id"]
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json=_decide_json())
     r = _mcp("devboard_start_task", project_root=root, goal_id=goal_id)
     run_id = r["run_id"]

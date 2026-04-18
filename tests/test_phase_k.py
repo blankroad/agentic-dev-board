@@ -163,11 +163,12 @@ def test_detect_runner_package_json_priority(tmp_path: Path):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _lock_a_plan(tmp_path: Path) -> str:
-    """Helper — init + add goal + lock plan, return goal_id."""
+    """Helper — init + add goal + approve + lock plan, return goal_id."""
     root = str(tmp_path)
     _mcp("devboard_init", project_root=root)
     r = _mcp("devboard_add_goal", project_root=root, title="Calc", description="calc")
     goal_id = r["goal_id"]
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
         "problem": "calc", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
@@ -206,6 +207,7 @@ def test_resume_run_mid_flight(tmp_path: Path):
     _mcp("devboard_init", project_root=root)
     r = _mcp("devboard_add_goal", project_root=root, title="x", description="x")
     goal_id = r["goal_id"]
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
@@ -232,6 +234,7 @@ def test_resume_run_after_converged(tmp_path: Path):
     _mcp("devboard_init", project_root=root)
     r = _mcp("devboard_add_goal", project_root=root, title="x", description="x")
     goal_id = r["goal_id"]
+    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
     _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],

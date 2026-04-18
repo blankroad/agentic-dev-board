@@ -433,6 +433,37 @@ async def list_tools() -> list[Tool]:
                 "required": ["project_root", "source_run_id", "from_iteration"],
             },
         ),
+        Tool(
+            name="devboard_save_brainstorm",
+            description="Save brainstorm output for a goal. Writes brainstorm.md (latest alias) and a versioned brainstorm-{ts}.md. Returns error if goal not found.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                    "premises": {"type": "array", "items": {"type": "string"}},
+                    "risks": {"type": "array", "items": {"type": "string"}},
+                    "alternatives": {"type": "array", "items": {"type": "string"}},
+                    "existing_code_notes": {"type": "string"},
+                },
+                "required": ["project_root", "goal_id", "premises", "risks", "alternatives", "existing_code_notes"],
+            },
+        ),
+        Tool(
+            name="devboard_approve_plan",
+            description="Record plan review decision. approved=true → status=approved. approved=false requires revision_target (problem|scope|arch|challenge). Returns error if goal not found or approved=false without revision_target.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                    "approved": {"type": "boolean"},
+                    "revision_target": {"type": "string", "enum": ["problem", "scope", "arch", "challenge"]},
+                    "notes": {"type": "string"},
+                },
+                "required": ["project_root", "goal_id", "approved"],
+            },
+        ),
     ]
 
 
@@ -673,6 +704,9 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
     # ── plans ─────────────────────────────────────────────────────────────────
     if name == "devboard_lock_plan":
         store = _store(args["project_root"])
+        review = store.load_plan_review(args["goal_id"])
+        if review is None or review.get("status") != "approved":
+            return _text({"error": "plan approval required before locking. Call devboard_approve_plan first."})
         plan = build_locked_plan(args["goal_id"], args["decide_json"])
         store.save_locked_plan(plan)
         plan_path = store._goals_dir(args["goal_id"]) / "plan.md"
@@ -922,6 +956,33 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "goal_id": goal_id,
             "initial_state": initial_state,
         })
+
+    if name == "devboard_save_brainstorm":
+        store = _store(args["project_root"])
+        goal_id = args["goal_id"]
+        if store.load_goal(goal_id) is None:
+            return _text({"error": f"goal not found: {goal_id}"})
+        store.save_brainstorm(
+            goal_id=goal_id,
+            premises=args["premises"],
+            risks=args["risks"],
+            alternatives=args["alternatives"],
+            existing_code_notes=args["existing_code_notes"],
+        )
+        return _text({"status": "saved", "goal_id": goal_id})
+
+    if name == "devboard_approve_plan":
+        store = _store(args["project_root"])
+        goal_id = args["goal_id"]
+        if store.load_goal(goal_id) is None:
+            return _text({"error": f"goal not found: {goal_id}"})
+        approved = args["approved"]
+        revision_target = args.get("revision_target")
+        if not approved and not revision_target:
+            return _text({"error": "revision_target required when approved=false"})
+        store.save_plan_review(goal_id=goal_id, approved=approved, revision_target=revision_target)
+        status = "approved" if approved else "revision_pending"
+        return _text({"status": status, "goal_id": goal_id})
 
     return _text({"error": f"unknown tool: {name}"})
 

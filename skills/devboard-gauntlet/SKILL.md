@@ -101,7 +101,11 @@ Each atomic_step = ONE red-green-refactor cycle. Decompose the goal_checklist in
 After Decide produces the JSON:
 
 1. Resolve any `borderline_decisions` with the user (one question at a time, offer A/B + your recommendation)
-2. Call the MCP tool `devboard_lock_plan(goal_id, decide_json, project_root)` which:
+2. Present the plan to the user for review. Ask: "Plan ready. Approve to lock? (yes / no + which step to revise: problem|scope|arch|challenge)"
+3. If approved: call `devboard_approve_plan(project_root, goal_id, approved=True)`
+4. If revision needed: call `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)`, then re-run from that step
+5. Once approved, call `devboard_lock_plan(goal_id, decide_json, project_root)` which:
+   - Verifies `plan_review.json` status=approved (returns error if missing or revision_pending)
    - Computes SHA256 hash of the locked fields
    - Writes `.devboard/goals/<goal_id>/plan.md` (human-readable) and `plan.json` (machine-readable)
    - Returns the locked_hash
@@ -114,7 +118,8 @@ You MUST call these in order. Missing a call leaves `.devboard/` incomplete and 
 
 | When | Tool | Purpose |
 |---|---|---|
-| After Decide step produces JSON | `devboard_lock_plan(project_root, goal_id, decide_json)` | Computes SHA256, writes plan.md + plan.json |
+| After user reviews Decide output | `devboard_approve_plan(project_root, goal_id, approved, revision_target?)` | Record plan review decision |
+| After approval confirmed | `devboard_lock_plan(project_root, goal_id, decide_json)` | Computes SHA256, writes plan.md + plan.json |
 | Right after lock | `devboard_start_task(project_root, goal_id)` | Creates Task + starts run. Returns `{task_id, run_id}` — SAVE BOTH. |
 | After lock + start_task | `devboard_checkpoint(project_root, run_id, "gauntlet_complete", {...})` | Record Gauntlet completion with locked_hash + atomic_steps count |
 

@@ -8,6 +8,9 @@ from devboard.tools.base import ToolCall
 
 TEST_DIR_MARKERS = ("test_", "tests/", "_test.py", "/test")
 
+# Claude Code uses "Write"/"Edit"; legacy LangGraph agent used "fs_write"
+_WRITE_TOOL_NAMES = {"Write", "Edit", "fs_write"}
+
 
 @dataclass
 class IronLawVerdict:
@@ -23,11 +26,17 @@ class IronLawVerdict:
             self.test_writes = []
 
 
+def _extract_path(tc: ToolCall) -> str:
+    # "Write"/"Edit" use file_path; legacy "fs_write" used path
+    return str(tc.tool_input.get("file_path") or tc.tool_input.get("path", ""))
+
+
 def check_iron_law(tool_calls: list[ToolCall]) -> IronLawVerdict:
     """Detect TDD Iron Law violations in an executor's tool call history.
 
-    Violation: fs_write to non-test file WITHOUT a preceding fs_write to a test file
-    in the same execution.
+    Violation: write to non-test file WITHOUT a preceding write to a test file
+    in the same execution. Handles Claude Code tool names (Write, Edit) and
+    legacy fs_write.
 
     Allowed: writes to test files alone, or test writes followed by impl writes.
     """
@@ -36,9 +45,9 @@ def check_iron_law(tool_calls: list[ToolCall]) -> IronLawVerdict:
     test_seen_before_impl = False
 
     for tc in tool_calls:
-        if tc.tool_name != "fs_write":
+        if tc.tool_name not in _WRITE_TOOL_NAMES:
             continue
-        path = str(tc.tool_input.get("path", ""))
+        path = _extract_path(tc)
         if _is_test_path(path):
             test_writes.append(path)
             if not impl_writes:

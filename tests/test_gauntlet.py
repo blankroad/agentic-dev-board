@@ -165,6 +165,24 @@ def test_locked_plan_hash_deterministic():
     assert plan1.locked_hash == plan2.locked_hash
 
 
+def test_locked_plan_hash_changes_when_atomic_steps_change():
+    """atomic_steps mutation must invalidate the stored hash."""
+    parsed = parse_decide_output(DECIDE_OUTPUT)
+    parsed.pop("borderline_decisions", None)
+    plan = build_locked_plan("g_001", dict(parsed))
+    original_hash = plan.compute_hash()
+
+    # Mutate an atomic step and recompute
+    if plan.atomic_steps:
+        plan.atomic_steps[0].behavior = "MUTATED_BY_TEST"
+    else:
+        from devboard.models import AtomicStep
+        plan.atomic_steps = [AtomicStep(id="s_mut", behavior="injected", test_file="tests/t.py", test_name="t")]
+
+    new_hash = plan.compute_hash()
+    assert original_hash != new_hash, "Hash must differ after atomic_steps mutation"
+
+
 def test_max_iterations_clamped():
     data = json.loads(DECIDE_OUTPUT)
     data["max_iterations"] = 50

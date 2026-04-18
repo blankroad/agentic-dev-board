@@ -141,6 +141,10 @@ class LockedPlan(BaseModel):
                 "scope_decision": self.scope_decision,
                 "architecture": self.architecture,
                 "goal_checklist": self.goal_checklist,
+                "atomic_steps": [
+                    {"id": s.id, "behavior": s.behavior, "test_file": s.test_file, "test_name": s.test_name}
+                    for s in self.atomic_steps
+                ],
             },
             sort_keys=True,
         )

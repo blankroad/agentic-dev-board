@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from devboard.storage.file_store import _sanitize_id
+
 from devboard.models import BoardState, Goal, GoalStatus, LockedPlan, Task, TaskStatus, Iteration, ReviewVerdict
 from devboard.storage.file_store import FileStore
 
@@ -234,3 +236,89 @@ def test_run_events(store: FileStore) -> None:
     assert len(events) == 2
     assert events[0]["node"] == "plan"
     assert events[1]["node"] == "impl"
+
+
+# ── _sanitize_id ──────────────────────────────────────────────────────────────
+
+def test_sanitize_id_valid_passes_through():
+    assert _sanitize_id("g_abc") == "g_abc"
+
+
+def test_sanitize_id_traversal_raises():
+    with pytest.raises(ValueError):
+        _sanitize_id("../../etc")
+
+
+def test_sanitize_id_existing_goal_id_format():
+    """g_{date}_{time}_{hex} format must pass — existing .devboard dirs use this."""
+    assert _sanitize_id("g_20260418_014050_0ecfaa") == "g_20260418_014050_0ecfaa"
+
+
+# ── save_brainstorm ───────────────────────────────────────────────────────────
+
+def test_save_brainstorm_writes_correct_format(store: FileStore) -> None:
+    goal = Goal(title="Brainstorm goal")
+    store.save_goal(goal)
+
+    store.save_brainstorm(
+        goal_id=goal.id,
+        premises=["Users need X", "Current system lacks Y"],
+        risks=["Scope creep", "Breaking change"],
+        alternatives=["Option A", "Option B"],
+        existing_code_notes="See file_store.py:save_goal",
+    )
+
+    bs_path = store._goals_dir(goal.id) / "brainstorm.md"
+    assert bs_path.exists()
+    content = bs_path.read_text()
+
+    assert f"goal_id: {goal.id}" in content
+    assert "## Premises" in content
+    assert "- Users need X" in content
+    assert "- Scope creep" in content
+    assert "## Risks" in content
+    assert "## Alternatives" in content
+    assert "- Option A" in content
+    assert "## Existing Code Notes" in content
+    assert "See file_store.py:save_goal" in content
+
+
+# ── save_plan_review / load_plan_review ───────────────────────────────────────
+
+def test_save_plan_review_approved(store: FileStore) -> None:
+    goal = Goal(title="Plan review goal")
+    store.save_goal(goal)
+
+    store.save_plan_review(goal_id=goal.id, approved=True)
+
+    review_path = store._goals_dir(goal.id) / "plan_review.json"
+    assert review_path.exists()
+    data = json.loads(review_path.read_text())
+    assert data["status"] == "approved"
+    assert "ts" in data
+
+
+def test_load_plan_review_returns_none_when_missing(store: FileStore) -> None:
+    goal = Goal(title="No review goal")
+    store.save_goal(goal)
+    assert store.load_plan_review(goal.id) is None
+
+
+def test_save_brainstorm_creates_versioned_file(store: FileStore) -> None:
+    goal = Goal(title="Versioned brainstorm")
+    store.save_goal(goal)
+
+    store.save_brainstorm(
+        goal_id=goal.id,
+        premises=["p1"],
+        risks=["r1"],
+        alternatives=["a1"],
+        existing_code_notes="notes",
+    )
+
+    d = store._goals_dir(goal.id)
+    versioned = list(d.glob("brainstorm-*.md"))
+    assert len(versioned) == 1
+    content = versioned[0].read_text()
+    assert "goal_id:" in content
+    assert "## Premises" in content
