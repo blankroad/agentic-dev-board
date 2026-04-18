@@ -707,6 +707,10 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         review = store.load_plan_review(args["goal_id"])
         if review is None or review.get("status") != "approved":
             return _text({"error": "plan approval required before locking. Call devboard_approve_plan first."})
+        brainstorm_path = store._goals_dir(args["goal_id"]) / "brainstorm.md"
+        warnings: list[str] = []
+        if not brainstorm_path.exists():
+            warnings.append("brainstorm not found — consider running devboard-brainstorm first")
         plan = build_locked_plan(args["goal_id"], args["decide_json"])
         store.save_locked_plan(plan)
         plan_path = store._goals_dir(args["goal_id"]) / "plan.md"
@@ -715,6 +719,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "plan_path": str(plan_path),
             "goal_checklist_count": len(plan.goal_checklist),
             "atomic_steps_count": len(plan.atomic_steps),
+            "warnings": warnings,
         })
 
     if name == "devboard_load_plan":
