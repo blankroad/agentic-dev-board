@@ -6,7 +6,7 @@ import pytest
 
 from devboard.models import BoardState, Goal, GoalStatus
 from devboard.storage.file_store import FileStore
-from devboard.tui.app import DevBoardApp
+from devboard.tui.app_legacy import DevBoardApp
 from devboard.tui.gauntlet_view import GauntletView
 
 
