@@ -40,6 +40,8 @@ class DevBoardApp(App):
     CSS = """
     Screen { layout: vertical; }
     #main-row { height: 1fr; }
+    #live-stream { height: 3; border-top: solid $primary-darken-3; }
+    #live-stream.expanded { height: 18; }
     #command-line { dock: bottom; height: 1; }
     """
 
@@ -53,6 +55,7 @@ class DevBoardApp(App):
         Binding("5", "switch_tab('plan')", show=False),
         Binding("right_square_bracket", "cycle_tab(1)", show=False),
         Binding("left_square_bracket", "cycle_tab(-1)", show=False),
+        Binding("backslash", "toggle_livestream", "Toggle live stream"),
         Binding("question_mark", "help", "Help"),
     ]
 
@@ -86,8 +89,8 @@ class DevBoardApp(App):
         yield HealthBar(id="health-bar")
         with Horizontal(id="main-row"):
             yield ResourcesView(id="resources")
-            yield LiveStreamView(id="live-stream")
             yield ContextViewer(id="context-viewer")
+        yield LiveStreamView(id="live-stream")
         yield CommandLine(id="command-line", placeholder=":")
         yield Footer()
 
@@ -146,6 +149,9 @@ class DevBoardApp(App):
 
     def action_cycle_tab(self, step: int) -> None:
         self.query_one("#context-viewer", ContextViewer).action_cycle(step)
+
+    def action_toggle_livestream(self) -> None:
+        self.query_one("#live-stream", LiveStreamView).toggle_class("expanded")
 
     def action_help(self) -> None:
         from devboard.tui.help_modal import HelpModal

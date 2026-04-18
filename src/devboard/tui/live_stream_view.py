@@ -18,8 +18,8 @@ class LiveStreamView(Widget):
 
     DEFAULT_CSS = """
     LiveStreamView {
-        width: 45%;
-        padding: 1;
+        padding: 0 1;
+        overflow-y: auto;
     }
     """
 
@@ -30,12 +30,16 @@ class LiveStreamView(Widget):
         body = self.query_one("#live-stream-body", Static)
         body.update(escape(message))
 
+    _MAX_LINES = 100
+
     def append_line(self, text: str, color: str | None = None) -> None:
         body = self.query_one("#live-stream-body", Static)
         safe = escape(text)
-        if color:
-            rendered = f"[{color}]{safe}[/]"
-        else:
-            rendered = safe
+        rendered = f"[{color}]{safe}[/]" if color else safe
         current = str(body.content or "")
-        body.update(f"{current}\n{rendered}")
+        # Newest first — in compact (3-line) mode this means the user
+        # always sees the most recent event without scrolling. Cap at
+        # _MAX_LINES so the Static never grows without bound.
+        combined = f"{rendered}\n{current}" if current else rendered
+        lines = combined.split("\n")[: self._MAX_LINES]
+        body.update("\n".join(lines))

@@ -24,7 +24,7 @@ class ContextViewer(Widget):
 
     DEFAULT_CSS = """
     ContextViewer {
-        width: 35%;
+        width: 80%;
         border-left: solid $primary-darken-3;
     }
     ContextViewer TabbedContent {
@@ -79,4 +79,9 @@ class ContextViewer(Widget):
 
     def set_tab_body(self, name: str, content: str) -> None:
         body = self.query_one(f"#tab-{name}-body", Static)
-        body.update(content)
+        if name in ("plan", "gauntlet"):
+            from rich.markdown import Markdown
+
+            body.update(Markdown(content))
+        else:
+            body.update(content)

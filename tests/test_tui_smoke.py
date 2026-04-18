@@ -170,6 +170,125 @@ async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_goals_list_prefix_reflects_task_status(tmp_path: Path) -> None:
+    """Goal.status stays 'active' in state.json even after its tasks finish.
+    The goals list must show derived status (from task files) so a pushed
+    goal is visually distinct from an in-progress one."""
+    import json
+
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    store = FileStore(tmp_path)
+    (tmp_path / ".devboard").mkdir()
+    board = BoardState()
+    board.goals.append(Goal(id="g_done", title="already-shipped", status=GoalStatus.active))
+    board.goals.append(Goal(id="g_wip", title="still-in-progress", status=GoalStatus.active))
+    store.save_board(board)
+
+    # g_done has a pushed task on disk — goal should visually show "done"
+    done_task = tmp_path / ".devboard" / "goals" / "g_done" / "tasks" / "t_1"
+    done_task.mkdir(parents=True)
+    (done_task / "task.json").write_text(json.dumps({"id": "t_1", "status": "pushed"}))
+
+    # g_wip has an in_progress task
+    wip_task = tmp_path / ".devboard" / "goals" / "g_wip" / "tasks" / "t_2"
+    wip_task.mkdir(parents=True)
+    (wip_task / "task.json").write_text(json.dumps({"id": "t_2", "status": "in_progress"}))
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        goals_list = app.query_one("#resources-goals")
+        labels = []
+        for child in goals_list.children:
+            if hasattr(child, "query_one"):
+                try:
+                    labels.append(str(child.query_one("Label").render()))
+                except Exception:
+                    pass
+        joined = " | ".join(labels)
+        # Pushed goal must not display the same prefix as active goal
+        done_line = next((l for l in labels if "already-shipped" in l), "")
+        wip_line = next((l for l in labels if "still-in-progress" in l), "")
+        assert done_line and wip_line, f"missing goal lines: {labels}"
+        # Pushed marker must be visually different from the in-progress marker
+        done_prefix = done_line.split("already-shipped")[0]
+        wip_prefix = wip_line.split("still-in-progress")[0]
+        assert done_prefix != wip_prefix, (
+            f"pushed goal must look different from in_progress; "
+            f"done={done_prefix!r} wip={wip_prefix!r}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_live_stream_docked_bottom_with_small_default_height(tmp_path: Path) -> None:
+    """LiveStream should be a compact bottom strip by default, not
+    dominate 45% of the viewport. Users can toggle to expand later."""
+    _bootstrap_board(tmp_path)
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        from devboard.tui.live_stream_view import LiveStreamView
+
+        stream = app.query_one(LiveStreamView)
+        # Region height in cells. Pre-fix this was ~40 (45% of 42 rows).
+        assert stream.region.height <= 6, (
+            f"LiveStream default height should be compact; got {stream.region.height}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_backslash_toggles_live_stream_expansion(tmp_path: Path) -> None:
+    """Pressing '\\' toggles the LiveStream between compact and expanded."""
+    _bootstrap_board(tmp_path)
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        from devboard.tui.live_stream_view import LiveStreamView
+
+        stream = app.query_one(LiveStreamView)
+        compact_h = stream.region.height
+        await pilot.press("backslash")
+        await pilot.pause()
+        expanded_h = stream.region.height
+        assert expanded_h > compact_h, (
+            f"expected LiveStream to grow; compact={compact_h} expanded={expanded_h}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_plan_tab_renders_markdown_with_rich_formatting(tmp_path: Path) -> None:
+    """Plan.md should render as Markdown (headings, lists, code blocks)
+    not as a plain string. Rich's Markdown renderable produces spans."""
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    store = FileStore(tmp_path)
+    (tmp_path / ".devboard").mkdir()
+    board = BoardState(active_goal_id="g_md")
+    board.goals.append(Goal(id="g_md", title="markdown-goal", status=GoalStatus.active))
+    store.save_board(board)
+    plan_dir = tmp_path / ".devboard" / "goals" / "g_md"
+    plan_dir.mkdir(parents=True)
+    (plan_dir / "plan.md").write_text("# Heading\n\n- item1\n- item2\n")
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        body = app.query_one("#tab-plan-body")
+        # Rich Markdown renderable has a __rich_console__ method and is
+        # NOT a plain str. Static.content with a Markdown object proves
+        # markdown rendering is wired up.
+        content = body.content
+        from rich.markdown import Markdown
+
+        assert isinstance(content, Markdown), (
+            f"plan tab should hold a rich.markdown.Markdown, got {type(content).__name__}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_context_viewer_diff_tab_default_is_action_prompt(tmp_path: Path) -> None:
     """Placeholders like '(diff)' teach nothing. Each tab must tell the
     user what to type to populate it."""
@@ -201,9 +320,15 @@ async def test_context_viewer_plan_tab_loads_active_goal_plan(tmp_path: Path) ->
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         body = app.query_one("#tab-plan-body")
-        text = str(body.render())
-        assert "my-goal" in text or "Step 1" in text, (
-            f"Plan tab should load active goal's plan.md; got {text!r}"
+        from rich.markdown import Markdown
+
+        content = body.content
+        assert isinstance(content, Markdown), (
+            f"Plan tab should hold a Markdown renderable; got {type(content).__name__}"
+        )
+        source = content.markup
+        assert "my-goal" in source or "Step 1" in source, (
+            f"Plan tab markdown should contain plan text; got {source!r}"
         )
 
 
