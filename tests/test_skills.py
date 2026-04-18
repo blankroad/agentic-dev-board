@@ -152,3 +152,95 @@ def test_brainstorm_clear_fastpath_preserved():
     assert "CLEAR" in content, (
         "CLEAR fast-path must be preserved for specific goals"
     )
+
+
+GAUNTLET_DIR = SKILLS_DIR / "devboard-gauntlet"
+
+
+# ── g_001: bad example in atomic_steps guidance ───────────────────────────────
+
+def test_gauntlet_bad_example_present():
+    """g_001: atomic_steps guidance must contain a bad example (counter-example)."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    assert skill_md.exists()
+    content = skill_md.read_text()
+    guidance_idx = content.find("## atomic_steps guidance")
+    assert guidance_idx != -1, "atomic_steps guidance section missing"
+    guidance_body = content[guidance_idx:]
+    assert "Bad:" in guidance_body or "❌" in guidance_body, (
+        "atomic_steps guidance must contain a bad example (Bad: or ❌)"
+    )
+
+
+# ── g_002: good counter-example in atomic_steps guidance ─────────────────────
+
+def test_gauntlet_good_example_present():
+    """g_002: atomic_steps guidance must contain a good counter-example."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    guidance_idx = content.find("## atomic_steps guidance")
+    assert guidance_idx != -1, "atomic_steps guidance section missing"
+    guidance_body = content[guidance_idx:]
+    assert "Good:" in guidance_body or "✅" in guidance_body, (
+        "atomic_steps guidance must contain a good counter-example (Good: or ✅)"
+    )
+
+
+# ── g_003: step splitter trigger ─────────────────────────────────────────────
+
+def test_gauntlet_step_splitter_trigger():
+    """g_003: atomic_steps guidance must document the splitter trigger."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    guidance_idx = content.find("## atomic_steps guidance")
+    assert guidance_idx != -1, "atomic_steps guidance section missing"
+    guidance_body = content[guidance_idx:]
+    assert "splitter" in guidance_body.lower() or (
+        '"and"' in guidance_body and "split" in guidance_body.lower()
+    ), (
+        "atomic_steps guidance must document step splitter trigger (split on 'and')"
+    )
+
+
+# ── g_004: Step Quality Review section after Decide ──────────────────────────
+
+def test_gauntlet_step_quality_review_section():
+    """g_004: Step Quality Review section must exist after Decide section."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    decide_idx = content.find("## Step 5 — Decide")
+    review_idx = content.find("## Step Quality Review")
+    assert decide_idx != -1, "## Step 5 — Decide section missing"
+    assert review_idx != -1, "## Step Quality Review section missing"
+    assert decide_idx < review_idx, (
+        "## Step Quality Review must appear after ## Step 5 — Decide"
+    )
+
+
+# ── g_005: Step Quality Review OK and warning notation ───────────────────────
+
+def test_gauntlet_step_review_has_ok_and_warning():
+    """g_005: Step Quality Review section must reference OK and warning notation."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    review_idx = content.find("## Step Quality Review")
+    assert review_idx != -1, "## Step Quality Review section missing"
+    review_body = content[review_idx:]
+    assert "OK" in review_body, "Step Quality Review must contain OK notation"
+    assert "warning" in review_body.lower() or "⚠" in review_body, (
+        "Step Quality Review must contain warning notation"
+    )
+
+
+# ── g_006: Step Quality Review proceed to lock ───────────────────────────────
+
+def test_gauntlet_step_review_proceed_to_lock():
+    """g_006: Step Quality Review must contain 'proceed to lock' instruction."""
+    skill_md = GAUNTLET_DIR / "SKILL.md"
+    content = skill_md.read_text()
+    review_idx = content.find("## Step Quality Review")
+    assert review_idx != -1, "## Step Quality Review section missing"
+    review_body = content[review_idx:]
+    assert "proceed to lock" in review_body.lower(), (
+        "Step Quality Review all-clear path must contain 'proceed to lock'"
+    )

@@ -96,6 +96,36 @@ Each atomic_step = ONE red-green-refactor cycle. Decompose the goal_checklist in
 - Order so earlier steps are prerequisites for later
 - Error-path behaviors are distinct steps ("div(a, 0) raises ZeroDivisionError" is its own step)
 
+**Step quality — Bad: vs Good:**
+
+❌ Bad: `"implement auth flow with login, logout, and session validation"`
+- Covers 3 behaviors. RED test would need 3 assertions. GREEN impl grows too large.
+
+✅ Good: (same goal, split correctly into 3 steps)
+- `s_001`: `"POST /auth/login with valid creds returns 200 + token"`
+- `s_002`: `"POST /auth/logout invalidates the session token"`
+- `s_003`: `"GET /api/protected with expired token returns 401"`
+
+**Step splitter trigger**: if the behavior contains "and", "with", or references multiple impl files → split into separate steps, one assertion each. This is a heuristic, not a hard rule — use judgment for behaviors that are genuinely atomic despite containing those words.
+
+## Step Quality Review
+
+After generating all `atomic_steps` in the Decide JSON, self-review each step before presenting to the user:
+
+```
+## Step Quality Check
+
+Checking each step: one behavior, one assertion, ≤5 min work.
+
+✅ s_001: OK
+⚠️  s_003: behavior contains "and" — may cover 2 behaviors
+    Suggestion: split into s_003a / s_003b
+✅ s_004: OK
+```
+
+- If all steps pass: output one line — "Step quality: all OK — proceeding to lock." No user interaction.
+- If any warning: list flagged steps with split suggestion. Ask: "Adjust these steps or proceed to lock as-is?"
+
 ## Finalize
 
 After Decide produces the JSON:
