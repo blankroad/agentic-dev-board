@@ -1057,6 +1057,80 @@ def show_gauntlet(
         console.print(f.read_text())
 
 
+# ── Documentation & Kanban ────────────────────────────────────────────────
+
+
+@app.command()
+def doc(
+    goal_id: Optional[str] = typer.Argument(None, help="Goal ID (default: active)"),
+    format: str = typer.Option("md", "--format", "-f", help="md | jira | confluence"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save to file"),
+) -> None:
+    """Generate a design/maintenance doc for a goal.
+
+    Combines LockedPlan + Gauntlet artifacts + decision timeline + review
+    verdicts + issues into a single narrative suitable for Confluence,
+    JIRA ticket description, release notes, or PR body.
+    """
+    from devboard.analytics.docgen import collect_doc
+
+    store = _get_store()
+    gid = _latest_goal_id(store, goal_id)
+    if not gid:
+        console.print("[red]No goal.[/red]")
+        raise typer.Exit(1)
+
+    if format not in ("md", "jira", "confluence"):
+        console.print(f"[red]Unknown format: {format} (use md/jira/confluence)[/red]")
+        raise typer.Exit(1)
+
+    doc_obj = collect_doc(store, gid)
+    content = doc_obj.render(format)
+
+    if output:
+        output.write_text(content)
+        console.print(f"[green]✓ saved[/green] {output}  ({len(content)} chars, {format})")
+    else:
+        # Plain print so the output is clean for pipe/copy
+        print(content)
+
+
+@app.command()
+def kanban(
+    format: str = typer.Option("terminal", "--format", "-f", help="terminal | md | jira"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o"),
+) -> None:
+    """Kanban-style board view — goals grouped by lifecycle status.
+
+    Columns: Backlog / Active / Awaiting Approval / Converged / Pushed / Blocked / Archived.
+    Each card shows task count, iteration count, retry count, last verdict, PR URL.
+    """
+    from devboard.analytics.kanban import collect_board, render_terminal, render_markdown, render_jira
+
+    store = _get_store()
+    board = collect_board(store)
+
+    if format == "terminal":
+        console.print(render_terminal(board))
+    elif format == "md":
+        out = render_markdown(board)
+        if output:
+            output.write_text(out)
+            console.print(f"[green]✓ saved[/green] {output}")
+        else:
+            print(out)
+    elif format == "jira":
+        out = render_jira(board)
+        if output:
+            output.write_text(out)
+            console.print(f"[green]✓ saved[/green] {output}")
+        else:
+            print(out)
+    else:
+        console.print(f"[red]Unknown format: {format}[/red]")
+        raise typer.Exit(1)
+
+
 # ── Retro ─────────────────────────────────────────────────────────────────
 
 
