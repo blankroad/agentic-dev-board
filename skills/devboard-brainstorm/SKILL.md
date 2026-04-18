@@ -38,7 +38,7 @@ Output: `Goal: {title} ({goal_id})`
 
 Ask questions **one at a time** using `AskUserQuestion`. Do NOT batch them. Do NOT propose solutions.
 
-**After each answer:** if the answer is specific and concrete → acknowledge briefly and move to the next question. If the answer is vague or generic → push once ("좀 더 구체적으로 — 예를 들면?"). Max 1 push per question, then move on regardless.
+**After each answer:** if the answer is specific and concrete → acknowledge briefly and move to the next question. If the answer is vague or generic → push up to 3 times ("좀 더 구체적으로 — 예를 들면?"). 3회 후에도 모호하면 그 상태로 수용하고 다음 질문으로 이동.
 
 ### Q1: 실제 사용자 (Desperate Specificity)
 
