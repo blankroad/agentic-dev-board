@@ -35,3 +35,25 @@ def test_upsert_replaces_when_section_exists(tmp_path: Path) -> None:
     assert text.count("## Outcome") == 1, f"must not stack: {text!r}"
     assert "second" in text
     assert "first" not in text
+
+
+def test_upsert_creates_file_when_missing(tmp_path: Path) -> None:
+    """# guards: edge-case-red-rule
+    edge: empty input — plan.md doesn't exist yet."""
+    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    plan = tmp_path / "plan.md"
+    assert not plan.exists()
+    upsert_plan_section(plan, PlanSection.METADATA, "goal_id: g_xxx")
+    assert plan.exists()
+    assert "## Metadata" in plan.read_text()
+    assert "goal_id: g_xxx" in plan.read_text()
+
+
+def test_upsert_on_empty_file_writes_single_block(tmp_path: Path) -> None:
+    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    plan = tmp_path / "plan.md"
+    plan.write_text("")
+    upsert_plan_section(plan, PlanSection.LESSONS, "learned X")
+    text = plan.read_text()
+    assert text.startswith("## Lessons"), f"no leading whitespace: {text!r}"
+    assert "learned X" in text
