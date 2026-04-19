@@ -6,6 +6,7 @@ from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Static
 
+from devboard.tui.goal_status_legend import verdict_color
 from devboard.tui.session_derive import SessionContext
 
 
@@ -30,7 +31,7 @@ class MetaPane(Widget):
         self._selected_iter = selected_iter
 
     def compose(self) -> ComposeResult:
-        yield Static(self._render_text(), id="meta-body", markup=False)
+        yield Static(self._render_text(), id="meta-body", markup=True)
 
     def refresh_body(self, task_id: str | None, selected_iter: int | None) -> None:
         self._task_id = task_id
@@ -53,8 +54,10 @@ class MetaPane(Widget):
                 if d.get("phase") == "redteam":
                     redteam = str(d.get("verdict_source", "-"))
                     break
-        lines.append(f"verdict: {verdict}")
-        lines.append(f"redteam: {redteam}")
+        v_col = verdict_color(verdict) if verdict != "-" else "dim"
+        r_col = verdict_color(redteam) if redteam != "-" else "dim"
+        lines.append(f"verdict: [{v_col}]{verdict}[/]")
+        lines.append(f"redteam: [{r_col}]{redteam}[/]")
         lines.append(f"steps:   {self._steps_progress()}")
         return "\n".join(lines)
 

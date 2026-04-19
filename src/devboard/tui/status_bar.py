@@ -6,6 +6,8 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
+from devboard.tui.goal_status_legend import phase_color, verdict_color
+
 
 class StatusBar(Widget):
     """Single-line top bar absorbing v2.0's LiveStream into a compact
@@ -33,7 +35,7 @@ class StatusBar(Widget):
         self._tests: int | None = None
 
     def compose(self) -> ComposeResult:
-        yield Static(self._format(), id="status-bar-body", markup=False)
+        yield Static(self._format(), id="status-bar-body", markup=True)
 
     def set_segments(
         self,
@@ -58,10 +60,14 @@ class StatusBar(Widget):
         if self._goal_title:
             segments.append(f"● {self._goal_title}")
         if self._iter_n is not None:
-            phase = f" {self._phase}" if self._phase else ""
-            segments.append(f"▶ iter {self._iter_n}{phase}")
+            phase_txt = ""
+            if self._phase:
+                pc = phase_color(self._phase)
+                phase_txt = f" [{pc}]{self._phase}[/]"
+            segments.append(f"▶ iter {self._iter_n}{phase_txt}")
         if self._redteam:
-            segments.append(f"◆ redteam {self._redteam}")
+            vc = verdict_color(self._redteam)
+            segments.append(f"◆ redteam [{vc}]{self._redteam}[/]")
         if self._tests is not None:
             segments.append(f"≡ {self._tests} tests")
         return "  ".join(segments) if segments else "devboard"
