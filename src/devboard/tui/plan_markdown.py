@@ -14,16 +14,24 @@ from devboard.tui.session_derive import SessionContext
 _GAUNTLET_ORDER = ("frame", "scope", "arch", "challenge", "decide")
 
 
+def _safe_read(path: Path, fallback: str = "") -> str:
+    try:
+        return path.read_text()
+    except (OSError, UnicodeDecodeError):
+        return fallback
+
+
 class PlanMarkdown(Widget):
-    """Center-top pane. Renders active goal's plan.md as Rich Markdown and
-    exposes gauntlet artifacts (frame/scope/arch/challenge/decide) behind
-    a collapsed '▸ Gauntlet' section. 'g' toggles the collapsible."""
+    """Center-top pane. Primary view = plan_summary.md (LLM-curated digest)
+    if present, else plan.md. Below: a '▸ Raw Artifacts' collapsible that
+    holds plan.md + frame/scope/arch/challenge/decide.md so the user can
+    always verify the source."""
 
     DEFAULT_CSS = """
     PlanMarkdown { height: 1fr; padding: 0 1; overflow-y: auto; }
     """
 
-    BINDINGS = [Binding("g", "toggle_gauntlet", "Gauntlet", show=False)]
+    BINDINGS = [Binding("g", "toggle_raw", "Raw", show=False)]
 
     can_focus = True
 
@@ -32,37 +40,52 @@ class PlanMarkdown(Widget):
         self._session = session
 
     def compose(self) -> ComposeResult:
-        plan_text, gauntlet_text = self._load()
-        yield Static(Markdown(plan_text), id="plan-body")
-        with Collapsible(title="▸ Gauntlet", collapsed=True, id="gauntlet-collapsible"):
-            yield Static(Markdown(gauntlet_text), id="gauntlet-body")
+        primary, raw = self._load()
+        yield Static(Markdown(primary), id="plan-body")
+        with Collapsible(title="▸ Raw Artifacts", collapsed=True, id="raw-artifacts-collapsible"):
+            yield Static(Markdown(raw), id="raw-artifacts-body")
 
-    def action_toggle_gauntlet(self) -> None:
-        c = self.query_one("#gauntlet-collapsible", Collapsible)
+    def action_toggle_raw(self) -> None:
+        try:
+            c = self.query_one("#raw-artifacts-collapsible", Collapsible)
+        except Exception:
+            return
         c.collapsed = not c.collapsed
 
     def _load(self) -> tuple[str, str]:
+        """Returns (primary_markdown, raw_markdown). Primary prefers
+        plan_summary.md; raw is plan.md + all gauntlet files."""
         gid = self._session.active_goal_id
         if not gid:
-            return ("_Plan not locked. Run `devboard-gauntlet`._", "_No gauntlet artifacts._")
+            return (
+                "_Plan not locked. Run `devboard-gauntlet`._",
+                "_No raw artifacts._",
+            )
         goal_dir: Path = self._session.store_root / ".devboard" / "goals" / gid
+        summary_file = goal_dir / "plan_summary.md"
         plan_file = goal_dir / "plan.md"
-        if plan_file.exists():
-            try:
-                plan = plan_file.read_text()
-            except (OSError, UnicodeDecodeError):
-                plan = "_plan.md unreadable (binary or permission denied)._"
+
+        # Primary view — summary if present, else raw plan
+        if summary_file.exists():
+            primary = _safe_read(summary_file, "_plan_summary.md unreadable._")
+        elif plan_file.exists():
+            primary = _safe_read(
+                plan_file,
+                "_plan.md unreadable (binary or permission denied)._",
+            )
         else:
-            plan = "_Plan not locked. Run `devboard-gauntlet`._"
-        gparts: list[str] = []
+            primary = "_Plan not locked. Run `devboard-gauntlet`._"
+
+        # Raw artifacts — always plan.md + all 5 gauntlet files
+        raw_parts: list[str] = []
+        if plan_file.exists():
+            raw_parts.append(f"## plan.md\n\n{_safe_read(plan_file, '_unreadable_')}")
         gdir = goal_dir / "gauntlet"
         if gdir.exists():
             for step in _GAUNTLET_ORDER:
                 f = gdir / f"{step}.md"
                 if f.exists():
-                    try:
-                        gparts.append(f"## {step}.md\n\n{f.read_text()}")
-                    except (OSError, UnicodeDecodeError):
-                        continue
-        gauntlet = "\n\n---\n\n".join(gparts) if gparts else "_No gauntlet artifacts._"
-        return plan, gauntlet
+                    raw_parts.append(f"## {step}.md\n\n{_safe_read(f, '_unreadable_')}")
+        raw = "\n\n---\n\n".join(raw_parts) if raw_parts else "_No raw artifacts._"
+
+        return primary, raw

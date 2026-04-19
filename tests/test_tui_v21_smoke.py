@@ -34,7 +34,7 @@ async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None
             "#resources-goals",
             "#goal-side-legend",
             "#plan-body",
-            "#gauntlet-collapsible",
+            "#raw-artifacts-collapsible",
             "#meta-body",
             "#files-changed-body",
             "#command-line",

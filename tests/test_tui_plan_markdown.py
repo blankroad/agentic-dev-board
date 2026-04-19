@@ -57,7 +57,7 @@ async def test_plan_markdown_renders_plan_md(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_gauntlet_section_collapsed_on_mount(tmp_path: Path) -> None:
+async def test_raw_artifacts_section_collapsed_on_mount(tmp_path: Path) -> None:
     _mk_goal(
         tmp_path,
         "g2",
@@ -69,8 +69,68 @@ async def test_gauntlet_section_collapsed_on_mount(tmp_path: Path) -> None:
         await pilot.pause()
         from textual.widgets import Collapsible
 
-        c = app.query_one("#gauntlet-collapsible", Collapsible)
+        c = app.query_one("#raw-artifacts-collapsible", Collapsible)
         assert c.collapsed is True, "gauntlet section must be collapsed on mount"
+
+
+@pytest.mark.asyncio
+async def test_plan_markdown_prefers_summary_when_present(tmp_path: Path) -> None:
+    """plan_summary.md (LLM-curated digest) must be the primary view when
+    present; plan.md falls into the raw-artifacts collapsible."""
+    _mk_goal(tmp_path, "g_sum", "# RAW PLAN full\n")
+    goal_dir = tmp_path / ".devboard" / "goals" / "g_sum"
+    (goal_dir / "plan_summary.md").write_text("# Curated Digest\n\nShort summary.\n")
+
+    app = await _mount(tmp_path)
+    async with app.run_test(size=(120, 30)) as pilot:
+        await pilot.pause()
+        from rich.markdown import Markdown
+
+        body = app.query_one("#plan-body")
+        content = body.content
+        assert isinstance(content, Markdown)
+        # The primary pane shows the summary, not the raw plan
+        assert "Curated Digest" in content.markup, content.markup
+        assert "RAW PLAN full" not in content.markup, (
+            "raw plan leaked into primary view; should be in Raw Artifacts section"
+        )
+
+
+@pytest.mark.asyncio
+async def test_plan_markdown_falls_back_to_plan_when_no_summary(tmp_path: Path) -> None:
+    """No plan_summary.md → render plan.md as primary (current behavior)."""
+    _mk_goal(tmp_path, "g_nosum", "# RAW PLAN body\n")
+    app = await _mount(tmp_path)
+    async with app.run_test(size=(120, 30)) as pilot:
+        await pilot.pause()
+        body = app.query_one("#plan-body")
+        from rich.markdown import Markdown
+
+        content = body.content
+        assert isinstance(content, Markdown)
+        assert "RAW PLAN body" in content.markup
+
+
+@pytest.mark.asyncio
+async def test_plan_markdown_raw_artifacts_collapsed_by_default(tmp_path: Path) -> None:
+    """Raw artifacts (plan.md + gauntlet/*.md) live in a collapsible that
+    is hidden on mount so the summary can breathe."""
+    _mk_goal(
+        tmp_path,
+        "g_raw",
+        "# RAW_SECRET\n",
+        gauntlet={"frame": "# FRAME_SECRET"},
+    )
+    goal_dir = tmp_path / ".devboard" / "goals" / "g_raw"
+    (goal_dir / "plan_summary.md").write_text("# SUMMARY\n")
+
+    app = await _mount(tmp_path)
+    async with app.run_test(size=(120, 30)) as pilot:
+        await pilot.pause()
+        from textual.widgets import Collapsible
+
+        col = app.query_one("#raw-artifacts-collapsible", Collapsible)
+        assert col.collapsed is True, "raw artifacts must be collapsed on mount"
 
 
 @pytest.mark.asyncio
@@ -99,7 +159,7 @@ async def test_plan_markdown_handles_binary_plan_md_without_crash(tmp_path: Path
 
 
 @pytest.mark.asyncio
-async def test_g_key_expands_gauntlet_section(tmp_path: Path) -> None:
+async def test_g_key_expands_raw_artifacts_section(tmp_path: Path) -> None:
     _mk_goal(
         tmp_path,
         "g3",
@@ -111,7 +171,7 @@ async def test_g_key_expands_gauntlet_section(tmp_path: Path) -> None:
         await pilot.pause()
         from textual.widgets import Collapsible
 
-        c = app.query_one("#gauntlet-collapsible", Collapsible)
+        c = app.query_one("#raw-artifacts-collapsible", Collapsible)
         assert c.collapsed is True
         app.query_one("#pm").focus()
         await pilot.press("g")
