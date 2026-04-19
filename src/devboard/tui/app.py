@@ -189,6 +189,43 @@ class DevBoardApp(App):
             goal_title=title, iter_n=iter_n, phase=phase, redteam=redteam, tests=tests
         )
 
+    def refresh_for_active_goal(self) -> None:
+        """Re-render every pane that depends on session.active_goal_id.
+        Called by command handlers (e.g. :goto) after mutating state."""
+        self._task_id = self._pick_task_id()
+        self.selected_iter = self._initial_iter()
+        for widget_id, method in (
+            ("#plan-markdown", "refresh_content"),
+            ("#activity-timeline", "refresh_for_task"),
+            ("#goal-side-list", "refresh_content"),
+        ):
+            try:
+                w = self.query_one(widget_id)
+                if method == "refresh_for_task":
+                    w.refresh_for_task(self._task_id)
+                else:
+                    getattr(w, method)()
+            except Exception:
+                pass
+        self._refresh_status_bar()
+
+    def refresh_for_active_task(self) -> None:
+        """Re-render the ActivityTimeline + Meta + FilesChanged for a task
+        switch (without changing active goal). Called by :decisions."""
+        try:
+            self.query_one("#activity-timeline").refresh_for_task(self._task_id)
+        except Exception:
+            pass
+        try:
+            self.query_one("#meta-pane").refresh_body(self._task_id, self.selected_iter)
+        except Exception:
+            pass
+        try:
+            self.query_one("#files-changed-pane").refresh_body(self._task_id, self.selected_iter)
+        except Exception:
+            pass
+        self._refresh_status_bar()
+
     def watch_selected_iter(self, _old: int | None, new: int | None) -> None:
         try:
             fc = self.query_one("#files-changed-pane", FilesChangedPane)

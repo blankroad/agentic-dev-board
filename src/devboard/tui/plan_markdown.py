@@ -52,6 +52,20 @@ class PlanMarkdown(Widget):
             return
         c.collapsed = not c.collapsed
 
+    def refresh_content(self) -> None:
+        """Re-read the active goal's files and push new content into the
+        existing Static widgets. Invoked after `:goto` or other state
+        mutations that change `session.active_goal_id`."""
+        primary, raw = self._load()
+        try:
+            self.query_one("#plan-body", Static).update(Markdown(primary))
+        except Exception:
+            pass
+        try:
+            self.query_one("#raw-artifacts-body", Static).update(Markdown(raw))
+        except Exception:
+            pass
+
     def _load(self) -> tuple[str, str]:
         """Returns (primary_markdown, raw_markdown). Primary prefers
         plan_summary.md; raw is plan.md + all gauntlet files."""

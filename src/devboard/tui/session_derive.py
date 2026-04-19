@@ -2,35 +2,39 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 from typing import Any
 
 
-@dataclass(frozen=True)
 class SessionContext:
     """Read-only facade over .devboard/ state used by every v2.1 pane.
 
     Resolves the "active" goal/task for rendering and exposes pre-parsed
     decision rows + touched-file lists. All methods are side-effect free
     and tolerate missing/malformed files (degrade to empty result).
+
+    `active_goal_id` resolution order:
+    1. explicit override set via `set_active_goal(gid)` (populated by
+       commands like `:goto` so widgets reflect user intent)
+    2. latest plan.md mtime on disk (default on first load)
+    3. None if no goal dirs exist
     """
 
-    store_root: Path
+    def __init__(self, store_root: Path) -> None:
+        self.store_root = store_root
+        self._devboard = store_root / ".devboard"
+        self._goals_dir = self._devboard / "goals"
+        self._override_goal_id: str | None = None
 
-    @cached_property
-    def _devboard(self) -> Path:
-        return self.store_root / ".devboard"
+    def set_active_goal(self, goal_id: str | None) -> None:
+        """Pin the active goal regardless of disk mtime. Pass None to
+        fall back to latest-mtime resolution."""
+        self._override_goal_id = goal_id
 
-    @cached_property
-    def _goals_dir(self) -> Path:
-        return self._devboard / "goals"
-
-    @cached_property
+    @property
     def active_goal_id(self) -> str | None:
-        """Goal with the latest plan.md mtime. Goals without plan.md fall
-        back to goal-dir mtime. Returns None if there are no goal dirs."""
+        if self._override_goal_id is not None:
+            return self._override_goal_id
         if not self._goals_dir.exists():
             return None
         candidates: list[tuple[float, str]] = []

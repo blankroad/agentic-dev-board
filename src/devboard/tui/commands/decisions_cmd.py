@@ -14,14 +14,19 @@ def _run(app: "DevBoardApp", task_id: str) -> None:
     """v2.1: ContextViewer decisions tab removed. ActivityTimeline renders
     the active task's decisions automatically. :decisions <task_id> now
     switches the App's active task_id and shows a hint."""
-    entries = app.store.load_decisions(task_id)
-    cl = app.query_one("#command-line")
-    if not entries:
-        cl.value = f"No decisions for task_id={task_id}"
-        return
+    # Switch the task FIRST so widget refresh uses SessionContext (which is
+    # resilient to malformed decisions), then show hint via the strict
+    # FileStore loader's count.
     app._task_id = task_id
-    # update selected_iter to the latest decision's iter so all panes refresh
-    latest = max((e.iter for e in entries), default=None)
+    cl = app.query_one("#command-line")
+    # update selected_iter to the latest decision's iter (use SessionContext —
+    # it tolerates missing optional fields, unlike FileStore's Pydantic model)
+    session_rows = app.session.decisions_for_task(task_id)
+    latest = session_rows[0].get("iter") if session_rows else None
     if latest is not None:
         app.selected_iter = latest
-    cl.value = f"decisions loaded: task={task_id} ({len(entries)} entries)"
+    app.refresh_for_active_task()
+    if not session_rows:
+        cl.value = f"No decisions for task_id={task_id}"
+        return
+    cl.value = f"decisions loaded: task={task_id} ({len(session_rows)} entries)"

@@ -33,6 +33,11 @@ def _run(app: "DevBoardApp", prefix: str) -> None:
     # Exactly one
     g = matches[0]
     app._board.active_goal_id = g.id
+    # Pin the session context so PlanMarkdown/ActivityTimeline/etc read the
+    # new goal. Widgets still cached their compose-time content, so trigger
+    # an explicit refresh.
+    app.session.set_active_goal(g.id)
+    app.refresh_for_active_goal()
     goals_list.append(ListItem(Label(f"> {g.status.value[:1]} {g.title}")))
     for other in app.board.goals:
         if other.id != g.id:

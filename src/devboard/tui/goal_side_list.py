@@ -66,7 +66,15 @@ class GoalSideList(Widget):
         yield ListView(id="resources-goals")
 
     def on_mount(self) -> None:
-        lv = self.query_one("#resources-goals", ListView)
+        self.refresh_content()
+
+    def refresh_content(self) -> None:
+        """Re-read goals from disk + re-render markers. Call after `:goto`
+        or board mutations so markers reflect current task statuses."""
+        try:
+            lv = self.query_one("#resources-goals", ListView)
+        except Exception:
+            return
         lv.clear()
         for goal in self._session.all_goals():
             goal_dir = (

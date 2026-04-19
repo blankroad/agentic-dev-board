@@ -34,4 +34,5 @@ def _run(app: "DevBoardApp", task_id: str) -> None:
         return
     app._task_id = task_id
     app.selected_iter = latest_iter
+    app.refresh_for_active_task()
     cl.value = f"diff loaded: task={task_id} iter={latest_iter}"

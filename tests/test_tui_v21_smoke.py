@@ -137,6 +137,90 @@ async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_goto_refreshes_plan_markdown_to_new_goal(tmp_path: Path) -> None:
+    """Red-team r2 CRITICAL: SessionContext.active_goal_id is a cached
+    disk-mtime lookup that ignores app._board.active_goal_id. After :goto
+    switches the board's active goal, PlanMarkdown must re-render to the
+    new goal's plan.md — not stay on the original goal."""
+    import os
+    import time
+
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+    from devboard.tui.app import DevBoardApp
+
+    (tmp_path / ".devboard").mkdir()
+    store = FileStore(tmp_path)
+    board = BoardState(active_goal_id="g_alpha")
+    board.goals.append(Goal(id="g_alpha", title="alpha-goal", status=GoalStatus.active))
+    board.goals.append(Goal(id="g_beta", title="beta-goal", status=GoalStatus.active))
+    store.save_board(board)
+    for gid, plan in [("g_alpha", "# ALPHA_PLAN\n"), ("g_beta", "# BETA_PLAN\n")]:
+        d = tmp_path / ".devboard" / "goals" / gid
+        d.mkdir(parents=True)
+        (d / "plan.md").write_text(plan)
+    # Make alpha's plan older so beta is auto-active on mount.
+    old = time.time() - 1000
+    os.utime(tmp_path / ".devboard" / "goals" / "g_alpha" / "plan.md", (old, old))
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        before = str(app.query_one("#plan-body").content.markup)
+        assert "BETA_PLAN" in before, f"precondition: beta should be initial; got {before!r}"
+        app.commands.dispatch("goto g_alpha")
+        await pilot.pause()
+        after = str(app.query_one("#plan-body").content.markup)
+        assert "ALPHA_PLAN" in after, (
+            f"goto must refresh PlanMarkdown to new goal's plan; still showing {after!r}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_decisions_cmd_refreshes_activity_timeline(tmp_path: Path) -> None:
+    """Red-team r2 HIGH: :decisions t_other must refresh ActivityTimeline
+    rows to the target task's decisions. Current bug: timeline composed
+    once with initial task_id and never re-reads."""
+    from devboard.tui.activity_row import ActivityRow
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
+    goal_dir = tmp_path / ".devboard" / "goals" / "g_1"
+    for tid, phases in [("t_init", ["p_init"]), ("t_other", ["p_other_a", "p_other_b"])]:
+        td = goal_dir / "tasks" / tid
+        td.mkdir(parents=True)
+        (td / "task.json").write_text(json.dumps({"id": tid, "status": "in_progress"}))
+        (td / "decisions.jsonl").write_text(
+            "\n".join(
+                json.dumps({"iter": i, "phase": p}) for i, p in enumerate(phases)
+            )
+            + "\n"
+        )
+    # Make t_init newer so it is chosen as initial
+    import os
+    import time
+
+    old = time.time() - 1000
+    os.utime(goal_dir / "tasks" / "t_other", (old, old))
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        phases_before = sorted(
+            str(r.entry.get("phase")) for r in app.query(ActivityRow).results()
+        )
+        assert phases_before == ["p_init"], f"precondition: {phases_before}"
+        app.commands.dispatch("decisions t_other")
+        await pilot.pause()
+        phases_after = sorted(
+            str(r.entry.get("phase")) for r in app.query(ActivityRow).results()
+        )
+        assert "p_other_a" in phases_after and "p_other_b" in phases_after, (
+            f"decisions must refresh ActivityTimeline; got {phases_after}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_runs_list_not_in_layout(tmp_path: Path) -> None:
     from textual.css.query import NoMatches
 
