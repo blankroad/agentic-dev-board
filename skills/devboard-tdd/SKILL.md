@@ -109,6 +109,39 @@ For each atomic_step in the LockedPlan (or each testable behavior):
 
 **Status**: `RED_CONFIRMED` | `RED_FAILED_TO_FAIL`
 
+#### Edge-Case RED Rule
+
+When the Preemptive Defense Checklist (from the Learnings Preamble above) contains an entry whose category matches the current `atomic_step` behavior, the RED test MUST assert the **happy path + at least 1 edge case** — not only the happy path. This is what turns learnings from "notes I read" into "tests that run".
+
+**Initial edge-case categories (extend as learnings accumulate):**
+
+1. **empty / None input** — functions that accept a string / list / dict must survive `""`, `None`, `[]`, `{}` without crashing; verify fallback behavior.
+2. **binary / non-UTF-8 file** — any `Path.read_text()` in a mount / compose / CLI-entry path must tolerate invalid bytes (matches `read-text-in-compose-must-catch-unicode`).
+3. **concurrent mutation** — when state is mutated mid-iteration (e.g. `runs_dir.glob()` then `p.stat()`), the consumer must not raise on TOCTOU races.
+4. **cached stale** — `cached_property` / `functools.cache` / widget compose-once values must either invalidate on state change OR expose a refresh hook; clobbers happen when a setter updates the upstream source but readers still see cached value.
+5. **integration wiring** — widgets / workers instantiated in isolation pass unit tests but the App may not actually wire them up; test the Pilot-driven end-to-end wiring at least once per feature (matches `unit-tests-on-primitives-dont-prove-integration`).
+6. **real-TTY divergence** — Textual Pilot rendering differs from a real terminal (border height, focus chain, input visibility). For TUI tasks, at least one test or manual TTY check must exercise the real pty path (matches `ui-requires-real-tty-smoke-not-just-pytest`).
+
+**happy + 1 edge pattern (example)**:
+
+```python
+def test_plan_markdown_renders_plan_md(tmp_path):
+    # happy path
+    ...
+
+def test_plan_markdown_tolerates_binary_plan_md(tmp_path):
+    # guards: read-text-in-compose-must-catch-unicode
+    # edge: binary / non-UTF-8 file category
+    (tmp_path / "plan.md").write_bytes(b"\xff\xfe\x00")
+    ...
+```
+
+**Naming convention (externally observable proof)**: when an edge test maps to a category, encode the category in the **test function name** (e.g. `_with_empty_input`, `_tolerates_binary_*`, `_stale_cache_*`, `_real_tty_*`) OR in the test **docstring** (first line names the category). This lets a reviewer — or the red-team skill — grep the suite for edge coverage without running anything. Without the name/docstring signal, the edge case may be present but invisible to audit.
+
+**YAGNI — is this speculative testing?** No. YAGNI forbids defending against *hypothetical future* failure modes. These categories are *already documented* in `.devboard/learnings/*.md` as **known-risk** attack vectors that red-team has shipped multiple times. A test that defends a known-risk category is not speculation — it's regression guarding a recurring class of bug. Adding such a test at RED time is cheaper than finding it via red-team round 2 and rebuilding.
+
+If the current `atomic_step` behavior has no matching category in the checklist (or the checklist is empty for a new project), the standard single-assertion RED is fine — do NOT invent categories to pad the test. Matching is intentional, not obligatory.
+
 ### GREEN — minimal implementation
 
 1. Read the RED test you just wrote
