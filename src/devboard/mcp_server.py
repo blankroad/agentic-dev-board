@@ -258,6 +258,38 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="devboard_log_parallel_review",
+            description=(
+                "Record a single combined parallel CSO+redteam review outcome. Writes one "
+                "phase='parallel_review' entry to decisions.jsonl with the required parallel-run "
+                "metadata fields (parallel_duration_s, cso_duration_s, redteam_duration_s, "
+                "cso_verdict, redteam_verdict, overall, overlap_count). Approval Step 0 uses this "
+                "single entry instead of separate cso+redteam entries."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "task_id": {"type": "string"},
+                    "iter": {"type": "integer"},
+                    "cso_verdict": {"type": "string"},
+                    "redteam_verdict": {"type": "string"},
+                    "overall": {"type": "string"},
+                    "parallel_duration_s": {"type": "number"},
+                    "cso_duration_s": {"type": "number"},
+                    "redteam_duration_s": {"type": "number"},
+                    "overlap_count": {"type": "integer"},
+                    "reasoning": {"type": "string"},
+                },
+                "required": [
+                    "project_root", "task_id", "iter",
+                    "cso_verdict", "redteam_verdict", "overall",
+                    "parallel_duration_s", "cso_duration_s", "redteam_duration_s",
+                    "overlap_count",
+                ],
+            },
+        ),
+        Tool(
             name="devboard_load_decisions",
             description="Load all decision entries for a task — used by approval, retro, and RCA for historical context.",
             inputSchema={
@@ -864,6 +896,63 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         store.append_decision(args["task_id"], entry)
         return _text({"status": "logged", "phase": args["phase"], "iter": args["iter"]})
+
+    if name == "devboard_log_parallel_review":
+        required = [
+            "project_root", "task_id", "iter",
+            "cso_verdict", "redteam_verdict", "overall",
+            "parallel_duration_s", "cso_duration_s", "redteam_duration_s",
+            "overlap_count",
+        ]
+        numeric_fields = [
+            "parallel_duration_s", "cso_duration_s", "redteam_duration_s", "overlap_count",
+        ]
+        missing = [f for f in required if f not in args]
+        if missing:
+            return _text({
+                "status": "error",
+                "message": f"missing required field(s): {', '.join(missing)}",
+                "missing": missing,
+            })
+        none_vals = [f for f in required if args.get(f) is None]
+        if none_vals:
+            return _text({
+                "status": "error",
+                "message": f"required field(s) must not be None: {', '.join(none_vals)}",
+                "null_fields": none_vals,
+            })
+        bad_types = [
+            f for f in numeric_fields
+            if isinstance(args.get(f), bool) or not isinstance(args.get(f), (int, float))
+        ]
+        if bad_types:
+            return _text({
+                "status": "error",
+                "message": f"numeric field(s) have invalid type: {', '.join(bad_types)}",
+                "bad_type_fields": bad_types,
+            })
+        store = _store(args["project_root"])
+        payload = {
+            "iter": args["iter"],
+            "phase": "parallel_review",
+            "reasoning": args.get("reasoning", ""),
+            "verdict_source": args["overall"],
+            "metadata": {
+                "cso_verdict": args["cso_verdict"],
+                "redteam_verdict": args["redteam_verdict"],
+                "overall": args["overall"],
+                "parallel_duration_s": args["parallel_duration_s"],
+                "cso_duration_s": args["cso_duration_s"],
+                "redteam_duration_s": args["redteam_duration_s"],
+                "overlap_count": args["overlap_count"],
+            },
+        }
+        store.append_decision(args["task_id"], payload)
+        return _text({
+            "status": "logged",
+            "phase": "parallel_review",
+            "iter": args["iter"],
+        })
 
     if name == "devboard_load_decisions":
         store = _store(args["project_root"])

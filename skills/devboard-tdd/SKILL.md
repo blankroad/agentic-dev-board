@@ -231,4 +231,4 @@ After all atomic_steps are complete:
 
 All three above are independent events — log each one separately. Do not combine.
 
-Hand off to `devboard-cso` (if diff is security-sensitive) or `devboard-redteam` (adversarial review) or `devboard-approval` (final review + PR).
+Hand off to `devboard-parallel-review` (preferred — dispatches CSO + redteam in parallel via the Agent tool and logs a single `phase="parallel_review"` entry). `devboard-parallel-review` auto-skips either side per `task.metadata.security_sensitive_plan` / `production_destined`, so it handles the "CSO-only" and "redteam-only" cases internally. The legacy sequential path (`devboard-cso` → `devboard-redteam` → `devboard-approval`) is still accepted by `devboard-approval` as a backward-compat fallback when no `phase="parallel_review"` entry is present.

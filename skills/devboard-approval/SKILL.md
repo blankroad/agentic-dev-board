@@ -26,16 +26,22 @@ On entry, call `devboard_load_decisions(project_root, task_id)` and verify these
 
 1. **TDD complete check** — does a `phase="reflect"` or `phase="review_complete"` entry exist?
    - If missing, **refuse**: "TDD가 완료되지 않았습니다. devboard-tdd를 먼저 실행하세요." → exit skill
-2. **CSO necessity check** — if the diff or LockedPlan contains security-sensitive keywords (auth, password, token, crypto, SQL, subprocess, eval, exec), verify a `phase="cso"` entry exists.
-   - If missing, **refuse**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso를 먼저 실행하세요." → exit skill
-3. **CSO verdict check** — if a `phase="cso"` entry exists, verify its verdict is not `VULNERABLE`.
-   - If `VULNERABLE`, **refuse**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → exit skill
-4. **Dep audit check** — call `devboard_check_dependencies(project_root)`.
+2. **Review gate — parallel_review (1st priority / preferred) OR legacy cso+redteam (fallback)**:
+   - **1순위 (preferred)**: a single `phase="parallel_review"` entry (produced by devboard-parallel-review) — if present, read its `metadata.overall`:
+     - `overall="CLEAN"` → pass this gate (no need to also check cso/redteam)
+     - `overall ∈ {"BLOCKER", "BOTH_BLOCKER"}` → **refuse**: "parallel-review returned {overall}. devboard-tdd로 복귀." → exit skill
+     - `overall="INCOMPLETE"` → **refuse**: "parallel-review returned INCOMPLETE. 재시도 필요." → exit skill
+   - **Legacy fallback (backward compat)**: if NO `phase="parallel_review"` entry exists, fall back to checking the separate `phase="cso"` + `phase="redteam"` pair:
+     - If the diff or LockedPlan contains security-sensitive keywords (auth, password, token, crypto, SQL, subprocess, eval, exec), verify a `phase="cso"` entry exists.
+       - Missing → **refuse**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso 또는 devboard-parallel-review를 먼저 실행하세요." → exit skill
+     - If a `phase="cso"` entry exists and its `verdict_source="VULNERABLE"`, **refuse**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → exit skill
+     - The legacy `phase="redteam"` entry is optional unless the task is production-destined (see task.metadata).
+3. **Dep audit check** — call `devboard_check_dependencies(project_root)`.
    - If `skipped_reason` is set → pass (audit unavailable)
    - If `severity_counts.CRITICAL ≥ 1` or `severity_counts.HIGH ≥ 1` → **refuse**: "Dep audit VULNERABLE: CRITICAL={c}, HIGH={h}. devboard-dep-audit를 실행해서 세부 확인 후 업그레이드 필요." → exit skill
    - Otherwise → pass
 
-If all four conditions pass, proceed to Step 1.
+If all three conditions pass (TDD complete + review gate + dep audit), proceed to Step 1.
 
 ## Step 1 — Summarize for user
 

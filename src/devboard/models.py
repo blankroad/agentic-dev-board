@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 def _uid(prefix: str) -> str:
@@ -57,6 +57,8 @@ class Iteration(BaseModel):
 
 
 class DecisionEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     iter: int
     ts: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     phase: str
