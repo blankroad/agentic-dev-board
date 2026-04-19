@@ -68,6 +68,37 @@ async def test_goal_side_list_renders_all_goals_with_markers(tmp_path: Path) -> 
 
 
 @pytest.mark.asyncio
+async def test_goal_side_list_markers_are_colored(tmp_path: Path) -> None:
+    """Each status marker (✓/●/▶/✗/○/?/·) should render with a distinct
+    color via Rich markup so the user can scan status at a glance without
+    reading labels."""
+    _mk_goal(tmp_path, "g_shipped", "shipped", task_status="pushed")
+    _mk_goal(tmp_path, "g_wip", "wip", task_status="in_progress")
+    _mk_goal(tmp_path, "g_blocked", "blocked-g", task_status="blocked")
+    app = await _mount(tmp_path)
+    async with app.run_test(size=(60, 20)) as pilot:
+        await pilot.pause()
+        lv = app.query_one("#resources-goals")
+        # Collect rendered span styles from each item's Label
+        styled_colors: set[str] = set()
+        for item in lv.children:
+            try:
+                label = item.query_one("Label")
+            except Exception:
+                continue
+            rendered = label.render()
+            spans = getattr(rendered, "spans", [])
+            for s in spans:
+                style = str(getattr(s, "style", ""))
+                styled_colors.add(style.lower())
+        flat = " ".join(styled_colors)
+        # at least green (pushed), blue/yellow (wip), red (blocked) must
+        # appear somewhere in the rendered styles
+        assert "green" in flat, f"pushed marker should have green; styles={flat!r}"
+        assert "red" in flat, f"blocked marker should have red; styles={flat!r}"
+
+
+@pytest.mark.asyncio
 async def test_goal_side_list_shows_inline_legend(tmp_path: Path) -> None:
     _mk_goal(tmp_path, "g1", "one", task_status="pushed")
     app = await _mount(tmp_path)

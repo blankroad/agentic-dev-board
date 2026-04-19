@@ -8,7 +8,7 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, ListItem, ListView, Static
 
-from devboard.tui.goal_status_legend import LEGEND_INLINE
+from devboard.tui.goal_status_legend import LEGEND_INLINE, STATUS_COLOR
 from devboard.tui.session_derive import SessionContext
 
 
@@ -25,7 +25,9 @@ _STATUS_MARKER: dict[str, str] = {
 }
 
 
-def _derive_marker(goal_dir: Path, declared: str) -> str:
+def _derive_marker_and_status(goal_dir: Path, declared: str) -> tuple[str, str]:
+    """Returns (marker, canonical_status_key). canonical_status_key is
+    used for color lookup via STATUS_COLOR."""
     tasks_dir = goal_dir / "tasks"
     statuses: list[str] = []
     if tasks_dir.exists():
@@ -42,8 +44,8 @@ def _derive_marker(goal_dir: Path, declared: str) -> str:
                 statuses.append(s)
     if statuses:
         picked = max(statuses, key=lambda s: _TASK_RANK.index(s) if s in _TASK_RANK else -1)
-        return _STATUS_MARKER.get(picked, "·")
-    return _STATUS_MARKER.get(declared, "·")
+        return _STATUS_MARKER.get(picked, "·"), picked
+    return _STATUS_MARKER.get(declared, "·"), declared
 
 
 class GoalSideList(Widget):
@@ -72,7 +74,7 @@ class GoalSideList(Widget):
         self._goal_ids: list[str] = []
 
     def compose(self) -> ComposeResult:
-        yield Static(LEGEND_INLINE, id="goal-side-legend", markup=False)
+        yield Static(LEGEND_INLINE, id="goal-side-legend", markup=True)
         yield ListView(id="resources-goals")
 
     def on_mount(self) -> None:
@@ -91,8 +93,12 @@ class GoalSideList(Widget):
             goal_dir = (
                 self._session.store_root / ".devboard" / "goals" / goal["id"]
             )
-            marker = _derive_marker(goal_dir, goal.get("status", "active"))
-            lv.append(ListItem(Label(f"{marker} {goal.get('title', goal['id'])}")))
+            marker, status_key = _derive_marker_and_status(
+                goal_dir, goal.get("status", "active")
+            )
+            color = STATUS_COLOR.get(status_key, "white")
+            title = goal.get("title", goal["id"])
+            lv.append(ListItem(Label(f"[{color}]{marker}[/] {title}")))
             self._goal_ids.append(goal["id"])
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
