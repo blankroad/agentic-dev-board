@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.widget import Widget
 from textual.widgets import Collapsible, Static
 
 from devboard.tui.activity_row import ActivityRow
@@ -11,7 +12,7 @@ from devboard.tui.session_derive import SessionContext
 _MAX_ROWS = 200
 
 
-class ActivityTimeline(Collapsible):
+class ActivityTimeline(Widget):
     """Collapsible iter-event history. Header shows a one-line summary
     ('▸ Activity  N events  latest: iter N phase verdict'); body reveals
     the full scrollable ActivityRow list when expanded. 't' toggles."""
@@ -25,21 +26,19 @@ class ActivityTimeline(Collapsible):
     def __init__(
         self, session: SessionContext, task_id: str | None = None, **kwargs: object
     ) -> None:
+        super().__init__(**kwargs)
         self._session = session
         self._task_id = task_id
-        rows = []
-        if task_id:
-            rows = session.decisions_for_task(task_id)[:_MAX_ROWS]
-        self._rows = rows
-        title = self._summary_title()
-        super().__init__(title=title, collapsed=True, **kwargs)
+        self._rows = session.decisions_for_task(task_id)[:_MAX_ROWS] if task_id else []
 
     def compose(self) -> ComposeResult:
+        title = self._summary_title()
         if not self._rows:
-            yield Static("(no activity yet)", id="timeline-empty", markup=False)
+            yield Static(title, id="activity-empty", markup=False)
             return
-        for entry in self._rows:
-            yield ActivityRow(entry)
+        with Collapsible(title=title, collapsed=True, id="activity-collapsible"):
+            for entry in self._rows:
+                yield ActivityRow(entry)
 
     def _summary_title(self) -> str:
         if not self._rows:
@@ -51,7 +50,11 @@ class ActivityTimeline(Collapsible):
         tail = f"iter {iter_n} {phase}"
         if verdict:
             tail += f" {verdict}"
-        return f"▸ Activity  {len(self._rows)} events  latest: {tail}"
+        return f"Activity  {len(self._rows)} events  latest: {tail}"
 
     def action_toggle_timeline(self) -> None:
-        self.collapsed = not self.collapsed
+        try:
+            c = self.query_one("#activity-collapsible", Collapsible)
+        except Exception:
+            return
+        c.collapsed = not c.collapsed

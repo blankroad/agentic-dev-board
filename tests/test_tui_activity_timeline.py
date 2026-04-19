@@ -31,6 +31,35 @@ def _mk_decisions(tmp_path: Path) -> tuple[str, str]:
 
 
 @pytest.mark.asyncio
+async def test_timeline_collapsed_by_default_with_summary_title(tmp_path: Path) -> None:
+    """Spec: timeline shows a single-line summary by default; full rows
+    are hidden behind a Collapsible until 't' expands them."""
+    from textual.app import App, ComposeResult
+    from textual.widgets import Collapsible
+
+    from devboard.tui.activity_timeline import ActivityTimeline
+    from devboard.tui.session_derive import SessionContext
+
+    _mk_decisions(tmp_path)
+    ctx = SessionContext(tmp_path)
+
+    class _Host(App):
+        def compose(self) -> ComposeResult:
+            yield ActivityTimeline(ctx, task_id="t_1", id="tl")
+
+    app = _Host()
+    async with app.run_test(size=(120, 30)) as pilot:
+        await pilot.pause()
+        col = app.query_one("#activity-collapsible", Collapsible)
+        assert col.collapsed is True, "timeline must be collapsed on mount"
+        # Title must contain summary
+        title = str(col.title)
+        assert "Activity" in title and "iter" in title, (
+            f"summary title missing expected segments; got {title!r}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_timeline_renders_rows_newest_first(tmp_path: Path) -> None:
     from textual.app import App, ComposeResult
 
