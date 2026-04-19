@@ -80,18 +80,17 @@ async def test_colon_goto_single_match_selects(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_colon_goto_ambiguous_hints(tmp_path: Path) -> None:
+    """v2.1: ambiguous hint shows in command-line (not the sidebar)
+    to keep GoalSideList._goal_ids in sync with ListView rows."""
     _bootstrap_board(tmp_path, ("g_alpha", "alpha"), ("g_alpine", "alpine"))
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await _run_cmd(pilot, "goto g_al")
-        goals_list = app.query_one("#resources-goals")
-        rendered = " ".join(
-            str(c.query_one("Label").render())
-            for c in goals_list.children
-            if hasattr(c, "query_one")
+        cl = app.query_one("#command-line")
+        assert "Ambiguous" in cl.value, (
+            f"ambiguous hint should be in command-line; got {cl.value!r}"
         )
-        assert "Ambiguous" in rendered
 
 
 @pytest.mark.asyncio

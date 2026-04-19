@@ -264,6 +264,64 @@ async def test_clicking_activity_row_navigates_to_that_iter(tmp_path: Path) -> N
 
 
 @pytest.mark.asyncio
+async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Path) -> None:
+    """Red-team r3 HIGH: goto_cmd used to append 'Ambiguous'/'No match'
+    labels directly to the goals ListView, leaving GoalSideList._goal_ids
+    stale. Subsequent clicks mapped to the ORIGINAL goals, not the
+    labels the user saw. After fix: goto ambiguous shows hint in command
+    line, sidebar stays in sync with _goal_ids so click always navigates
+    to the labeled goal."""
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(
+        tmp_path,
+        ("g_alpha", "alpha"),
+        ("g_bravo", "bravo"),
+        ("g_charlie", "charlie"),
+        active="g_alpha",
+    )
+    for gid in ("g_alpha", "g_bravo", "g_charlie"):
+        (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text(f"# {gid}\n")
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        # Ambiguous goto
+        app.commands.dispatch("goto g_")
+        await pilot.pause()
+        lv = app.query_one("#resources-goals")
+        items = list(lv.children)
+        gsl = app.query_one("#goal-side-list")
+        # Sidebar must stay in sync: one item per tracked goal_id, nothing
+        # extra (no 'Ambiguous' label stuffed in), no missing
+        assert len(items) == len(gsl._goal_ids), (
+            f"sidebar/_goal_ids mismatch: items={len(items)} "
+            f"ids={gsl._goal_ids}"
+        )
+        # Click item[0] → navigate to _goal_ids[0]. Must equal the goal
+        # labeled on that row (no surprise swap).
+        labels = [
+            str(item.query_one("Label").render()) for item in items
+        ]
+        await pilot.click(items[0])
+        await pilot.pause()
+        # The first goal_id in the sidebar corresponds to the first label.
+        # Whatever goal got activated must match label[0]'s text.
+        activated = app.board.active_goal_id
+        assert activated is not None
+        assert activated in labels[0] or labels[0].endswith(
+            next(
+                g["title"]
+                for g in app.session.all_goals()
+                if g["id"] == activated
+            )
+        ), (
+            f"click on labeled row must navigate to the displayed goal. "
+            f"label={labels[0]!r} activated={activated}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None:
     """Clicking a goal in the sidebar should navigate to it — same as
     running ':goto <id>'. Otherwise the list is read-only decoration."""

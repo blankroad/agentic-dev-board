@@ -288,8 +288,12 @@ class DevBoardApp(App):
         except Exception as exc:  # noqa: BLE001 — handler surface must not crash App
             self._show_error(cl, f"Error: {exc}")
             return
-        cl.value = ""
-        cl.styles.background = None
+        # Only clear the input if the handler didn't write a hint/result.
+        # Commands like :goto ambiguous / :runs / :diff leave a success
+        # message in cl.value that the user should see.
+        if cl.value == raw:
+            cl.value = ""
+            cl.styles.background = None
 
     def _show_error(self, cl: CommandLine, message: str) -> None:
         cl.styles.background = "red"
