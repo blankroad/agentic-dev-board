@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-import pytest
+
 
 def test_plan_section_enum_has_four_known_members() -> None:
     """# guards: edge-case-red-rule
