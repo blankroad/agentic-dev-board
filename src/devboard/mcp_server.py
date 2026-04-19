@@ -483,6 +483,23 @@ async def list_tools() -> list[Tool]:
                 "required": ["project_root", "goal_id", "approved"],
             },
         ),
+        Tool(
+            name="devboard_tui_render_smoke",
+            description=(
+                "Spawn `devboard board` in a real pty for timeout_s seconds, "
+                "send Ctrl+Q, capture output, detect Python tracebacks. "
+                "Returns {mounted, crashed, traceback, captured_bytes, duration_s} "
+                "or {skipped_reason} if pty/devboard unavailable. POSIX-only."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "timeout_s": {"type": "number", "default": 3.0},
+                },
+                "required": ["project_root"],
+            },
+        ),
     ]
 
 
@@ -1021,6 +1038,15 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         store.save_plan_review(goal_id=goal_id, approved=approved, revision_target=revision_target)
         status = "approved" if approved else "revision_pending"
         return _text({"status": status, "goal_id": goal_id})
+
+    if name == "devboard_tui_render_smoke":
+        from devboard.mcp_tools.tui_smoke import run_tui_smoke
+
+        result = run_tui_smoke(
+            Path(args["project_root"]).resolve(),
+            timeout_s=float(args.get("timeout_s", 3.0)),
+        )
+        return _text(result)
 
     return _text({"error": f"unknown tool: {name}"})
 
