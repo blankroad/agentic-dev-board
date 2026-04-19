@@ -97,8 +97,35 @@ On y:
 2. Call `devboard_push_pr(project_root, branch, pr_title, pr_body, base_branch, draft)` which:
    - `git push -u origin <branch>`
    - `gh pr create --title ... --body "<body>" --base <base_branch>`
-3. Update task status to `pushed` via `devboard_update_task_status(task_id, 'pushed')`
-4. Report the PR URL to the user
+3. Write the Outcome section to `plan.md` (see Step 4.5 below)
+4. Mark the task as pushed (Step 4.5 handoff — see below)
+5. Report the PR URL to the user
+
+## Step 4.5 — Write Outcome section to plan.md (MANDATORY)
+
+After `devboard_push_pr` returns success (or a direct-push equivalent completes), write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan:
+
+```python
+from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+from pathlib import Path
+
+plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
+outcome = (
+    f"- Status: pushed\n"
+    f"- Final commit: {final_commit_sha}\n"
+    f"- PR: {pr_url or 'direct push to origin/main'}\n"
+    f"- Iterations: {iterations}\n"
+    f"- Tests: {tests_total} passing\n"
+    f"- Red-team: {redteam_rounds} rounds, final {redteam_final_verdict}\n"
+    f"- CSO: {cso_verdict or 'not required'}\n"
+    f"- Pushed at: {utcnow_iso}"
+)
+upsert_plan_section(plan_path, PlanSection.OUTCOME, outcome)
+```
+
+The helper is idempotent — re-running approval after a fix produces the same single-section result, no stacking. The `plan.json` locked_hash is unaffected (Outcome lives in plan.md only).
+
+After this write, proceed to `devboard_checkpoint "converged"` and `devboard_update_task_status status="pushed"`.
 
 ## Failure modes
 
