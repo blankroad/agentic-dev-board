@@ -9,3 +9,15 @@ def test_plan_section_enum_has_four_known_members() -> None:
     assert {m.value for m in PlanSection} == {
         "Metadata", "Outcome", "Screenshots / Diagrams", "Lessons",
     }
+
+
+def test_upsert_appends_when_section_missing(tmp_path: Path) -> None:
+    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    plan = tmp_path / "plan.md"
+    plan.write_text("# Goal\n\n## Problem\n\nexisting body\n")
+    upsert_plan_section(plan, PlanSection.OUTCOME, "status: pushed")
+    text = plan.read_text()
+    assert "## Problem" in text, "existing content must survive"
+    assert "## Outcome" in text, "new section must appear"
+    assert "status: pushed" in text
+    assert text.index("## Problem") < text.index("## Outcome")
