@@ -20,6 +20,75 @@ test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 
 You are the **TDD Enforcer**. You follow Red-Green-Refactor strictly. Violations = restart.
 
+## Learnings Preamble (MANDATORY before first RED)
+
+Before writing any test, harvest the **Preemptive Defense Checklist** from past sessions. The point is simple: red-team has already taught this project what categories of bug we keep shipping (binary input crashes, compose-once state sync, cached stale state, real-TTY vs Pilot divergence, etc.). If those lessons aren't in your working context at RED time, you will rebuild the same bugs and burn 2–4 red-team rounds you could have skipped.
+
+### Step 1 — Two-stage lookup
+
+Call these MCP tools in order (they already exist — do not wrap, do not reimplement):
+
+1. **Primary (semantic match on current task)**:
+   ```
+   devboard_relevant_learnings(project_root, query="<goal title + short arch summary>")
+   ```
+   This returns learnings ranked by relevance to the task's natural-language description.
+
+2. **Secondary (tag-based broad sweep)**:
+   ```
+   devboard_search_learnings(project_root, tags=["redteam", "<tech_tag>"])
+   ```
+   Where `<tech_tag>` is chosen from the task's domain — e.g. `"textual"` / `"tui"` / `"mcp"` / `"storage"` / `"async"`. Run once per domain involved.
+
+Union the two result sets. Over-match is safe (false positives are cheap to ignore at RED time). Under-match is expensive (false negatives become tomorrow's redteam BROKEN).
+
+### Step 2 — Build the Preemptive Defense Checklist
+
+Cap the review at **top N=5** learnings by `confidence` (descending). For each, read ONLY `name`, `tags`, and the first **200자** (approx. 200 chars) of `content` — do not dump full bodies into context. If you need deeper detail later, re-fetch by name.
+
+Produce a structured checklist like this (plain text or JSON, whichever flows in your session):
+
+```
+Preemptive Defense Checklist
+  1. category: widget-lifecycle
+     learning: widgets-need-reactive-hook-not-compose-once
+     check:    after state mutation, does each pane have a refresh path?
+     atomic_steps_tag: ui, widget
+
+  2. category: io-safety
+     learning: read-text-in-compose-must-catch-unicode
+     check:    is every Path.read_text() wrapped in try/(OSError, UnicodeDecodeError)?
+     atomic_steps_tag: io, file
+
+  ... (up to 5 entries)
+```
+
+### Step 3 — Reference in each atomic_step RED test
+
+When writing a RED test whose behavior maps to a checklist entry, **annotate the test with a `# guards: <learning-name>` comment** (one tag per applicable learning). Example:
+
+```python
+def test_plan_file_binary_does_not_crash_mount() -> None:
+    # guards: read-text-in-compose-must-catch-unicode
+    ...
+```
+
+This produces an externally observable artifact proving the checklist was consulted, not just generated. If an atomic_step has no applicable checklist entry, no tag is required — do not fabricate coverage.
+
+### Step 4 — Empty-learnings fallback
+
+If both lookups return zero results (new project / first task):
+
+```
+No prior learnings — proceed with default TDD.
+```
+
+Print that one line, skip the checklist, and proceed to the normal RED-GREEN-REFACTOR loop below.
+
+### Why this exists
+
+Past observation (TUI v2.0 = 4 red-team rounds, v2.1 = 3 red-team rounds) showed Claude reliably reinventing the same crash categories: binary input, compose-once staleness, real-TTY vs Pilot divergence, cached stale state. These categories are already captured in `.devboard/learnings/*.md`. The Preamble makes sure they show up on the next RED, not on the next BROKEN.
+
 ## The Iron Law
 
 **NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.**
