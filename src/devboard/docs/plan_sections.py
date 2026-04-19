@@ -17,7 +17,15 @@ def upsert_plan_section(plan_path: Path, section: PlanSection, content: str) -> 
     heading = f"## {section.value}"
     block = f"{heading}\n\n{content.rstrip()}\n"
     with file_lock(plan_path):
-        original = plan_path.read_text() if plan_path.exists() else ""
+        if plan_path.exists():
+            try:
+                original = plan_path.read_text()
+            except (OSError, UnicodeDecodeError):
+                # Corrupted / binary plan.md — refuse to clobber. Skill caller
+                # sees a no-op; user can fix the file and re-run.
+                return
+        else:
+            original = ""
         if heading in _section_headings(original):
             new_text = _replace_section(original, heading, block)
         else:

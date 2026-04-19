@@ -57,3 +57,20 @@ def test_upsert_on_empty_file_writes_single_block(tmp_path: Path) -> None:
     text = plan.read_text()
     assert text.startswith("## Lessons"), f"no leading whitespace: {text!r}"
     assert "learned X" in text
+
+
+def test_upsert_does_not_clobber_binary_plan(tmp_path: Path) -> None:
+    """# guards: read-text-in-compose-must-catch-unicode
+    edge: binary / non-UTF-8 file — must NOT overwrite a corrupted file
+    with a fresh block (data loss risk). Should fall through quietly."""
+    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+
+    plan = tmp_path / "plan.md"
+    bad = b"\xff\xfe\x00garbled"
+    plan.write_bytes(bad)
+
+    # Must not raise
+    upsert_plan_section(plan, PlanSection.OUTCOME, "status: pushed")
+
+    # Original bytes preserved — we refused to touch it
+    assert plan.read_bytes() == bad
