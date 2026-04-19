@@ -74,3 +74,33 @@ def test_upsert_does_not_clobber_binary_plan(tmp_path: Path) -> None:
 
     # Original bytes preserved — we refused to touch it
     assert plan.read_bytes() == bad
+
+
+def test_upsert_is_safe_under_concurrent_writes(tmp_path: Path) -> None:
+    """# guards: edge-case-red-rule
+    edge: concurrent mutation — two threads upserting different sections
+    must both succeed without data loss."""
+    import threading
+
+    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+
+    plan = tmp_path / "plan.md"
+    plan.write_text("# Goal\n\n## Problem\n\np\n")
+
+    def worker_metadata() -> None:
+        upsert_plan_section(plan, PlanSection.METADATA, "goal_id: g_xxx")
+
+    def worker_outcome() -> None:
+        upsert_plan_section(plan, PlanSection.OUTCOME, "status: pushed")
+
+    t1 = threading.Thread(target=worker_metadata)
+    t2 = threading.Thread(target=worker_outcome)
+    t1.start(); t2.start()
+    t1.join(); t2.join()
+
+    text = plan.read_text()
+    assert "## Problem" in text
+    assert "## Metadata" in text
+    assert "## Outcome" in text
+    assert "goal_id: g_xxx" in text
+    assert "status: pushed" in text
