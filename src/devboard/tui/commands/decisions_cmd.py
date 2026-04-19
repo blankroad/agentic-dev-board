@@ -11,16 +11,17 @@ def register(app: "DevBoardApp") -> None:
 
 
 def _run(app: "DevBoardApp", task_id: str) -> None:
-    from devboard.tui.context_viewer import ContextViewer
-
+    """v2.1: ContextViewer decisions tab removed. ActivityTimeline renders
+    the active task's decisions automatically. :decisions <task_id> now
+    switches the App's active task_id and shows a hint."""
     entries = app.store.load_decisions(task_id)
+    cl = app.query_one("#command-line")
     if not entries:
-        body = f"No decisions for task_id={task_id}"
-    else:
-        body = "\n".join(
-            f"[iter {e.iter}] {e.phase} — {e.verdict_source}: {e.reasoning[:80]}"
-            for e in entries
-        )
-    viewer = app.query_one("#context-viewer", ContextViewer)
-    viewer.set_tab_body("decisions", body)
-    viewer.action_switch("decisions")
+        cl.value = f"No decisions for task_id={task_id}"
+        return
+    app._task_id = task_id
+    # update selected_iter to the latest decision's iter so all panes refresh
+    latest = max((e.iter for e in entries), default=None)
+    if latest is not None:
+        app.selected_iter = latest
+    cl.value = f"decisions loaded: task={task_id} ({len(entries)} entries)"

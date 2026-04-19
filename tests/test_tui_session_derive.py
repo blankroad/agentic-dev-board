@@ -71,6 +71,36 @@ def test_decisions_sorted_newest_first(tmp_path: Path) -> None:
     assert iters == [3, 2, 1], f"decisions must sort newest iter first; got {iters}"
 
 
+def test_diff_parser_strips_crlf_trailing_r(tmp_path: Path) -> None:
+    """Red-team: CRLF-terminated iter_N.diff must not leak \\r into
+    returned file paths (regex \\r-aware)."""
+    from devboard.tui.session_derive import SessionContext
+
+    (tmp_path / ".devboard").mkdir()
+    goal_dir = tmp_path / ".devboard" / "goals" / "g_crlf"
+    (goal_dir / "tasks" / "t_c" / "changes").mkdir(parents=True)
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    store = FileStore(tmp_path)
+    board = BoardState()
+    board.goals.append(Goal(id="g_crlf", title="c", status=GoalStatus.active))
+    store.save_board(board)
+    (goal_dir / "plan.md").write_text("# p\n")
+    (goal_dir / "tasks" / "t_c" / "task.json").write_text(
+        json.dumps({"id": "t_c", "status": "in_progress"})
+    )
+    (goal_dir / "tasks" / "t_c" / "changes" / "iter_1.diff").write_bytes(
+        b"+++ b/src/a.py\r\n+++ b/tests/b.py\r\n"
+    )
+
+    ctx = SessionContext(tmp_path)
+    files = ctx.files_changed_in_iter("t_c", 1)
+    assert files == ["src/a.py", "tests/b.py"], (
+        f"CRLF must not leak into paths; got {files!r}"
+    )
+
+
 def test_diff_parser_extracts_touched_files(tmp_path: Path) -> None:
     from devboard.tui.session_derive import SessionContext
 

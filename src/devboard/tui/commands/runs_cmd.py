@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from textual.widgets import Label, ListItem, ListView
-
 if TYPE_CHECKING:
     from devboard.tui.app import DevBoardApp
 
@@ -13,13 +11,12 @@ def register(app: "DevBoardApp") -> None:
 
 
 def _run(app: "DevBoardApp") -> None:
-    runs_list = app.query_one("#resources-runs", ListView)
-    runs_list.clear()
+    """v2.1: Runs list was removed — the StatusBar now absorbs live run
+    info. :runs is kept for backward compat and shows a hint in the
+    command line instead of populating a widget."""
+    cl = app.query_one("#command-line")
     runs_dir = app.store_root / ".devboard" / "runs"
-    if not runs_dir.exists():
-        runs_list.append(ListItem(Label("(no runs)")))
-        return
-    files = sorted(runs_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)[:5]
-    for p in files:
-        runs_list.append(ListItem(Label(p.stem)))
-    runs_list.focus()
+    count = 0
+    if runs_dir.exists():
+        count = sum(1 for _ in runs_dir.glob("*.jsonl"))
+    cl.value = f"{count} runs on disk — live summary shown in StatusBar"

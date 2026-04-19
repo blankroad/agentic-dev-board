@@ -11,18 +11,27 @@ def register(app: "DevBoardApp") -> None:
 
 
 def _run(app: "DevBoardApp", task_id: str) -> None:
-    from devboard.tui.context_viewer import ContextViewer
-
-    # Locate most recent saved iter_N.diff for the task
-    content = f"No diff for task_id={task_id}"
+    """v2.1: ContextViewer tabs removed. :diff <task_id> now targets the
+    FilesChangedPane + MetaPane by updating app._task_id and the reactive
+    selected_iter to the latest iter of the given task."""
+    # locate latest iter_N.diff for this task under any goal
+    latest_iter: int | None = None
     for goal_dir in (app.store_root / ".devboard" / "goals").glob("*"):
         changes = goal_dir / "tasks" / task_id / "changes"
         if changes.exists():
             diffs = sorted(changes.glob("iter_*.diff"))
             if diffs:
-                content = diffs[-1].read_text()
+                # parse "iter_N.diff" → N
+                stem = diffs[-1].stem.removeprefix("iter_")
+                try:
+                    latest_iter = int(stem)
+                except ValueError:
+                    latest_iter = None
             break
-
-    viewer = app.query_one("#context-viewer", ContextViewer)
-    viewer.set_tab_body("diff", content)
-    viewer.action_switch("diff")
+    cl = app.query_one("#command-line")
+    if latest_iter is None:
+        cl.value = f"No diff for task_id={task_id}"
+        return
+    app._task_id = task_id
+    app.selected_iter = latest_iter
+    cl.value = f"diff loaded: task={task_id} iter={latest_iter}"

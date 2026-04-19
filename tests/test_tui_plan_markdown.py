@@ -74,6 +74,31 @@ async def test_gauntlet_section_collapsed_on_mount(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_plan_markdown_handles_binary_plan_md_without_crash(tmp_path: Path) -> None:
+    """Red-team: a corrupted / binary plan.md must not crash the App.
+    Gauntlet sections already tolerate bad files; plan.md must too."""
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    (tmp_path / ".devboard").mkdir()
+    store = FileStore(tmp_path)
+    board = BoardState(active_goal_id="g_bin")
+    board.goals.append(Goal(id="g_bin", title="binary", status=GoalStatus.active))
+    store.save_board(board)
+    goal_dir = tmp_path / ".devboard" / "goals" / "g_bin"
+    goal_dir.mkdir(parents=True)
+    (goal_dir / "plan.md").write_bytes(b"\xff\xfe\x00broken utf8 \x80\xc0")
+
+    app = await _mount(tmp_path)
+    async with app.run_test(size=(120, 30)) as pilot:
+        await pilot.pause()
+        body = app.query_one("#plan-body")
+        # Either the plan-body shows a sensible fallback OR the widget is
+        # still present and app did not crash — either satisfies spec
+        assert body is not None
+
+
+@pytest.mark.asyncio
 async def test_g_key_expands_gauntlet_section(tmp_path: Path) -> None:
     _mk_goal(
         tmp_path,

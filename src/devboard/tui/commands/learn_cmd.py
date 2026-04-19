@@ -11,20 +11,18 @@ def register(app: "DevBoardApp") -> None:
 
 
 def _run(app: "DevBoardApp", query: str) -> None:
+    """v2.1: Learnings tab removed. :learn <query> shows a count hint in
+    the command line (full render deferred until a dedicated pane in v2.2)."""
     from devboard.memory.learnings import search_learnings
-    from devboard.tui.context_viewer import ContextViewer
 
+    cl = app.query_one("#command-line")
     try:
         hits = search_learnings(app.store, query)[:10]
-    except Exception as exc:  # noqa: BLE001 — skill API may surface many errors
-        hits = []
-        body = f"Search failed: {exc}"
-    else:
-        if not hits:
-            body = f"No learnings for '{query}'"
-        else:
-            body = "\n".join(f"[{l.confidence}] {l.name} — {l.content[:80]}" for l in hits)
-
-    viewer = app.query_one("#context-viewer", ContextViewer)
-    viewer.set_tab_body("learnings", body)
-    viewer.action_switch("learnings")
+    except Exception as exc:  # noqa: BLE001 — search API surfaces varied errors
+        cl.value = f"Search failed: {exc}"
+        return
+    if not hits:
+        cl.value = f"No learnings for '{query}'"
+        return
+    top = hits[0]
+    cl.value = f"{len(hits)} learning(s) — top: {top.name}"

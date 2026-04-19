@@ -111,6 +111,32 @@ async def test_v20_commands_still_dispatch(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
+    """Red-team: :runs/:diff/:decisions/:learn referenced v2.0-only
+    widgets (#resources-runs, #context-viewer) that v2.1 removed. All
+    4 raised NoMatches from their handlers. Each command must now either
+    update v2.1 state or surface a friendly message — never propagate."""
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
+    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
+    changes = task_dir / "changes"
+    changes.mkdir(parents=True)
+    (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
+    (changes / "iter_1.diff").write_text("+++ b/src/x.py\n")
+    (task_dir / "decisions.jsonl").write_text(
+        json.dumps({"iter": 1, "phase": "tdd_green"}) + "\n"
+    )
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        for cmd in ["runs", "diff t_1", "decisions t_1", "learn hello"]:
+            # Must NOT raise
+            app.commands.dispatch(cmd)
+
+
+@pytest.mark.asyncio
 async def test_runs_list_not_in_layout(tmp_path: Path) -> None:
     from textual.css.query import NoMatches
 

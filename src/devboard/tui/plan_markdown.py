@@ -47,9 +47,13 @@ class PlanMarkdown(Widget):
             return ("_Plan not locked. Run `devboard-gauntlet`._", "_No gauntlet artifacts._")
         goal_dir: Path = self._session.store_root / ".devboard" / "goals" / gid
         plan_file = goal_dir / "plan.md"
-        plan = (
-            plan_file.read_text() if plan_file.exists() else "_Plan not locked. Run `devboard-gauntlet`._"
-        )
+        if plan_file.exists():
+            try:
+                plan = plan_file.read_text()
+            except (OSError, UnicodeDecodeError):
+                plan = "_plan.md unreadable (binary or permission denied)._"
+        else:
+            plan = "_Plan not locked. Run `devboard-gauntlet`._"
         gparts: list[str] = []
         gdir = goal_dir / "gauntlet"
         if gdir.exists():
