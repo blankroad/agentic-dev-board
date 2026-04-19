@@ -29,6 +29,7 @@ from devboard.tui.commands import (
 )
 from devboard.tui.files_changed_pane import FilesChangedPane
 from devboard.tui.goal_side_list import GoalSideList  # noqa: F401 used via message
+from devboard.tui.live_status_line import LiveStatusLine
 from devboard.tui.meta_pane import MetaPane
 from devboard.tui.plan_markdown import PlanMarkdown
 from devboard.tui.session_derive import SessionContext
@@ -125,6 +126,7 @@ class DevBoardApp(App):
                 yield FilesChangedPane(
                     self._session, task_id=self._task_id, selected_iter=initial_iter, id="files-changed-pane"
                 )
+        yield LiveStatusLine(id="live-status-line")
         yield CommandLine(id="command-line", placeholder=":")
         yield Footer()
 
@@ -155,10 +157,14 @@ class DevBoardApp(App):
             self.set_interval(0.1, self._tail_worker.poll_once)
 
     def on_stream_event(self, text: str, color: str | None) -> None:
-        """RunTailWorker callback. v2.1 repurposes this to refresh the
-        StatusBar 'phase' segment instead of streaming every line into a
-        widget (that role was reduced to one line)."""
+        """RunTailWorker callback. Updates both:
+        (a) StatusBar — active-goal curated segments (selected_iter context)
+        (b) LiveStatusLine — raw tail feed of the latest event at bottom"""
         self._refresh_status_bar(latest_line=text)
+        try:
+            self.query_one("#live-status-line", LiveStatusLine).set_line(text, color)
+        except Exception:
+            pass
 
     def _refresh_status_bar(self, latest_line: str | None = None) -> None:
         try:

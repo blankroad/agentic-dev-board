@@ -111,6 +111,46 @@ async def test_v20_commands_still_dispatch(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_status_line_shows_latest_event_at_bottom(tmp_path: Path) -> None:
+    """A 1-line LiveStatusLine sits above the CommandLine and shows the
+    most recent formatted event from runs/*.jsonl. Complements StatusBar
+    (top = goal context, bottom = raw live feed)."""
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
+    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    run_file = runs_dir / "run_live.jsonl"
+    run_file.write_text("")
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        # Widget exists
+        line = app.query_one("#live-status-line")
+        # Append new event
+        run_file.write_text(
+            json.dumps(
+                {
+                    "ts": "2026-04-19T15:16:17+00:00",
+                    "event": "tdd_green_complete",
+                    "state": {"iteration": 5, "status": "GREEN_CONFIRMED"},
+                }
+            )
+            + "\n"
+        )
+        for _ in range(20):
+            await pilot.pause(0.1)
+            body = app.query_one("#live-status-body")
+            if "15:16:17" in str(body.render()):
+                break
+        body = app.query_one("#live-status-body")
+        rendered = str(body.render())
+        assert "15:16:17" in rendered, rendered
+        assert "tdd_green_complete" in rendered, rendered
+
+
+@pytest.mark.asyncio
 async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
     """Red-team: :runs/:diff/:decisions/:learn referenced v2.0-only
     widgets (#resources-runs, #context-viewer) that v2.1 removed. All
