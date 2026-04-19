@@ -78,6 +78,48 @@ Write a markdown report including:
 
 Save to `.devboard/retros/retro_<timestamp>.md` via the MCP tool (or ask user to confirm).
 
+## Step 4.1 — Write Lessons section to each goal's plan.md (MANDATORY)
+
+After `retro.md` is written, fan out per-goal Lessons summaries so each goal's `plan.md` carries forward the lessons it produced. This is a MANDATORY step — retro is the only place lessons get projected back into the living plan doc.
+
+```python
+from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+from pathlib import Path
+
+for goal_id in goals_covered:
+    lessons = [
+        f"- {learning.name} — {learning.summary}"
+        for learning in learnings_for_goal(goal_id)
+    ]
+    retro_excerpt = retro_narrative_for_goal(goal_id)  # 1-3 lines the retro flagged
+    next_apply = next_apply_notes_for_goal(goal_id)
+
+    if not lessons and not retro_excerpt:
+        # Skip goals with zero learnings + zero retro narrative — don't
+        # write an empty Lessons block. Helper is idempotent, so a future
+        # retro with content will correctly upsert.
+        continue
+
+    body_parts = []
+    if lessons:
+        body_parts.append("\n".join(lessons))
+    if retro_excerpt:
+        body_parts.append(f"\n**Retro:** {retro_excerpt}")
+    if next_apply:
+        body_parts.append(f"\n**Next apply:** {next_apply}")
+
+    plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
+    upsert_plan_section(plan_path, PlanSection.LESSONS, "\n".join(body_parts))
+```
+
+Notes:
+- Per-goal iteration: retro can cover multiple goals at once — for each goal in `goals_covered`, call `upsert_plan_section` once.
+- The helper is idempotent — re-running retro replaces the Lessons block, no stacking.
+- Empty input guard: goals with zero lessons AND zero retro narrative are skipped entirely (no empty Lessons block is written). A future retro with content will correctly upsert into the same plan.md.
+- Source of lessons: filter `.devboard/learnings/` entries by learning's `goal_id` tag or by name match against the goal's checklist items.
+
+For each goal processed, note it in the retro output as `Lessons written → <goal_id>` so the user can see which plans were updated.
+
 ## On repeating patterns — automatic proposals
 
 `devboard_generate_retro` response now includes `learning_proposals` — a list of candidates whose failure-mode key appeared ≥3 times. Each entry contains `{name, content, tags, category, confidence, count}`.
