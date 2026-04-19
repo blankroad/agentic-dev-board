@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from textual.app import ComposeResult
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, ListItem, ListView, Static
 
@@ -57,9 +58,18 @@ class GoalSideList(Widget):
     GoalSideList ListView { height: 1fr; }
     """
 
+    class GoalSelected(Message):
+        """Emitted when the user clicks/activates a goal in the sidebar.
+        App handles this as equivalent to ':goto <goal_id>'."""
+
+        def __init__(self, goal_id: str) -> None:
+            super().__init__()
+            self.goal_id = goal_id
+
     def __init__(self, session: SessionContext, **kwargs: object) -> None:
         super().__init__(**kwargs)
         self._session = session
+        self._goal_ids: list[str] = []
 
     def compose(self) -> ComposeResult:
         yield Static(LEGEND_INLINE, id="goal-side-legend", markup=False)
@@ -76,9 +86,21 @@ class GoalSideList(Widget):
         except Exception:
             return
         lv.clear()
+        self._goal_ids = []
         for goal in self._session.all_goals():
             goal_dir = (
                 self._session.store_root / ".devboard" / "goals" / goal["id"]
             )
             marker = _derive_marker(goal_dir, goal.get("status", "active"))
             lv.append(ListItem(Label(f"{marker} {goal.get('title', goal['id'])}")))
+            self._goal_ids.append(goal["id"])
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """ListView fires Selected on click or Enter. Post GoalSelected
+        so the App can navigate."""
+        try:
+            idx = list(event.list_view.children).index(event.item)
+        except (ValueError, AttributeError):
+            return
+        if 0 <= idx < len(self._goal_ids):
+            self.post_message(self.GoalSelected(self._goal_ids[idx]))

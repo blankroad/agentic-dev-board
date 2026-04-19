@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static
@@ -29,7 +31,7 @@ class ActivityRow(Widget):
     ActivityRow #row-body { padding: 0 2; color: $text-muted; height: auto; }
     """
 
-    BINDINGS = [Binding("enter", "toggle", "Expand", show=False)]
+    BINDINGS = [Binding("enter", "toggle_and_select", "Open", show=False)]
     can_focus = True
 
     expanded: reactive[bool] = reactive(False)
@@ -64,3 +66,19 @@ class ActivityRow(Widget):
 
     def action_toggle(self) -> None:
         self.expanded = not self.expanded
+
+    class Selected(Message):
+        """Emitted when this row is activated (click or Enter). Carries
+        the decision entry so the App can update selected_iter."""
+
+        def __init__(self, entry: dict[str, Any]) -> None:
+            super().__init__()
+            self.entry = entry
+
+    def on_click(self, event: events.Click) -> None:
+        self.post_message(self.Selected(self.entry))
+        self.expanded = True
+
+    def action_toggle_and_select(self) -> None:
+        self.post_message(self.Selected(self.entry))
+        self.action_toggle()

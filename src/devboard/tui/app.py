@@ -11,6 +11,7 @@ from textual.widgets import Footer
 from devboard.config import DevBoardConfig, load_config
 from devboard.models import BoardState
 from devboard.storage.file_store import FileStore
+from devboard.tui.activity_row import ActivityRow
 from devboard.tui.activity_timeline import ActivityTimeline
 from devboard.tui.command_line import CommandLine
 from devboard.tui.command_registry import (
@@ -27,7 +28,7 @@ from devboard.tui.commands import (
     runs_cmd,
 )
 from devboard.tui.files_changed_pane import FilesChangedPane
-from devboard.tui.goal_side_list import GoalSideList
+from devboard.tui.goal_side_list import GoalSideList  # noqa: F401 used via message
 from devboard.tui.meta_pane import MetaPane
 from devboard.tui.plan_markdown import PlanMarkdown
 from devboard.tui.session_derive import SessionContext
@@ -252,6 +253,22 @@ class DevBoardApp(App):
 
     def on_status_bar_clicked(self, _event: StatusBar.Clicked) -> None:
         self.action_toggle_timeline()
+
+    def on_goal_side_list_goal_selected(
+        self, event: GoalSideList.GoalSelected
+    ) -> None:
+        """Click/Enter on a sidebar goal → equivalent of ':goto <gid>'."""
+        try:
+            self.commands.dispatch(f"goto {event.goal_id}")
+        except Exception:
+            pass
+
+    def on_activity_row_selected(self, event: ActivityRow.Selected) -> None:
+        """Click or Enter on a timeline row → navigate Meta/Files to that
+        iter."""
+        iter_n = event.entry.get("iter")
+        if isinstance(iter_n, int):
+            self.selected_iter = iter_n
 
     def action_help(self) -> None:
         from devboard.tui.help_modal import HelpModal

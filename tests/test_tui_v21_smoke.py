@@ -221,6 +221,74 @@ async def test_decisions_cmd_refreshes_activity_timeline(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
+async def test_clicking_activity_row_navigates_to_that_iter(tmp_path: Path) -> None:
+    """Clicking a timeline entry should jump Meta/Files to that iter —
+    otherwise the timeline is display-only and users have no way to drill
+    into a specific event."""
+    from devboard.tui.activity_row import ActivityRow
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
+    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
+    changes = task_dir / "changes"
+    changes.mkdir(parents=True)
+    (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
+    (task_dir / "decisions.jsonl").write_text(
+        "\n".join(
+            json.dumps({"iter": i, "phase": "tdd_green"}) for i in (1, 2, 3)
+        )
+        + "\n"
+    )
+    (changes / "iter_1.diff").write_text("+++ b/src/one.py\n")
+    (changes / "iter_2.diff").write_text("+++ b/src/two.py\n")
+    (changes / "iter_3.diff").write_text("+++ b/src/three.py\n")
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        # expand timeline so rows receive clicks
+        await pilot.press("h")
+        await pilot.pause()
+        rows = list(app.query(ActivityRow).results())
+        # find the iter=1 row (newest-first means rows[-1])
+        iter_one_row = next(r for r in rows if r.entry.get("iter") == 1)
+        await pilot.click(iter_one_row)
+        await pilot.pause()
+        assert app.selected_iter == 1, (
+            f"click on iter 1 row must set selected_iter; got {app.selected_iter}"
+        )
+        body = app.query_one("#files-changed-body")
+        assert "src/one.py" in str(body.render()), (
+            "FilesChanged pane must refresh to clicked iter"
+        )
+
+
+@pytest.mark.asyncio
+async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None:
+    """Clicking a goal in the sidebar should navigate to it — same as
+    running ':goto <id>'. Otherwise the list is read-only decoration."""
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(tmp_path, ("g_first", "first"), ("g_second", "second"), active="g_first")
+    for gid in ("g_first", "g_second"):
+        (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text(f"# PLAN_{gid}\n")
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        # initial active goal
+        assert app.board.active_goal_id == "g_first"
+        lv = app.query_one("#resources-goals")
+        # click the second ListItem
+        second_item = list(lv.children)[1]
+        await pilot.click(second_item)
+        await pilot.pause()
+        assert app.board.active_goal_id == "g_second", (
+            f"click on sidebar goal must switch active; got {app.board.active_goal_id}"
+        )
+
+
+@pytest.mark.asyncio
 async def test_plan_toc_line_shows_h2_headings(tmp_path: Path) -> None:
     """Spec: above the ActivityTimeline, a '#plan-toc' line lists the
     active plan's H2 section titles so the user can see structure without
