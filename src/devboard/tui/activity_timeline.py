@@ -20,6 +20,9 @@ class ActivityTimeline(Widget):
 
     DEFAULT_CSS = """
     ActivityTimeline { height: auto; border-top: solid $primary-darken-3; }
+    ActivityTimeline #plan-toc {
+        color: $text-muted; padding: 0 1; height: 1; text-overflow: ellipsis;
+    }
     """
 
     BINDINGS = [Binding("t", "toggle_timeline", "Timeline", show=False)]
@@ -36,6 +39,7 @@ class ActivityTimeline(Widget):
         self.set_reactive(ActivityTimeline.current_task_id, task_id)
 
     def compose(self) -> ComposeResult:
+        yield Static(self._toc_line(), id="plan-toc", markup=False)
         rows = self._load_rows()
         title = self._summary_title(rows)
         if not rows:
@@ -44,6 +48,31 @@ class ActivityTimeline(Widget):
         with Collapsible(title=title, collapsed=True, id="activity-collapsible"):
             for entry in rows:
                 yield ActivityRow(entry)
+
+    def _toc_line(self) -> str:
+        """Parse plan_summary.md (or plan.md) for H2 headings and return
+        them as a dot-separated TOC line. Empty if no plan is available."""
+        gid = self._session.active_goal_id
+        if not gid:
+            return ""
+        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        for name in ("plan_summary.md", "plan.md"):
+            f = goal_dir / name
+            if not f.exists():
+                continue
+            try:
+                text = f.read_text()
+            except (OSError, UnicodeDecodeError):
+                continue
+            sections = [
+                line[3:].strip()
+                for line in text.splitlines()
+                if line.startswith("## ")
+            ]
+            if sections:
+                return "TOC: " + " · ".join(sections[:8])
+            break
+        return ""
 
     def _load_rows(self) -> list[dict]:
         tid = self.current_task_id

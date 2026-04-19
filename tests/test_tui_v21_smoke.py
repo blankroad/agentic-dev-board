@@ -221,6 +221,64 @@ async def test_decisions_cmd_refreshes_activity_timeline(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
+async def test_plan_toc_line_shows_h2_headings(tmp_path: Path) -> None:
+    """Spec: above the ActivityTimeline, a '#plan-toc' line lists the
+    active plan's H2 section titles so the user can see structure without
+    scrolling the plan pane."""
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+    from devboard.tui.app import DevBoardApp
+
+    (tmp_path / ".devboard").mkdir()
+    store = FileStore(tmp_path)
+    board = BoardState(active_goal_id="g_toc")
+    board.goals.append(Goal(id="g_toc", title="g", status=GoalStatus.active))
+    store.save_board(board)
+    gd = tmp_path / ".devboard" / "goals" / "g_toc"
+    gd.mkdir(parents=True)
+    (gd / "plan_summary.md").write_text(
+        "# Title\n\n## Problem\n\ntext\n\n## Architecture\n\nmore\n\n## Goal Checklist\n\n- a\n"
+    )
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        toc = app.query_one("#plan-toc")
+        text = str(toc.render())
+        for section in ("Problem", "Architecture", "Goal Checklist"):
+            assert section in text, f"TOC missing {section}; got {text!r}"
+
+
+@pytest.mark.asyncio
+async def test_h_key_toggles_activity_timeline(tmp_path: Path) -> None:
+    """Spec: pressing 'h' anywhere (outside CommandLine Input) toggles
+    ActivityTimeline's collapsed state. Convenient shortcut for 'history'."""
+    from textual.widgets import Collapsible
+
+    from devboard.tui.app import DevBoardApp
+
+    _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
+    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
+    task_dir.mkdir(parents=True)
+    (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
+    (task_dir / "decisions.jsonl").write_text(
+        json.dumps({"iter": 1, "phase": "tdd_green"}) + "\n"
+    )
+
+    app = DevBoardApp(store_root=tmp_path)
+    async with app.run_test(size=(140, 42)) as pilot:
+        await pilot.pause()
+        col = app.query_one("#activity-collapsible", Collapsible)
+        assert col.collapsed is True
+        await pilot.press("h")
+        await pilot.pause()
+        assert col.collapsed is False, "'h' should expand the timeline"
+        await pilot.press("h")
+        await pilot.pause()
+        assert col.collapsed is True, "'h' pressed again should collapse"
+
+
+@pytest.mark.asyncio
 async def test_runs_list_not_in_layout(tmp_path: Path) -> None:
     from textual.css.query import NoMatches
 

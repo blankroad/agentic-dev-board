@@ -7,7 +7,23 @@ from textual.widgets import Input
 
 
 class CommandLine(Input):
-    """Bottom-docked command input. Opens on ':' (via host App), closes on Esc."""
+    """Bottom-docked command input. Opens on ':' (via host App), closes on Esc.
+
+    Textual's default `Input` CSS uses `border: tall` + `height: 3` so the
+    typed text sits inside a 3-cell tall border box. Our App forces
+    `#command-line { height: 1 }` to keep it a single status-line-style
+    row — that clips away the actual content row, leaving typed chars
+    invisible in real TTY (Pilot-tests render differently). Override the
+    widget defaults here to force a no-border 1-cell layout."""
+
+    DEFAULT_CSS = """
+    CommandLine {
+        border: none;
+        padding: 0 1;
+        height: 1;
+        background: $primary-darken-3;
+    }
+    """
 
     BINDINGS = [
         Binding("escape", "close", "Close", show=False),

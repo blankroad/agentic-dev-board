@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from textual import events
 from textual.app import ComposeResult
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Static
 
@@ -11,8 +13,16 @@ class StatusBar(Widget):
 
     DEFAULT_CSS = """
     StatusBar { height: 1; background: $primary-darken-3; padding: 0 1; }
+    StatusBar:hover { background: $primary-darken-2; }
     StatusBar #status-bar-body { color: $text; }
     """
+
+    class Clicked(Message):
+        """Emitted when the user clicks the StatusBar. App reacts by
+        toggling the ActivityTimeline."""
+
+    def on_click(self, event: events.Click) -> None:
+        self.post_message(self.Clicked())
 
     def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)

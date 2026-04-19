@@ -59,6 +59,7 @@ class DevBoardApp(App):
         Binding("ctrl+q", "quit", "Quit"),
         Binding("colon", "open_command_line", "Cmd"),
         Binding("question_mark", "help", "Help"),
+        Binding("h", "toggle_timeline", "History"),
     ]
 
     selected_iter: reactive[int | None] = reactive(None)
@@ -242,6 +243,15 @@ class DevBoardApp(App):
     def action_open_command_line(self) -> None:
         cl = self.query_one("#command-line", CommandLine)
         cl.open(return_to=self.focused)
+
+    def action_toggle_timeline(self) -> None:
+        try:
+            self.query_one("#activity-timeline").action_toggle_timeline()
+        except Exception:
+            pass
+
+    def on_status_bar_clicked(self, _event: StatusBar.Clicked) -> None:
+        self.action_toggle_timeline()
 
     def action_help(self) -> None:
         from devboard.tui.help_modal import HelpModal
