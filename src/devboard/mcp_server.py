@@ -21,6 +21,7 @@ from mcp.types import TextContent, Tool
 from devboard.analytics.metrics import collect_metrics, diagnose_activations
 from devboard.analytics.retro import generate_retro, save_retro
 from devboard.agents.iron_law import check_iron_law
+from devboard.docs.plan_sections import PlanSection, upsert_plan_section
 from devboard.gauntlet.lock import build_locked_plan
 from devboard.memory.learnings import load_all_learnings, save_learning, search_learnings
 from devboard.memory.retriever import load_relevant_learnings
@@ -49,6 +50,59 @@ def _text(payload: Any) -> list[TextContent]:
     if isinstance(payload, str):
         return [TextContent(type="text", text=payload)]
     return [TextContent(type="text", text=json.dumps(payload, default=str, indent=2))]
+
+
+def _git_identity(project_root: Path) -> tuple[str, str]:
+    """Return ``(owner, branch)`` derived from local git config + HEAD ref.
+
+    - owner: ``"Name <email>"`` if both are set; the non-empty one alone if
+      only one is; ``"unknown"`` otherwise.
+    - branch: short ref name (``git rev-parse --abbrev-ref HEAD``) or
+      ``"unknown"`` when HEAD is detached, git is absent, or the directory
+      is not a repo.
+
+    Never raises — any OSError/TimeoutExpired/non-zero exit degrades to
+    ``"unknown"``. Lock flow must not crash just because git is unhappy.
+    """
+    import subprocess
+
+    def _run(*cmd: str) -> str:
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=3,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+        if proc.returncode != 0:
+            return ""
+        return proc.stdout.strip()
+
+    # Only trust git identity if ``project_root`` is itself a git work tree.
+    # Otherwise ``git config`` happily returns the user's global identity,
+    # which is misleading for throwaway directories (tests, CI sandboxes).
+    in_repo = _run("git", "rev-parse", "--is-inside-work-tree") == "true"
+    if not in_repo:
+        return "unknown", "unknown"
+
+    name = _run("git", "config", "user.name")
+    email = _run("git", "config", "user.email")
+    # symbolic-ref works on unborn branches (fresh `git init -b <name>` with
+    # zero commits) where `rev-parse --abbrev-ref HEAD` errors out.
+    branch = _run("git", "symbolic-ref", "--short", "HEAD")
+    if name and email:
+        owner = f"{name} <{email}>"
+    elif name:
+        owner = name
+    elif email:
+        owner = email
+    else:
+        owner = "unknown"
+    return owner, (branch or "unknown")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -756,6 +810,18 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         plan = build_locked_plan(args["goal_id"], args["decide_json"])
         store.save_locked_plan(plan)
         plan_path = store._goals_dir(args["goal_id"]) / "plan.md"
+        # Metadata section (Goal #2 of plan-as-living-doc): write once after
+        # lock so the human plan.md carries goal_id, lock timestamp, hash,
+        # owner, and branch at its head. Idempotent via upsert_plan_section.
+        owner, branch = _git_identity(Path(args["project_root"]))
+        metadata_content = (
+            f"- Goal ID: {args['goal_id']}\n"
+            f"- Locked at: {plan.locked_at.isoformat()}\n"
+            f"- Locked hash: {plan.locked_hash}\n"
+            f"- Owner: {owner}\n"
+            f"- Branch: {branch}"
+        )
+        upsert_plan_section(plan_path, PlanSection.METADATA, metadata_content)
         return _text({
             "locked_hash": plan.locked_hash,
             "plan_path": str(plan_path),
