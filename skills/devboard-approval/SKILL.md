@@ -125,7 +125,42 @@ upsert_plan_section(plan_path, PlanSection.OUTCOME, outcome)
 
 The helper is idempotent — re-running approval after a fix produces the same single-section result, no stacking. The `plan.json` locked_hash is unaffected (Outcome lives in plan.md only).
 
-After this write, proceed to `devboard_checkpoint "converged"` and `devboard_update_task_status status="pushed"`.
+After this write, continue to Step 4.6 (real-TTY screenshot for UI tasks), then `devboard_checkpoint "converged"` and `devboard_update_task_status status="pushed"`.
+
+## Step 4.6 — Capture real-TTY smoke for UI tasks (if `ui_surface` set)
+
+When the current task's metadata has `ui_surface=True` (gauntlet sets this during Finalize when arch.md / decide.json mention TUI / widget / pilot / textual / ui / frontend / browser keywords), run the real-TTY smoke tool AFTER Outcome has been written, and record any capture into the `## Screenshots / Diagrams` section of plan.md:
+
+```python
+task_meta = task.metadata or {}
+if task_meta.get("ui_surface", False):
+    # Run real-TTY smoke
+    result = devboard_tui_render_smoke(project_root, timeout_s=3.0)
+
+    # Graceful skip if pty/devboard unavailable — no Screenshots block
+    if "skipped_reason" in result:
+        # Log for visibility; do NOT write an empty section
+        print(f"[screenshots] skipped: {result['skipped_reason']}")
+    else:
+        from devboard.mcp_tools.capture_store import save_tui_capture
+        from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+        from pathlib import Path
+
+        capture_path = save_tui_capture(project_root, goal_id, result)
+        rel = capture_path.relative_to(Path(project_root))
+        screenshots_body = (
+            f"### TUI real-TTY capture ({capture_path.stem})\n"
+            f"- Path: `{rel}`\n"
+            f"- Result: mounted={result.get('mounted')}, "
+            f"crashed={result.get('crashed')}, "
+            f"captured_bytes={result.get('captured_bytes')}, "
+            f"duration_s={result.get('duration_s')}"
+        )
+        plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
+        upsert_plan_section(plan_path, PlanSection.SCREENSHOTS, screenshots_body)
+```
+
+For non-UI tasks (`ui_surface` missing or `False`), this step is a no-op — use `.get("ui_surface", False)` so legacy tasks without the marker default to skip. Idempotent: re-running approval regenerates a fresh capture file (new timestamp) and REPLACES the `## Screenshots / Diagrams` section (single-block, not cumulative).
 
 ## Failure modes
 

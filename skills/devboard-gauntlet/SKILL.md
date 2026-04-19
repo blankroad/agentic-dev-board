@@ -212,17 +212,22 @@ Right after receiving `task_id` from `devboard_start_task`, set the markers belo
 
 1. **production_destined**: default `true`. Only `false` if the user explicitly said "throwaway" or "prototype".
 2. **security_sensitive_plan**: concatenate the architecture/atomic_steps text from arch.md + decide.json into a single string, then call `devboard_check_security_sensitive(diff=<plan_text>)`. Use the returned `sensitive` value as-is.
+3. **ui_surface**: concatenate arch.md + decide.json into a single string, then scan case-insensitively for any of these keywords: `tui`, `textual`, `widget`, `pilot`, `browser`, `ui`, `frontend`. If any keyword is present → `True`, else `False`. This flag lets `devboard-approval` decide whether to capture a real-TTY screenshot via `devboard_tui_render_smoke` and write the `## Screenshots / Diagrams` section of plan.md.
 
-Save both values like this:
+Save all three values like this:
 
 ```
 devboard_update_task_status(
   project_root, task_id, status="planning",
-  metadata={"production_destined": <bool>, "security_sensitive_plan": <bool>}
+  metadata={
+      "production_destined": <bool>,
+      "security_sensitive_plan": <bool>,
+      "ui_surface": <bool>,
+  }
 )
 ```
 
-The CSO/redteam skills read these markers to decide whether to auto-run.
+The CSO/redteam skills read the first two markers to decide whether to auto-run. Approval reads `ui_surface` to decide whether to run the real-TTY smoke capture.
 
 ## Required MCP calls
 
