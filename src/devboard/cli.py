@@ -1096,6 +1096,43 @@ def doc(
 
 
 @app.command()
+def export(
+    goal_id: str = typer.Argument(..., help="Goal id to export"),
+    format: str = typer.Option("md", "--format", "-f", help="md | html | confluence"),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
+    project_root: Optional[Path] = typer.Option(None, "--project-root", help="Project root (defaults to find_devboard_root)"),
+) -> None:
+    """Export a goal's plan.md as md/html/confluence.
+
+    Reads .devboard/goals/<goal_id>/plan.md and emits the requested format.
+    Writes to stdout by default, or to --output file if provided.
+    """
+    from devboard.config import find_devboard_root
+    from devboard.docs.export import render
+
+    root = project_root or find_devboard_root() or Path.cwd()
+    plan_path = root / ".devboard" / "goals" / goal_id / "plan.md"
+    if not plan_path.exists():
+        console.print(f"[red]no plan.md for goal {goal_id} at {plan_path}[/red]")
+        raise typer.Exit(1)
+    try:
+        text = plan_path.read_text()
+    except (OSError, UnicodeDecodeError) as e:
+        console.print(f"[red]could not read plan.md: {e}[/red]")
+        raise typer.Exit(2)
+    try:
+        rendered = render(text, format)
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    if output is not None:
+        output.write_text(rendered)
+    else:
+        # stdout, no Rich formatting (print raw)
+        print(rendered, end="")
+
+
+@app.command()
 def kanban(
     format: str = typer.Option("terminal", "--format", "-f", help="terminal | md | jira"),
     output: Optional[Path] = typer.Option(None, "--output", "-o"),
