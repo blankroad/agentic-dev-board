@@ -95,8 +95,12 @@ async def test_dev_body_uses_render_dev_timeline(tmp_path: Path) -> None:
     async with app.run_test(size=(120, 30)) as pilot:
         await pilot.pause()
         body = app.query_one("#phase-flow").dev_body_text()
-        # "delta :" only appears in render_dev_timeline output
-        assert "delta :" in body, f"Dev tab must use render_dev_timeline; got: {body[:400]!r}"
+        # render_dev_timeline outputs either "## Scope baseline" (As-Is→To-Be,
+        # when git-based code_delta populates) or "iter N · phase" (fallback).
+        # Both are exclusive to the new renderer — not the legacy inline loop.
+        assert ("## Scope baseline" in body) or ("iter 1 · tdd_green" in body), (
+            f"Dev tab must use render_dev_timeline; got: {body[:400]!r}"
+        )
 
 
 @pytest.mark.asyncio

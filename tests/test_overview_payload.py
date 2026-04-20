@@ -73,6 +73,31 @@ def test_build_overview_payload_iterations_with_numstat(tmp_path: Path) -> None:
     assert iters[1]["touched_files"] == []
 
 
+def test_build_overview_payload_iter_prefers_green_phase(tmp_path: Path) -> None:
+    """Per-iter primary row must prefer tdd_green over tdd_refactor/SKIPPED.
+
+    Regression guard for 2026-04-20 Dev-tab noise issue: last-row-wins made every
+    iter show 'tdd_refactor · SKIPPED · +0 −0 · (none)' regardless of real work.
+    """
+    gdir = _fresh_goal(tmp_path)
+    tdir = _task_dir(gdir, "t_test")
+    (tdir / "decisions.jsonl").write_text(
+        '{"iter": 1, "phase": "tdd_red", "verdict_source": "RED_CONFIRMED",'
+        ' "reasoning": "red reasoning", "ts": "2026-04-20T13:30:00"}\n'
+        '{"iter": 1, "phase": "tdd_green", "verdict_source": "GREEN_CONFIRMED",'
+        ' "reasoning": "ship iter 1 green", "ts": "2026-04-20T13:31:00"}\n'
+        '{"iter": 1, "phase": "tdd_refactor", "verdict_source": "SKIPPED",'
+        ' "reasoning": "no refactor.", "ts": "2026-04-20T13:31:05"}\n',
+        encoding="utf-8",
+    )
+    out = build_overview_payload(tmp_path, "g_test", task_id="t_test")
+    assert len(out["iterations"]) == 1
+    row = out["iterations"][0]
+    assert row["phase"] == "tdd_green"
+    assert row["verdict"] == "GREEN_CONFIRMED"
+    assert row["reasoning"] == "ship iter 1 green"
+
+
 def test_build_overview_payload_partial_failure(tmp_path: Path) -> None:
     """Corrupt plan.json must not erase purpose — per-section try/except.
 

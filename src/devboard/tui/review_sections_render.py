@@ -1,7 +1,12 @@
-"""Review tab renderer: 4 text-label sections.
+"""Review tab renderer — As-Is → To-Be risk framing.
 
-Per borderline decision: text labels (Improved / ToImprove / Learned / TODOs),
-no emoji — terminal-font independent, snapshot-stable.
+Improved = risks planned AND resolved during execution.
+ToImprove = risks planned but unresolved + new known_risks surfaced mid-run.
+Learned = learnings.jsonl entries.
+TODOs = non_goals (deferred followups).
+
+All 4 sections use text labels (no emoji) per borderline decision — terminal
+font independent, snapshot stable.
 """
 
 from __future__ import annotations
@@ -24,36 +29,66 @@ def _fmt_learning(l: dict[str, Any]) -> str:
 
 
 def render_review_sections(payload: dict[str, Any]) -> str:
+    risk = payload.get("risk_delta") or {}
+    resolved = risk.get("resolved") or []
+    remaining = risk.get("remaining") or []
+    learnings = payload.get("learnings") or []
+
+    # Fallback to completed/non-completed steps when risk_delta is empty
+    # (e.g. unit tests that seed only plan_digest).
+    use_steps_fallback = not resolved and not remaining
     plan = payload.get("plan_digest") or {}
     steps = plan.get("atomic_steps") or []
-    improved = [s for s in steps if s.get("completed")]
-    to_improve = [s for s in steps if not s.get("completed")]
-    learnings = payload.get("learnings") or []
-    followups = payload.get("followups") or []
+    improved_steps = [s for s in steps if s.get("completed")]
+    to_improve_steps = [s for s in steps if not s.get("completed")]
+    followups = (
+        risk.get("followups") if risk.get("followups")
+        else payload.get("followups") or []
+    )
 
     lines: list[str] = []
-    lines.append("## Improved (개선한 것)")
-    if improved:
-        lines.extend(_fmt_step(s) for s in improved)
+    lines.append("## Improved (resolved during this task)")
+    if use_steps_fallback:
+        # Legacy unit-test compat: show completed steps as "improved".
+        if improved_steps:
+            lines.extend(_fmt_step(s) for s in improved_steps)
+        else:
+            lines.append("  (none yet)")
     else:
-        lines.append("  (아직 완료된 step 없음)")
+        if resolved:
+            for r in resolved:
+                lines.append(f"  • {r}")
+        else:
+            lines.append("  (none yet)")
     lines.append("")
-    lines.append("## ToImprove (앞으로 개선할 것)")
-    if to_improve:
-        lines.extend(_fmt_step(s) for s in to_improve)
+
+    lines.append("## ToImprove (risks remaining / newly surfaced)")
+    if use_steps_fallback:
+        if to_improve_steps:
+            lines.extend(_fmt_step(s) for s in to_improve_steps)
+        else:
+            lines.append("  (all planned steps complete)")
     else:
-        lines.append("  (모두 완료)")
+        if remaining:
+            for r in remaining:
+                # Trim long risk strings for scanability.
+                text = r if len(r) <= 160 else r[:157] + "…"
+                lines.append(f"  • {text}")
+        else:
+            lines.append("  (none)")
     lines.append("")
-    lines.append("## Learned (배운 점)")
+
+    lines.append("## Learned")
     if learnings:
         lines.extend(_fmt_learning(l) for l in learnings)
     else:
-        lines.append("  (누적된 learnings 없음)")
+        lines.append("  (no learnings captured)")
     lines.append("")
-    lines.append("## TODOs (후속 할 일)")
+
+    lines.append("## TODOs (follow-up work)")
     if followups:
         for f in followups:
             lines.append(f"  □ {f}")
     else:
-        lines.append("  (없음)")
+        lines.append("  (none)")
     return "\n".join(lines)

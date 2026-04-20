@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import TypedDict
 
@@ -21,6 +22,10 @@ class OverviewPayload(TypedDict):
     current_state: dict[str, object]
     learnings: list[dict[str, object]]
     followups: list[str]
+    # As-Is → To-Be framing: one delta per task, not a per-iter timeline.
+    code_delta: dict[str, object]  # {base_commit, head_commit, files[], adds, dels}
+    step_shipping: list[dict[str, object]]  # per atomic_step: shipping iter/ts/verdict
+    risk_delta: dict[str, object]  # {resolved[], remaining[], learnings[], todos[]}
 
 
 _PREMISE_BULLET = re.compile(r"^-\s+(.+?)\s*$")
@@ -76,7 +81,85 @@ def _diff_stats(diff_path: Path) -> dict[str, int]:
     return {"adds": adds, "dels": dels}
 
 
-def _extract_iterations(task_dir: Path) -> list[dict[str, object]]:
+# Per-iter "primary row" selection. Decisions.jsonl logs tdd_red → tdd_green →
+# tdd_refactor for every cycle. tdd_refactor=SKIPPED is the *last* row but the
+# least informative — it carries no reasoning, no verdict signal. tdd_green
+# carries the real "why it shipped" narrative, so it wins. Fallback to tdd_red
+# (early failures), then anything else, then tdd_refactor only if nothing else
+# exists for the iter. Also excludes bool from the int check — `True` is an int
+# in Python and would otherwise pollute the iteration list.
+_PHASE_PRIORITY: dict[str, int] = {
+    "tdd_green": 100,
+    "tdd_red": 50,
+    "eng_review": 40,
+    "review": 40,
+    "parallel_review": 40,
+    "tdd_refactor": -10,
+}
+
+
+def _git_numstat_for_iter(
+    project_root: Path, iter_n: int, task_id: str | None = None
+) -> tuple[list[str], dict[str, int]]:
+    """Look up numstat for the commit whose subject carries ``iter N [`` for
+    this specific task.
+
+    The ``task <task_id>`` scope is critical — without it, ``iter 1 [`` would
+    match every prior task's first commit too.
+
+    Returns ([], {0,0}) when git is unavailable, no match, or on any failure —
+    caller falls back to the legacy iter_N.diff parser.
+    """
+    # Conservative: if task_id is not scoped, do not run git (would leak other
+    # tasks' commits into this iter's file list).
+    if not task_id:
+        return ([], {"adds": 0, "dels": 0})
+    grep = f"task {task_id} iter {iter_n} \\["
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "log",
+                "-1",
+                "--numstat",
+                "--format=",
+                f"--grep={grep}",
+                "--extended-regexp",
+            ],
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return ([], {"adds": 0, "dels": 0})
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return ([], {"adds": 0, "dels": 0})
+    touched: list[str] = []
+    adds_total = 0
+    dels_total = 0
+    for line in proc.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        a, d, path = parts
+        if not path or path in touched:
+            continue
+        touched.append(path)
+        try:
+            adds_total += int(a)
+            dels_total += int(d)
+        except ValueError:
+            # binary (- / -) — count as touched but not summed
+            continue
+    return touched, {"adds": adds_total, "dels": dels_total}
+
+
+def _extract_iterations(
+    task_dir: Path,
+    project_root: Path | None = None,
+    task_id: str | None = None,
+) -> list[dict[str, object]]:
     decisions = task_dir / "decisions.jsonl"
     if not decisions.exists():
         return []
@@ -84,8 +167,8 @@ def _extract_iterations(task_dir: Path) -> list[dict[str, object]]:
         text = decisions.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return []
-    rows: list[dict[str, object]] = []
-    seen: dict[int, int] = {}
+    # Group every decision row by iter number.
+    by_iter: dict[int, list[dict]] = {}
     for raw in text.splitlines():
         if not raw.strip():
             continue
@@ -96,24 +179,207 @@ def _extract_iterations(task_dir: Path) -> list[dict[str, object]]:
         if not isinstance(entry, dict):
             continue
         it = entry.get("iter")
-        if not isinstance(it, int):
+        # Strict int check — True/False would pass isinstance(int) otherwise.
+        if isinstance(it, bool) or not isinstance(it, int):
             continue
-        diff_path = task_dir / "changes" / f"iter_{it}.diff"
-        row = {
-            "iter": it,
-            "phase": entry.get("phase", ""),
-            "verdict": entry.get("verdict_source", ""),
-            "ts": entry.get("ts", ""),
-            "touched_files": _extract_touched_files(diff_path),
-            "diff_stats": _diff_stats(diff_path),
-        }
-        if it in seen:
-            rows[seen[it]] = row
-        else:
-            seen[it] = len(rows)
-            rows.append(row)
-    rows.sort(key=lambda r: r["iter"])
+        by_iter.setdefault(it, []).append(entry)
+
+    rows: list[dict[str, object]] = []
+    for it in sorted(by_iter.keys()):
+        entries = by_iter[it]
+        # Pick the most informative row per iter via _PHASE_PRIORITY.
+        primary = max(
+            entries,
+            key=lambda e: _PHASE_PRIORITY.get(str(e.get("phase", "")), 0),
+        )
+        # Prefer live git numstat (real unified diff, accurate); fallback to
+        # legacy iter_N.diff parser when git lookup is empty.
+        touched: list[str] = []
+        stats: dict[str, int] = {"adds": 0, "dels": 0}
+        if project_root is not None:
+            touched, stats = _git_numstat_for_iter(project_root, it, task_id)
+        if not touched:
+            diff_path = task_dir / "changes" / f"iter_{it}.diff"
+            touched = _extract_touched_files(diff_path)
+            stats = _diff_stats(diff_path)
+        rows.append(
+            {
+                "iter": it,
+                "phase": primary.get("phase", ""),
+                "verdict": primary.get("verdict_source", ""),
+                "reasoning": primary.get("reasoning", ""),
+                "ts": primary.get("ts", ""),
+                "touched_files": touched,
+                "diff_stats": stats,
+            }
+        )
     return rows
+
+
+def _git_run(args: list[str], cwd: Path, timeout: float = 5.0) -> str:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return proc.stdout
+
+
+def _task_base_commit(project_root: Path, task_id: str) -> str:
+    """Find the commit immediately BEFORE the first commit of this task.
+
+    Strategy: `git log --grep="task <task_id>"` gives all this-task commits
+    newest-first; the last line is the oldest. Its parent is the baseline.
+    Falls back to empty string if git unavailable or no commits matched
+    (task-in-progress without any shipped iters yet).
+    """
+    out = _git_run(
+        [
+            "log",
+            "--all",
+            "--reflog",
+            f"--grep=task {task_id}",
+            "--format=%H",
+        ],
+        cwd=project_root,
+    )
+    if not out.strip():
+        return ""
+    shas = [line for line in out.splitlines() if line.strip()]
+    if not shas:
+        return ""
+    oldest_task_sha = shas[-1]
+    parent_out = _git_run(
+        ["rev-parse", f"{oldest_task_sha}^"],
+        cwd=project_root,
+    )
+    return parent_out.strip()
+
+
+def _code_delta(project_root: Path, base: str, head: str = "HEAD") -> dict[str, object]:
+    """`git diff --numstat base..head` → {files, adds, dels, base, head}.
+
+    Returns empty stats if base is empty (new task, nothing shipped yet).
+    """
+    if not base:
+        return {"base_commit": "", "head_commit": "", "files": [], "adds": 0, "dels": 0}
+    head_sha = _git_run(["rev-parse", head], cwd=project_root).strip()
+    out = _git_run(["diff", "--numstat", f"{base}..{head}"], cwd=project_root)
+    files: list[dict[str, object]] = []
+    adds_total = 0
+    dels_total = 0
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) != 3:
+            continue
+        a, d, path = parts
+        if not path:
+            continue
+        if a == "-" and d == "-":
+            files.append({"path": path, "adds": "bin", "dels": "bin"})
+            continue
+        try:
+            ai, di = int(a), int(d)
+        except ValueError:
+            continue
+        files.append({"path": path, "adds": ai, "dels": di})
+        adds_total += ai
+        dels_total += di
+    return {
+        "base_commit": base[:8],
+        "head_commit": head_sha[:8] if head_sha else "",
+        "files": files,
+        "adds": adds_total,
+        "dels": dels_total,
+    }
+
+
+def _step_shipping(
+    atomic_steps: list[dict[str, object]], iterations: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    """Cross-reference plan.json atomic_steps with decisions GREEN iters.
+
+    Each atomic_step's `behavior` is the authoritative test description.
+    We look for a GREEN iter whose `reasoning` mentions the step's id
+    (e.g. `s_001`). When found, the step is "shipped" with that iter's
+    ts + verdict. Falls back to the step's own `completed` flag.
+    """
+    green_by_step: dict[str, dict[str, object]] = {}
+    for it in iterations:
+        phase = str(it.get("phase", ""))
+        if not phase.startswith("tdd_green"):
+            continue
+        reasoning = str(it.get("reasoning", ""))
+        # Step ids are short (s_001, s_002, ..., s_015). Scan reasoning.
+        m = re.search(r"\b(s_\d{3})\b", reasoning)
+        if m:
+            green_by_step.setdefault(m.group(1), it)
+
+    out: list[dict[str, object]] = []
+    for s in atomic_steps:
+        sid = str(s.get("id", ""))
+        shipped = green_by_step.get(sid)
+        out.append(
+            {
+                "id": sid,
+                "behavior": s.get("behavior", ""),
+                "shipped": shipped is not None or bool(s.get("completed")),
+                "ship_iter": shipped.get("iter") if shipped else None,
+                "ship_ts": shipped.get("ts", "") if shipped else "",
+                "ship_verdict": shipped.get("verdict", "") if shipped else "",
+            }
+        )
+    return out
+
+
+def _risk_delta(
+    plan_data: dict[str, object],
+    decisions: list[dict[str, object]],
+) -> dict[str, object]:
+    """Build As-Is risks (from plan.known_failure_modes) vs resolved/remaining.
+
+    A planned risk is considered "resolved" if any tdd_green iter's reasoning
+    or any review-phase row references its key phrase. Unreferenced risks
+    stay under `remaining`. Also collects `known_risk` verdict_source rows as
+    new-risk entries that weren't in the plan.
+    """
+    planned = [str(r) for r in (plan_data.get("known_failure_modes") or [])]
+    followups = [str(x) for x in (plan_data.get("non_goals") or []) if x]
+
+    # Text corpus of everything the team said during execution.
+    corpus = " ".join(
+        str(d.get("reasoning", "")) for d in decisions
+    ).lower()
+
+    def _referenced(risk: str) -> bool:
+        # Risks look like "CRITICAL: wedge bloat ..." — match on the noun phrase
+        # after the severity prefix.
+        after_colon = risk.split(":", 1)[-1]
+        key = after_colon.strip().split(" ")[0].lower()
+        return bool(key) and key in corpus
+
+    resolved = [r for r in planned if _referenced(r)]
+    remaining = [r for r in planned if r not in resolved]
+
+    # New risks surfaced during execution (not in plan).
+    new_risks = [
+        str(d.get("reasoning", ""))
+        for d in decisions
+        if str(d.get("verdict_source", "")) == "KNOWN_RISK"
+    ]
+
+    return {
+        "resolved": resolved,
+        "remaining": remaining + new_risks,
+        "followups": followups,
+    }
 
 
 def _extract_followups(plan_json_path: Path) -> list[str]:
@@ -195,7 +461,11 @@ def build_overview_payload(
     iterations: list[dict[str, object]] = []
     if task_id is not None:
         try:
-            iterations = _extract_iterations(goal_dir / "tasks" / task_id)
+            iterations = _extract_iterations(
+                goal_dir / "tasks" / task_id,
+                project_root=project_root,
+                task_id=task_id,
+            )
         except Exception:
             iterations = []
     current_state: dict[str, object] = (
@@ -220,6 +490,48 @@ def build_overview_payload(
         )
     except Exception:
         learnings = []
+
+    # As-Is → To-Be delta sections.
+    code_delta: dict[str, object] = {
+        "base_commit": "", "head_commit": "", "files": [], "adds": 0, "dels": 0,
+    }
+    step_shipping: list[dict[str, object]] = []
+    risk_delta: dict[str, object] = {"resolved": [], "remaining": [], "followups": []}
+    if task_id is not None:
+        try:
+            base = _task_base_commit(project_root, task_id)
+            code_delta = _code_delta(project_root, base)
+        except Exception:
+            pass
+        try:
+            atomic_steps = list(plan_digest.get("atomic_steps") or [])  # type: ignore[arg-type]
+            step_shipping = _step_shipping(atomic_steps, iterations)
+        except Exception:
+            pass
+        try:
+            plan_data: dict[str, object] = {}
+            plan_path = goal_dir / "plan.json"
+            if plan_path.exists():
+                plan_data = json.loads(plan_path.read_text(encoding="utf-8"))
+            # decisions rows live in task_dir/decisions.jsonl — already parsed
+            # once inside _extract_iterations; re-parse cheaply here for risk
+            # corpus instead of plumbing state across calls.
+            decisions_raw: list[dict[str, object]] = []
+            dpath = goal_dir / "tasks" / task_id / "decisions.jsonl"
+            if dpath.exists():
+                for raw in dpath.read_text(encoding="utf-8").splitlines():
+                    if not raw.strip():
+                        continue
+                    try:
+                        e = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(e, dict):
+                        decisions_raw.append(e)
+            risk_delta = _risk_delta(plan_data, decisions_raw)
+        except Exception:
+            pass
+
     return OverviewPayload(
         purpose=purpose,
         plan_digest=plan_digest,
@@ -227,4 +539,7 @@ def build_overview_payload(
         current_state=current_state,
         learnings=learnings,
         followups=followups,
+        code_delta=code_delta,
+        step_shipping=step_shipping,
+        risk_delta=risk_delta,
     )

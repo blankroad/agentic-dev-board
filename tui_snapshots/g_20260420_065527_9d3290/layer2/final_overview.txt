@@ -1,0 +1,154 @@
+DevBoardApp
+● TUI 개선 — TOC 위치/점프, 우측패널 활용, 중앙패널 phase-flow화  ▶ iter 16 
+tdd_red
+  ◆ redteam 
+KNOWN_RISK
+✓ pushed
+▶ wip
+?
+│
+Overview
+Plan
+Dev 49/15
+Result
+Review
+│
+iter:    16
+✓
+ UI preview 4-layer
+│
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+╸
+━━━━━━
+╺
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+│
+verdict: 
+RED_CONFIRMED
+·
+ TUI 개선 — TOC 위 
+│
+## Improved (개선한 것)
+│
+redteam: 
+KNOWN_RISK
+│
+  (아직 완료된 step 없음)
+│
+steps:   0/15
+│
+│
+───────────────────────────
+│
+## ToImprove (앞으로 개선할 것)
+│
+(no files)
+│
+  • s_001  parse_numstat('1\t2\tsrc/a.py\n') returns
+│
+│
+[{'path':'src/a.py','adds':1,'dels':2}]
+│
+│
+  • s_002  parse_numstat handles binary (-\t-\t) and empty input returning safe sentinels
+│
+│
+  • s_003  build_overview_payload on fresh goal (no task) returns dict with iterations=[]
+│
+│
+and current_state.status=='awaiting_task'
+│
+│
+  • s_004  build_overview_payload extracts purpose from brainstorm.md premises[0] and
+│
+│
+plan_digest.locked_hash from plan.json
+│
+│
+  • s_005  build_overview_payload iterates decisions.jsonl + changes/iter_N.diff producing
+│
+│
+iterations list with numstat per iter
+│
+│
+  • s_006  build_overview_payload treats corrupt plan.json as partial failure — purpose
+│
+│
+still returned, plan_digest={}
+│
+│
+  • s_007  MCP tool devboard_build_overview registered and dispatches to
+│
+│
+build_overview_payload returning the dict
+│
+│
+  • s_008  render_overview_body(payload) returns markdown string containing all 4 section
+│
+│
+headers (목적/계획 요약/활동/현재 상태)
+│
+│
+  • s_009  render_dev_timeline(payload) emits per-iter block with iter number, phase,
+│
+│
+verdict, and numstat file list, ordered oldest-top
+│
+│
+  • s_010  render_result_timeline(payload) emits atomic_steps checklist with completed
+│
+│
+timestamps
+│
+│
+  • s_011  render_review_sections(payload) emits 4 text-label section headers
+│
+│
+(Improved/ToImprove/Learned/TODOs)
+│
+│
+  • s_012  PhaseFlowView composes 5 TabPanes with ids [overview, plan, dev, result, review]
+│
+│
+and initial=='overview'
+│
+│
+  • s_013  PhaseFlowView keybinding 1 activates 'overview' (not 'plan')
+│
+│
+  • s_014  DevBoardApp forwards keys 1..5 to phase_flow.action_activate_tab mapping to the
+│
+│
+5 tab ids
+│
+│
+  • s_015  Existing test_phase_flow.py keybinding assertions updated to 1..5 mapping
+│
+│
+without altering PHASE_TO_TAB tests
+│
+│
+│
+│
+## Learned (배운 점)
+│
+│
+  (누적된 learnings 없음)
+│
+│
+│
+│
+## TODOs (후속 할 일)
+│
+│
+  □ R5 우측 패널 재설계 (후속 goal candidate) — src/devboard/tui/board_view.py,
+│
+^q 
+Quit 
+ : 
+Cmd 
+ ? 
+Help 
+▏
+^p
+ Pin

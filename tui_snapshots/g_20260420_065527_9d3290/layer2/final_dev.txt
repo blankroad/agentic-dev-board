@@ -1,0 +1,148 @@
+DevBoardApp
+● TUI 개선 — TOC 위치/점프, 우측패널 활용, 중앙패널 phase-flow화  ▶ iter 16 
+tdd_red
+  ◆ redteam 
+KNOWN_RISK
+✓ pushed
+▶ wip
+?
+│
+Overview
+Plan
+Dev 49/15
+Result
+Review
+│
+iter:    16
+✓
+ UI preview 4-layer
+│
+━━━━━━━━━━━━━━━━
+╸
+━━━━━━━━━
+╺
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+│
+verdict: 
+RED_CONFIRMED
+·
+ TUI 개선 — TOC 위 
+│
+iter 0 · eng_review · ENG_REVIEW     2026-04-20 12:36:27.305381+00:00
+│
+redteam: 
+KNOWN_RISK
+│
+  delta : +0 −0
+│
+steps:   0/15
+│
+  files : (none)
+│
+───────────────────────────
+│
+│
+(no files)
+│
+iter 1 · tdd_refactor · SKIPPED     2026-04-20 12:39:41.443819+00:00
+│
+│
+  delta : +23 −0
+│
+│
+  files :
+│
+│
+    ~ src/devboard/analytics/iter_diffstat.py
+│
+│
+    ~ tests/test_iter_diffstat.py
+│
+│
+│
+│
+iter 2 · tdd_refactor · SKIPPED     2026-04-20 12:40:30.232577+00:00
+│
+│
+  delta : +15 −1
+│
+│
+  files : (none)
+│
+│
+│
+│
+iter 3 · tdd_refactor · SKIPPED     2026-04-20 12:41:37.217036+00:00
+│
+│
+  delta : +0 −0
+│
+│
+  files : (none)
+│
+│
+│
+│
+iter 4 · tdd_refactor · SKIPPED     2026-04-20 12:42:58.254215+00:00
+│
+│
+  delta : +0 −0
+│
+│
+  files : (none)
+│
+│
+│
+│
+iter 5 · tdd_refactor · SKIPPED     2026-04-20 12:45:05.331324+00:00
+│
+│
+  delta : +0 −0
+│
+│
+  files : (none)
+│
+│
+│
+│
+iter 6 · tdd_refactor · SKIPPED     2026-04-20 12:46:04.547367+00:00
+│
+│
+  delta : +0 −0
+│
+│
+  files : (none)
+│
+│
+│
+│
+iter 7 · tdd_refactor · SKIPPED     2026-04-20 12:47:26.482145+00:00
+│
+│
+  delta : +0 −0
+│
+│
+  files : (none)
+│
+│
+│
+│
+iter 8 · tdd_refactor · SKIPPED     2026-04-20 12:48:20.710732+00:00
+│
+│
+  delta : +2 −0
+│
+│
+  files : (none)
+│
+│
+│
+^q 
+Quit 
+ : 
+Cmd 
+ ? 
+Help 
+▏
+^p
+ Pin
