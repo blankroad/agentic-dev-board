@@ -4,11 +4,13 @@ import json
 from pathlib import Path
 
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Label, ListItem, ListView, Static
 
 from devboard.tui.goal_status_legend import LEGEND_INLINE, STATUS_COLOR
+from devboard.tui.goal_tree import build_goal_tree
 from devboard.tui.session_derive import SessionContext
 
 
@@ -23,6 +25,8 @@ _STATUS_MARKER: dict[str, str] = {
     "todo": "○", "blocked": "✗", "failed": "✗",
     "active": "·", "archived": "-",
 }
+
+_INDENT = "  "  # two spaces per depth level
 
 
 def _derive_marker_and_status(goal_dir: Path, declared: str) -> tuple[str, str]:
@@ -50,7 +54,9 @@ def _derive_marker_and_status(goal_dir: Path, declared: str) -> tuple[str, str]:
 
 class GoalSideList(Widget):
     """Left sidebar: inline legend line + scrollable goal list with derived
-    status markers."""
+    status markers. Renders a parent_id-based hierarchy via prefix-indent,
+    sorts roots by created_at desc, and hides pushed/archived behind the
+    '[a] toggle archived' binding."""
 
     DEFAULT_CSS = """
     GoalSideList { width: 15%; border-right: solid $primary-darken-3; }
@@ -59,6 +65,10 @@ class GoalSideList(Widget):
     }
     GoalSideList ListView { height: 1fr; }
     """
+
+    BINDINGS = [
+        Binding("a", "toggle_archived", "toggle archived", show=False),
+    ]
 
     class GoalSelected(Message):
         """Emitted when the user clicks/activates a goal in the sidebar.
@@ -72,12 +82,18 @@ class GoalSideList(Widget):
         super().__init__(**kwargs)
         self._session = session
         self._goal_ids: list[str] = []
+        self._show_archived: bool = False
 
     def compose(self) -> ComposeResult:
         yield Static(LEGEND_INLINE, id="goal-side-legend", markup=True)
         yield ListView(id="resources-goals")
 
     def on_mount(self) -> None:
+        self.refresh_content()
+
+    def action_toggle_archived(self) -> None:
+        """Flip the archived-visibility state and re-render."""
+        self._show_archived = not self._show_archived
         self.refresh_content()
 
     def refresh_content(self) -> None:
@@ -89,7 +105,10 @@ class GoalSideList(Widget):
             return
         lv.clear()
         self._goal_ids = []
-        for goal in self._session.all_goals():
+        rows = build_goal_tree(
+            self._session.all_goals(), show_archived=self._show_archived
+        )
+        for goal, depth in rows:
             goal_dir = (
                 self._session.store_root / ".devboard" / "goals" / goal["id"]
             )
@@ -98,7 +117,8 @@ class GoalSideList(Widget):
             )
             color = STATUS_COLOR.get(status_key, "white")
             title = goal.get("title", goal["id"])
-            lv.append(ListItem(Label(f"[{color}]{marker}[/] {title}")))
+            indent = _INDENT * depth
+            lv.append(ListItem(Label(f"{indent}[{color}]{marker}[/] {title}")))
             self._goal_ids.append(goal["id"])
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:

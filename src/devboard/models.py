@@ -165,6 +165,7 @@ class Goal(BaseModel):
     description: str = ""
     status: GoalStatus = GoalStatus.active
     branch_prefix: str = ""
+    parent_id: str | None = Field(default=None)
     task_ids: list[str] = Field(default_factory=list)
     locked_plan: LockedPlan | None = None
     cost_tokens_used: int = 0

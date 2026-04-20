@@ -124,13 +124,14 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="devboard_add_goal",
-            description="Register a new goal. Returns goal_id. If board has no active goal, this one becomes active.",
+            description="Register a new goal. Returns goal_id. If board has no active goal, this one becomes active. Optional parent_id must refer to an existing goal; passing an unknown id returns {error}.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "project_root": {"type": "string"},
                     "title": {"type": "string"},
                     "description": {"type": "string"},
+                    "parent_id": {"type": ["string", "null"]},
                 },
                 "required": ["project_root", "title"],
             },
@@ -644,7 +645,15 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
     if name == "devboard_add_goal":
         store = _store(args["project_root"])
         board = store.load_board()
-        goal = Goal(title=args["title"], description=args.get("description", ""))
+        parent_id = args.get("parent_id")
+        if parent_id is not None:
+            if not any(g.id == parent_id for g in board.goals):
+                return _text({"error": f"parent_id '{parent_id}' not found"})
+        goal = Goal(
+            title=args["title"],
+            description=args.get("description", ""),
+            parent_id=parent_id,
+        )
         board.goals.append(goal)
         if board.active_goal_id is None:
             board.active_goal_id = goal.id
