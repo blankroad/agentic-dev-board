@@ -330,6 +330,8 @@ def _step_shipping(
             {
                 "id": sid,
                 "behavior": s.get("behavior", ""),
+                "impl_file": s.get("impl_file", ""),
+                "test_file": s.get("test_file", ""),
                 "shipped": shipped is not None or bool(s.get("completed")),
                 "ship_iter": shipped.get("iter") if shipped else None,
                 "ship_ts": shipped.get("ts", "") if shipped else "",
@@ -430,6 +432,8 @@ def _extract_plan_digest(plan_json_path: Path) -> dict[str, object]:
         {
             "id": s.get("id", ""),
             "behavior": s.get("behavior", ""),
+            "impl_file": s.get("impl_file", ""),
+            "test_file": s.get("test_file", ""),
             "completed": s.get("completed") is True,
         }
         for s in steps
