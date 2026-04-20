@@ -78,21 +78,30 @@ def assemble_process(grouped: dict[int, list[dict[str, Any]]]) -> str:
             f"(source: decisions.jsonl aggregate)."
         )
 
-    # Redteam round listing
-    redteam_rows: list[dict[str, Any]] = []
+    # Eng_review, review, redteam rows — each gets a per-iter citation
+    # so the golden sample's shorthand citations like '(source: iter=7
+    # review)' have a token-subset match in the generated output.
+    narrated_phases = ("eng_review", "review", "redteam")
+    round_index = 0
     for iter_n in sorted(grouped.keys()):
         for r in grouped[iter_n]:
-            if str(r.get("phase")) == "redteam":
-                redteam_rows.append(r)
-
-    for idx, r in enumerate(redteam_rows, start=1):
-        iter_n = r.get("iter", "?")
-        verdict = r.get("verdict_source") or "?"
-        reasoning = _trim(str(r.get("reasoning", "")), 200)
-        lines.append(
-            f"Round {idx} (iter={iter_n}) returned {verdict}. "
-            f"{reasoning} (source: decisions.jsonl iter={iter_n} phase=redteam)."
-        )
+            phase = str(r.get("phase", ""))
+            if phase not in narrated_phases:
+                continue
+            verdict = r.get("verdict_source") or "?"
+            reasoning = _trim(str(r.get("reasoning", "")), 200)
+            if phase == "redteam":
+                round_index += 1
+                lines.append(
+                    f"Round {round_index} (iter={iter_n}) returned {verdict}. "
+                    f"{reasoning} "
+                    f"(source: decisions.jsonl iter={iter_n} phase=redteam)."
+                )
+            else:
+                lines.append(
+                    f"iter={iter_n} {phase}: {verdict}. {reasoning} "
+                    f"(source: decisions.jsonl iter={iter_n} phase={phase})."
+                )
 
     if not lines:
         lines.append("_No iteration data yet — generator ran before TDD started._")

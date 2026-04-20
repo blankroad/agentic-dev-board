@@ -85,3 +85,103 @@ def test_generate_narrative_writes_five_section_plan_summary(tmp_path: Path) -> 
     assert headers == ["Purpose", "Plan", "Process", "Result", "Review"], (
         f"expected 5 headers in order, got {headers!r}"
     )
+
+
+def _normalize_citation(text: str) -> str:
+    """Normalize a citation string for superset comparison: lowercase,
+    collapse internal whitespace, strip parens + leading 'source:'
+    prefix, strip trailing punctuation."""
+    s = text.lower().strip()
+    s = re.sub(r"^\(source:\s*", "", s)
+    s = s.rstrip(").,;:")
+    return re.sub(r"[\s,]+", " ", s)
+
+
+def _citation_tokens(normalized: str) -> set[str]:
+    """Extract essential tokens from a normalized citation: artifact
+    name (plan.md/decisions.jsonl), iter=N, phase keyword. Used so
+    golden shorthand like 'iter=7 review' token-matches generator
+    output 'decisions.jsonl iter=7 phase=review'."""
+    tokens: set[str] = set()
+    # Artifact hints
+    for keyword in ("plan.md", "decisions.jsonl", "changes/"):
+        if keyword in normalized:
+            tokens.add(keyword)
+    # iter=N numbers (collect ALL — golden may say 'iter=8, 9, 10')
+    for m in re.findall(r"iter\s*=\s*(\d+)", normalized):
+        tokens.add(f"iter={m}")
+    # Phase keywords (open vocabulary — generator also covers)
+    for phase in (
+        "review", "redteam", "cso", "approval", "eng_review", "eng review",
+        "parallel_review", "tdd_red", "tdd_green", "tdd_refactor",
+        "problem", "architecture", "scope decision", "budget",
+    ):
+        if phase in normalized:
+            tokens.add(phase.replace(" ", "_"))
+    return tokens
+
+
+def _extract_citations(section_text: str) -> list[str]:
+    """Pull every `(source: ...)` citation from a section body."""
+    return re.findall(r"\(source:\s*[^)]+\)", section_text, flags=re.IGNORECASE)
+
+
+def test_generate_narrative_citations_are_superset_of_audit_golden() -> None:
+    """Real-goal integration test: run the generator on the parent
+    audit's target (g_20260418_103214_db0261) and assert that every
+    citation present in the hand-authored golden_sample.md appears,
+    under normalize_citation, in the generator's output. Generated is
+    never thinner than golden.
+
+    # guards: unit-tests-on-primitives-dont-prove-integration
+    """
+    project_root = Path(__file__).resolve().parent.parent
+    audit_golden = (
+        project_root
+        / ".devboard"
+        / "goals"
+        / "g_20260419_231208_af78bb"
+        / "audit"
+        / "golden_sample.md"
+    )
+    if not audit_golden.exists():
+        # Parent audit artifacts may have been trimmed from a checkout;
+        # skip is acceptable, the fixture-based test above still runs.
+        import pytest
+        pytest.skip("parent audit golden_sample.md not present in this checkout")
+
+    target_goal_id = "g_20260418_103214_db0261"
+    target_plan = project_root / ".devboard" / "goals" / target_goal_id / "plan.md"
+    if not target_plan.exists():
+        import pytest
+        pytest.skip(f"target goal {target_goal_id} plan.md not in this checkout")
+
+    from devboard.narrative.generator import generate_narrative
+
+    out_path = generate_narrative(project_root, target_goal_id)
+    generated = out_path.read_text(encoding="utf-8")
+    generated_token_sets = [
+        _citation_tokens(_normalize_citation(c))
+        for c in _extract_citations(generated)
+    ]
+
+    golden = audit_golden.read_text(encoding="utf-8")
+    golden_citations = _extract_citations(golden)
+
+    # Token-subset acceptance: every golden citation's token set must
+    # be a subset of SOME generated citation's token set. This tolerates
+    # shorthand drift ('iter=7 review' vs 'decisions.jsonl iter=7 phase=review')
+    # while still catching missed artifacts or iter numbers.
+    missing: list[str] = []
+    for cite in golden_citations:
+        g_tokens = _citation_tokens(_normalize_citation(cite))
+        if not g_tokens:
+            continue  # citation has no extractable tokens, skip
+        if not any(g_tokens.issubset(s) for s in generated_token_sets):
+            missing.append(cite)
+
+    assert not missing, (
+        f"generated narrative missing {len(missing)} citations from audit "
+        f"golden_sample.md; first examples: {missing[:10]!r}. "
+        f"Generated token sets sample: {generated_token_sets[:5]!r}"
+    )
