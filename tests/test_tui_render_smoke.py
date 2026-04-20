@@ -135,7 +135,7 @@ def test_mcp_server_registers_tui_render_smoke() -> None:
 # s_010 — real integration: mount on current project (skipped if devboard absent)
 # ------------------------------------------------------------------
 @pytest.mark.skipif(
-    shutil.which("devboard") is None, reason="devboard binary not on PATH"
+    shutil.which("agentboard") is None, reason="agentboard binary not on PATH"
 )
 def test_run_tui_smoke_mounts_current_project() -> None:
     """# guards: ui-requires-real-tty-smoke-not-just-pytest

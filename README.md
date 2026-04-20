@@ -34,7 +34,7 @@ Influences:
 
 ## TL;DR — get running
 
-**One-line installer** (clones to `~/.local/share/agentic-dev-board`, adds `devboard` alias to your shell rc, installs 9 skills globally):
+**One-line installer** (clones to `~/.local/share/agentic-dev-board`, adds `agentboard` alias to your shell rc, installs 9 skills globally):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/install.sh | bash
@@ -45,8 +45,8 @@ Then:
 source ~/.zshrc    # or open a new terminal
 
 cd ~/my-project
-devboard init            # .devboard/ scaffold
-devboard install         # writes .claude/{hooks,settings.json} + .mcp.json (Python auto-detected)
+agentboard init          # .devboard/ scaffold
+agentboard install       # writes .claude/{hooks,settings.json} + .mcp.json (Python auto-detected)
 
 claude                   # open Claude Code — skills + MCP tools auto-load
 # You: "build calculator.py with add/sub/mul/div and pytest, div-by-zero raises"
@@ -59,8 +59,8 @@ git clone https://github.com/blankroad/agentic-dev-board.git
 cd agentic-dev-board
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
-devboard install --scope global     # skills → ~/.claude/skills/
-echo "alias devboard=\"$PWD/.venv/bin/devboard\"" >> ~/.zshrc
+agentboard install --scope global   # skills → ~/.claude/skills/
+echo "alias agentboard=\"$PWD/.venv/bin/agentboard\"" >> ~/.zshrc
 ```
 
 **Update** (re-run the one-liner — it's idempotent):
@@ -105,7 +105,7 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 │   iron-law-check.sh    — PostToolUse Write|Edit — TDD reminders        │
 │   activity-log.py      — PostToolUse all  — append every tool call     │
 │                                                                          │
-│  devboard CLI (observability, no LLM calls)                              │
+│  agentboard CLI (observability, no LLM calls)                            │
 │   init | install | board | watch | retro | audit | replay | mcp         │
 │                                                                          │
 │  devboard analytics (Kanban, Confluence, JIRA, wiki, PR, metrics)        │
@@ -307,32 +307,32 @@ Verdicts: GREEN_CONFIRMED ×4, RED_CONFIRMED ×3, RETRY ×2
 ## CLI
 
 ```bash
-devboard init              # scaffold .devboard/
-devboard install           # install skills + hooks + .mcp.json
-  --scope global           #   → ~/.claude/skills/ (no hooks/mcp, those are per-project)
-  --no-hooks --no-mcp      #   pick & choose
-  --overwrite              #   replace existing
+agentboard init              # scaffold .devboard/
+agentboard install           # install skills + hooks + .mcp.json
+  --scope global             #   → ~/.claude/skills/ (no hooks/mcp, those are per-project)
+  --no-hooks --no-mcp        #   pick & choose
+  --overwrite                #   replace existing
 
-devboard goal add "..."    # register a goal (auto-active if first)
-devboard goal list         # Kanban-style goal table
-devboard task show <id>    # task detail with decision timeline
+agentboard goal add "..."    # register a goal (auto-active if first)
+agentboard goal list         # Kanban-style goal table
+agentboard task show <id>    # task detail with decision timeline
 
-devboard board             # Textual TUI
-devboard watch [--run ID]  # tail .devboard/runs/*.jsonl live
-devboard retro             # markdown retro report
+agentboard board             # Textual TUI
+agentboard watch [--run ID]  # tail .devboard/runs/*.jsonl live
+agentboard retro             # markdown retro report
   --goal ID | --last-n N
-  --save                   # → .devboard/retros/retro_<ts>.md
-devboard audit             # self-DX check (install state, tool versions, API key)
+  --save                     # → .devboard/retros/retro_<ts>.md
+agentboard audit             # self-DX check (install state, tool versions, API key)
 
-devboard replay <run_id> --from <N> --variant "..."   # time-travel branch
-devboard learnings list
-devboard learnings search [QUERY] --tag T --category C
+agentboard replay <run_id> --from <N> --variant "..."   # time-travel branch
+agentboard learnings list
+agentboard learnings search [QUERY] --tag T --category C
 
-devboard mcp               # start MCP server stdio (Claude Code spawns this automatically)
-devboard config KEY VALUE  # set config (e.g., tdd.enabled false)
+agentboard mcp               # start MCP server stdio (Claude Code spawns this automatically)
+agentboard config KEY VALUE  # set config (e.g., tdd.enabled false)
 ```
 
-**No `devboard run`** — that role belongs to Claude Code + skills.
+**No `agentboard run`** — that role belongs to Claude Code + skills.
 
 ---
 
@@ -377,9 +377,9 @@ All of this is observable in:
 - Claude Code's UI (tool calls, outputs)
 - `.devboard/runs/<run_id>.jsonl` (every state transition)
 - `.devboard/goals/<goal_id>/tasks/.../decisions.jsonl` (every *why*)
-- `devboard watch` (live tail)
-- `devboard retro` / `devboard metrics` (aggregation)
-- `devboard analytics` Confluence/JIRA doc (full development arc)
+- `agentboard watch` (live tail)
+- `agentboard retro` / `agentboard metrics` (aggregation)
+- `devboard.analytics` Confluence/JIRA doc (full development arc)
 
 ---
 

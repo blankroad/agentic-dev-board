@@ -17,7 +17,7 @@ class HealthBar(Widget):
     """
 
     def compose(self) -> ComposeResult:
-        yield Static("devboard", id="health-text", markup=False)
+        yield Static("agentboard", id="health-text", markup=False)
 
     def set_text(self, text: str) -> None:
         self.query_one("#health-text", Static).update(text)

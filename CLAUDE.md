@@ -42,7 +42,7 @@ pytest tests/test_mcp.py    # MCP tools only
 
 ## MCP server
 
-Start: `devboard-mcp` (runs on stdio, Claude Code connects automatically via `.mcp.json`).
+Start: `agentboard-mcp` (runs on stdio, Claude Code connects automatically via `.mcp.json`).
 All 22 tools are in `mcp_server.py:call_tool`. Add new tools in `list_tools()` + dispatch block.
 
 ## Skill routing

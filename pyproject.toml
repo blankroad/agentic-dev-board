@@ -45,8 +45,8 @@ legacy = [
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.4"]
 
 [project.scripts]
-devboard = "devboard.cli:app"
-devboard-mcp = "devboard.mcp_server:main"
+agentboard = "devboard.cli:app"
+agentboard-mcp = "devboard.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/devboard"]

@@ -219,7 +219,7 @@ class DevBoardApp(App):
         self._load_goal_detail(goal_id)
         self.action_refresh_board()
         self._update_status(f"✓ Converged in {iterations} iteration(s) — awaiting approval")
-        self.notify(f"Goal converged in {iterations} iteration(s)!", title="devboard", severity="information")
+        self.notify(f"Goal converged in {iterations} iteration(s)!", title="agentboard", severity="information")
 
 
 def run_tui(store_root: Path) -> None:

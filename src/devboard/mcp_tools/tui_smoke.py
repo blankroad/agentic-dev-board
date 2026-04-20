@@ -71,11 +71,11 @@ def run_tui_smoke(project_root: Path, timeout_s: float = 3.0) -> dict[str, Any]:
     if fds is None:
         return {"skipped_reason": "pty unavailable"}
 
-    binary = shutil.which("devboard")
+    binary = shutil.which("agentboard")
     if binary is None:
         os.close(fds[0])
         os.close(fds[1])
-        return {"skipped_reason": "devboard binary not on PATH"}
+        return {"skipped_reason": "agentboard binary not on PATH"}
 
     master_fd, slave_fd = fds
     started = time.time()

@@ -70,4 +70,4 @@ class StatusBar(Widget):
             segments.append(f"◆ redteam [{vc}]{self._redteam}[/]")
         if self._tests is not None:
             segments.append(f"≡ {self._tests} tests")
-        return "  ".join(segments) if segments else "devboard"
+        return "  ".join(segments) if segments else "agentboard"

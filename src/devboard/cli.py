@@ -29,7 +29,7 @@ from devboard.models import BoardState, Goal, GoalStatus
 from devboard.storage.file_store import FileStore
 
 app = typer.Typer(
-    name="devboard",
+    name="agentboard",
     help="agentic-dev-board — Skills + MCP + hooks for autonomous development",
     no_args_is_help=True,
 )

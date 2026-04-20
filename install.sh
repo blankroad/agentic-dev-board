@@ -57,7 +57,7 @@ say "installing dependencies"
 "$INSTALL_DIR/.venv/bin/pip" install --quiet --upgrade pip
 "$INSTALL_DIR/.venv/bin/pip" install --quiet -e "$INSTALL_DIR"
 
-BIN="$INSTALL_DIR/.venv/bin/devboard"
+BIN="$INSTALL_DIR/.venv/bin/agentboard"
 if [ ! -x "$BIN" ]; then
     err "install failed — $BIN missing"
     exit 1
@@ -71,7 +71,7 @@ say "installing skills to ~/.claude/skills/"
 # ── Shell alias ───────────────────────────────────────────────────────────────
 
 if [ "${AGENTIC_DEV_BOARD_NO_ALIAS:-0}" != "1" ]; then
-    ALIAS_LINE="alias devboard=\"$BIN\""
+    ALIAS_LINE="alias agentboard=\"$BIN\""
     MARKER="# agentic-dev-board (auto-installed)"
 
     shell_name=$(basename "${SHELL:-/bin/bash}")
@@ -79,7 +79,7 @@ if [ "${AGENTIC_DEV_BOARD_NO_ALIAS:-0}" != "1" ]; then
         zsh)  RC="$HOME/.zshrc"  ;;
         bash) RC="$HOME/.bashrc" ;;
         fish) RC="$HOME/.config/fish/config.fish"
-              ALIAS_LINE="alias devboard='$BIN'" ;;
+              ALIAS_LINE="alias agentboard='$BIN'" ;;
         *)    RC="" ;;
     esac
 
@@ -132,8 +132,8 @@ $(say "next steps")
 
    # use in any project
    cd ~/my-project
-   devboard init
-   devboard install           # writes .mcp.json + hooks (Python auto-detected)
+   agentboard init
+   agentboard install         # writes .mcp.json + hooks (Python auto-detected)
 
    # open Claude Code — skills and MCP tools auto-load
    claude
