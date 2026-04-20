@@ -14,6 +14,7 @@ from pathlib import Path
 from rich.markdown import Markdown
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import VerticalScroll
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static, TabbedContent, TabPane
@@ -123,6 +124,7 @@ class PhaseFlowView(Widget):
 
     DEFAULT_CSS = """
     PhaseFlowView { height: 1fr; }
+    PhaseFlowView VerticalScroll { height: 1fr; }
     """
 
     BINDINGS = [
@@ -151,21 +153,26 @@ class PhaseFlowView(Widget):
     def compose(self) -> ComposeResult:
         with TabbedContent(initial="overview"):
             with TabPane("Overview", id="overview"):
-                yield Static(
-                    self._load_overview_body(), id="overview-body", markup=False
-                )
+                with VerticalScroll():
+                    yield Static(
+                        self._load_overview_body(), id="overview-body", markup=False
+                    )
             with TabPane("Plan", id="plan"):
                 # Rich Markdown wrap so plan_summary.md renders with
                 # proper headings / lists in the TUI, and matches the
                 # legacy PlanMarkdown contract expected by
                 # tests/test_plan_markdown_narrative_scroll.py.
-                yield Static(Markdown(self._load_plan_body()), id="plan-body")
+                with VerticalScroll():
+                    yield Static(Markdown(self._load_plan_body()), id="plan-body")
             with TabPane("Dev", id="dev"):
-                yield Static(self._load_dev_body(), id="dev-body", markup=False)
+                with VerticalScroll():
+                    yield Static(self._load_dev_body(), id="dev-body", markup=False)
             with TabPane("Result", id="result"):
-                yield Static(self._load_result_body(), id="result-body", markup=False)
+                with VerticalScroll():
+                    yield Static(self._load_result_body(), id="result-body", markup=False)
             with TabPane("Review", id="review"):
-                yield Static(self._load_review_body(), id="review-body", markup=False)
+                with VerticalScroll():
+                    yield Static(self._load_review_body(), id="review-body", markup=False)
 
     def _build_payload(self) -> dict[str, object]:
         from devboard.analytics.overview_payload import build_overview_payload
@@ -390,6 +397,23 @@ class PhaseFlowView(Widget):
         # Manual key press establishes a temporary window during which
         # auto-switch is suppressed. handle_new_decision checks this.
         self.manual_override_until = time.monotonic() + _MANUAL_OVERRIDE_SECONDS
+        self.focus_active_tab_scroll()
+
+    def focus_active_tab_scroll(self) -> None:
+        """Move focus to the VerticalScroll inside the currently active
+        TabPane so ↓/PgDn/wheel scroll overflowing content without
+        requiring an explicit click. Redteam CRITICAL guard."""
+        try:
+            tc = self.query_one(TabbedContent)
+            active_id = tc.active
+            if not active_id:
+                return
+            pane = self.query_one(f"#{active_id}", TabPane)
+            scrolls = list(pane.query(VerticalScroll))
+            if scrolls:
+                scrolls[0].focus()
+        except Exception:
+            pass
 
     def action_toggle_pin(self) -> None:
         self.pinned = not self.pinned

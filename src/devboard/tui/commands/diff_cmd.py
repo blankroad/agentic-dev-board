@@ -11,9 +11,9 @@ def register(app: "DevBoardApp") -> None:
 
 
 def _run(app: "DevBoardApp", task_id: str) -> None:
-    """v2.1: ContextViewer tabs removed. :diff <task_id> now targets the
-    FilesChangedPane + MetaPane by updating app._task_id and the reactive
-    selected_iter to the latest iter of the given task."""
+    """:diff <task_id> updates app._task_id and the reactive selected_iter
+    to the latest iter of the given task, which triggers StatusBar +
+    PhaseFlowView refresh through the usual watch hooks."""
     # locate latest iter_N.diff for this task under any goal
     latest_iter: int | None = None
     for goal_dir in (app.store_root / ".devboard" / "goals").glob("*"):

@@ -18,6 +18,9 @@ venv/
 .devboard/activity.jsonl
 .devboard/.iron-law-history.jsonl
 
+# devboard TUI snapshots (Layer 1/2/3 capture artifacts — regenerated per run)
+tui_snapshots/
+
 # devboard config is tracked (intentional)
 !.devboard/config.yaml
 

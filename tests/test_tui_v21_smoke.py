@@ -29,17 +29,14 @@ async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
-        # v2.2: center col is a single #phase-flow (4-tab) replacing the
-        # legacy #plan-markdown + #activity-timeline pair. #plan-body still
-        # exists as the Plan tab's Static inside PhaseFlowView.
+        # v2.3: right column removed. Center col is a single #phase-flow
+        # (5-tab) whose TabPane bodies are wrapped in VerticalScroll.
         for wid in (
             "#status-bar-body",
             "#resources-goals",
             "#goal-side-legend",
             "#phase-flow",
             "#plan-body",
-            "#meta-body",
-            "#files-changed-body",
             "#command-line",
         ):
             app.query_one(wid)
@@ -62,33 +59,10 @@ async def test_colon_then_type_works_on_v21_layout(tmp_path: Path) -> None:
         assert cl.value == "goto", f"typing failed; got {cl.value!r}"
 
 
-@pytest.mark.asyncio
-async def test_selected_iter_change_refreshes_files_pane(tmp_path: Path) -> None:
-    from devboard.tui.app import DevBoardApp
-
-    _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
-    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
-    changes = task_dir / "changes"
-    changes.mkdir(parents=True)
-    (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
-    (changes / "iter_1.diff").write_text("+++ b/src/one.py\n")
-    (changes / "iter_2.diff").write_text("+++ b/src/two.py\n")
-    (task_dir / "decisions.jsonl").write_text(
-        json.dumps({"iter": 1, "phase": "tdd_green"}) + "\n"
-        + json.dumps({"iter": 2, "phase": "tdd_green"}) + "\n"
-    )
-
-    app = DevBoardApp(store_root=tmp_path)
-    async with app.run_test(size=(140, 42)) as pilot:
-        await pilot.pause()
-        app.selected_iter = 1
-        await pilot.pause()
-        body = app.query_one("#files-changed-body")
-        assert "src/one.py" in str(body.render())
-        app.selected_iter = 2
-        await pilot.pause()
-        body = app.query_one("#files-changed-body")
-        assert "src/two.py" in str(body.render())
+# v2.3: test_selected_iter_change_refreshes_files_pane removed — it
+# asserted on #files-changed-body which belonged to the deleted
+# FilesChangedPane. Right-panel redesign goal g_20260420_203952_f98d46
+# absorbed this cleanup.
 
 
 @pytest.mark.asyncio

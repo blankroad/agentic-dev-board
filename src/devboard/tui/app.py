@@ -26,29 +26,28 @@ from devboard.tui.commands import (
     learn_cmd,
     runs_cmd,
 )
-from devboard.tui.files_changed_pane import FilesChangedPane
 from devboard.tui.goal_side_list import GoalSideList  # noqa: F401 used via message
 from devboard.tui.live_status_line import LiveStatusLine
-from devboard.tui.meta_pane import MetaPane
 from devboard.tui.phase_flow import PhaseFlowView
 from devboard.tui.session_derive import SessionContext
 from devboard.tui.status_bar import StatusBar
 
 
 class DevBoardApp(App):
-    """v2.2 phase-flow cockpit.
+    """v2.3 phase-flow cockpit (right column removed).
 
     Layout:
       StatusBar (1 line)
-      Horizontal(GoalSideList 15% | PhaseFlowView 65% | Vertical(MetaPane, FilesChangedPane) 20%)
+      Horizontal(GoalSideList 15% | PhaseFlowView 1fr)
       LiveStatusLine (1 line)
       CommandLine (dock bottom, 1 line)
       Footer
 
-    The center column is now a 4-tab PhaseFlowView (Plan / Dev / Result /
-    Review) that absorbs the legacy PlanMarkdown + ActivityTimeline pair.
-    Number keys 1/2/3/4 jump between tabs; ctrl+p pins the view so
-    live phase-auto-switch does not yank the current tab.
+    The center column is a 5-tab PhaseFlowView (Overview / Plan / Dev /
+    Result / Review) whose tab bodies are wrapped in VerticalScroll so
+    ↓/PgDn/wheel scroll overflowing content. Number keys 1/2/3/4/5 jump
+    between tabs; ctrl+p pins the view so live phase-auto-switch does
+    not yank the current tab.
 
     Read-only — writes go through MCP tools. v2.0 commands (:goto/:diff/
     :decisions/:learn/:goals/:runs) still dispatch for backward compat.
@@ -57,8 +56,7 @@ class DevBoardApp(App):
     CSS = """
     Screen { layout: vertical; }
     #main-row { height: 1fr; }
-    #center-col { width: 65%; }
-    #right-col { width: 20%; border-left: solid $primary-darken-3; }
+    #center-col { width: 1fr; }
     #command-line { dock: bottom; height: 1; }
     """
 
@@ -133,14 +131,6 @@ class DevBoardApp(App):
                 yield PhaseFlowView(
                     self._session, task_id=self._task_id, id="phase-flow"
                 )
-            with Vertical(id="right-col"):
-                initial_iter = self._initial_iter()
-                yield MetaPane(
-                    self._session, task_id=self._task_id, selected_iter=initial_iter, id="meta-pane"
-                )
-                yield FilesChangedPane(
-                    self._session, task_id=self._task_id, selected_iter=initial_iter, id="files-changed-pane"
-                )
         yield LiveStatusLine(id="live-status-line")
         yield CommandLine(id="command-line", placeholder=":")
         yield Footer()
@@ -158,9 +148,13 @@ class DevBoardApp(App):
         self.selected_iter = self._initial_iter()
         # set initial StatusBar summary
         self._refresh_status_bar()
-        # move focus off the Input so printable-key bindings (?, g) fire
+        # Focus the center tab's VerticalScroll so ↓/PgDn/wheel scroll
+        # overflowing content without the user having to click first
+        # (redteam CRITICAL: ListView in #resources-goals would otherwise
+        # consume arrow keys). PhaseFlowView.focus_active_tab_scroll
+        # falls back silently if the scroll container isn't mounted yet.
         try:
-            self.query_one("#resources-goals").focus()
+            self.query_one("#phase-flow", PhaseFlowView).focus_active_tab_scroll()
         except Exception:
             pass
         # wire tail worker for live updates (throttled single-line StatusBar only)
@@ -234,34 +228,16 @@ class DevBoardApp(App):
         self._refresh_status_bar()
 
     def refresh_for_active_task(self) -> None:
-        """Re-render PhaseFlowView + Meta + FilesChanged for a task
-        switch (without changing active goal). Called by :decisions."""
+        """Re-render PhaseFlowView for a task switch (without changing
+        active goal). Called by :decisions."""
         try:
             flow = self.query_one("#phase-flow", PhaseFlowView)
             flow.refresh_content(task_id=self._task_id)
         except Exception:
             pass
-        try:
-            self.query_one("#meta-pane").refresh_body(self._task_id, self.selected_iter)
-        except Exception:
-            pass
-        try:
-            self.query_one("#files-changed-pane").refresh_body(self._task_id, self.selected_iter)
-        except Exception:
-            pass
         self._refresh_status_bar()
 
-    def watch_selected_iter(self, _old: int | None, new: int | None) -> None:
-        try:
-            fc = self.query_one("#files-changed-pane", FilesChangedPane)
-            fc.refresh_body(self._task_id, new)
-        except Exception:
-            pass
-        try:
-            mp = self.query_one("#meta-pane", MetaPane)
-            mp.refresh_body(self._task_id, new)
-        except Exception:
-            pass
+    def watch_selected_iter(self, _old: int | None, _new: int | None) -> None:
         self._refresh_status_bar()
 
     def action_open_command_line(self) -> None:
@@ -293,8 +269,8 @@ class DevBoardApp(App):
             pass
 
     def on_activity_row_selected(self, event: ActivityRow.Selected) -> None:
-        """Click or Enter on a timeline row → navigate Meta/Files to that
-        iter."""
+        """Click or Enter on a timeline row → update selected_iter so the
+        StatusBar watcher refreshes to that iter's phase/verdict."""
         iter_n = event.entry.get("iter")
         if isinstance(iter_n, int):
             self.selected_iter = iter_n
