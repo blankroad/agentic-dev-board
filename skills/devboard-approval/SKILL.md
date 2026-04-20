@@ -109,7 +109,31 @@ On y:
 
 ## Step 4.5 — Write Outcome section to plan.md (MANDATORY)
 
-After `devboard_push_pr` returns success (or a direct-push equivalent completes), write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan:
+After `devboard_push_pr` returns success (or a direct-push equivalent completes), first auto-regenerate `plan_summary.md` when the task is UI-surface, then write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan.
+
+### Step 4.5a — Auto-regenerate plan_summary.md narrative (if `ui_surface`)
+
+When `task.metadata.get("ui_surface", False)` is True, call `devboard_generate_narrative` to refresh `.devboard/goals/<goal_id>/plan_summary.md` BEFORE the Outcome write (so the narrative covers the final push state). Wrap the call in `try/except` — generator failure is non-blocking: log a `NARRATIVE_SKIPPED` decision and continue.
+
+```python
+task_meta = task.metadata or {}
+if task_meta.get("ui_surface", False):
+    try:
+        narrative = devboard_generate_narrative(
+            project_root=project_root,
+            goal_id=goal_id,
+        )
+        # narrative = {"plan_summary_path": ..., "section_citation_counts": ..., "total_citations": ...}
+    except Exception as exc:
+        devboard_log_decision(
+            project_root, task_id, iter=iteration,
+            phase="approval",
+            reasoning=f"narrative generation skipped: {exc!r}",
+            verdict_source="NARRATIVE_SKIPPED",
+        )
+```
+
+### Step 4.5b — Write Outcome section
 
 ```python
 from devboard.docs.plan_sections import PlanSection, upsert_plan_section

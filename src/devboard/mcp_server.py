@@ -586,6 +586,24 @@ async def list_tools() -> list[Tool]:
                 "required": ["project_root"],
             },
         ),
+        Tool(
+            name="devboard_generate_narrative",
+            description=(
+                "Deterministically assemble plan_summary.md for a goal — a "
+                "5-section Purpose/Plan/Process/Result/Review narrative with "
+                "per-sentence (source: ...) citations drawn from plan.md + "
+                "decisions.jsonl + iter diffs. No LLM calls, no network. "
+                "Returns {plan_summary_path, section_citation_counts, total_citations}."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                },
+                "required": ["project_root", "goal_id"],
+            },
+        ),
     ]
 
 
@@ -1202,6 +1220,11 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             timeout_s=float(args.get("timeout_s", 3.0)),
         )
         return _text(result)
+
+    if name == "devboard_generate_narrative":
+        from devboard.mcp_tools.generate_narrative import run_generate_narrative
+
+        return _text(run_generate_narrative(args))
 
     return _text({"error": f"unknown tool: {name}"})
 
