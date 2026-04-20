@@ -37,5 +37,9 @@ htmlcov/
 .claude/hooks/
 .claude/skills/
 
-# MCP local config (contains absolute paths)
+# OpenCode — local-only files (install artifacts mirror skills/)
+.opencode/skills/
+
+# Agent host local configs (contain absolute paths)
 .mcp.json
+opencode.json
