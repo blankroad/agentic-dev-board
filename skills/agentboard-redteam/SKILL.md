@@ -1,5 +1,5 @@
 ---
-name: devboard-redteam
+name: agentboard-redteam
 description: Adversarial QA persona that actively tries to BREAK working code. Use AFTER reviewer PASS and (if applicable) CSO SECURE - find at least 3 concrete breaking scenarios with exact inputs (edge cases, boundary conditions, type mismatches, state corruption, race conditions, missing error paths). Verdict SURVIVED or BROKEN. Proactively invoke this skill when the user says "red team this", "try to break this", "adversarial review", "find edge cases", "stress test this", "what could go wrong", OR automatically after a PASS verdict on production-destined code. Do NOT hedge - either you found concrete breaks (BROKEN) or you didn't (SURVIVED). Skip for throwaway prototypes.
 when_to_use: User explicitly requests red-team/adversarial/edge-case review. Auto-invoke after reviewer PASS for production-bound code or anything going to main. Skip for exploratory scripts, one-off prototypes, or code the user labels "throwaway".
 ---
@@ -70,12 +70,12 @@ Find at least 3 scenarios where this implementation fails, crashes, returns wron
 
 1. Write a failing test that reproduces the most severe attack (this becomes the next RED)
 2. Call MCP tool `devboard_log_decision(iter, phase='redteam', verdict_source='BROKEN', reasoning=<top finding>, ...)`
-3. Hand back to `devboard-tdd` — the cycle continues with the new failing test as the next RED
+3. Hand back to `agentboard-tdd` — the cycle continues with the new failing test as the next RED
 
 ## On SURVIVED
 
 1. Log decision with verdict_source='SURVIVED'
-2. Hand off to `devboard-approval`
+2. Hand off to `agentboard-approval`
 
 ## Required MCP calls
 

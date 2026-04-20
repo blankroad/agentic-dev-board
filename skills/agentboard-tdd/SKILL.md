@@ -1,7 +1,7 @@
 ---
-name: devboard-tdd
+name: agentboard-tdd
 description: ALWAYS activate for any task that writes or modifies production code — new features, bug fixes, refactoring, behavior changes. Iron Law of TDD enforced - NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST. Violations require restart (delete the pre-test code, not "keep as reference"). Runs atomic Red-Green-Refactor cycles with deterministic devboard_verify evidence after each cycle. Proactively invoke this skill (do NOT write production code directly) whenever the user requests code changes. Skip only for generated code, config files, or throwaway prototypes with explicit user approval logged to decisions.jsonl.
-when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after devboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
+when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after agentboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -183,7 +183,7 @@ For existing code without tests: add tests for existing behavior BEFORE modifyin
 
 ## Guardrails
 
-- The LockedPlan's `out_of_scope_guard` paths: never touch them. If a change requires touching one, STOP and invoke `devboard-rca` — the plan may need to be revised.
+- The LockedPlan's `out_of_scope_guard` paths: never touch them. If a change requires touching one, STOP and invoke `agentboard-rca` — the plan may need to be revised.
 - The `goal_checklist` is authoritative. PASS requires every item verified, not just "tests pass".
 
 ## Required MCP calls — Logging is NOT optional
@@ -231,15 +231,15 @@ After all atomic_steps are complete:
 
 All three above are independent events — log each one separately. Do not combine.
 
-Hand off to `devboard-parallel-review` (preferred — dispatches CSO + redteam in parallel via the Agent tool and logs a single `phase="parallel_review"` entry). `devboard-parallel-review` auto-skips either side per `task.metadata.security_sensitive_plan` / `production_destined`, so it handles the "CSO-only" and "redteam-only" cases internally. The legacy sequential path (`devboard-cso` → `devboard-redteam` → `devboard-approval`) is still accepted by `devboard-approval` as a backward-compat fallback when no `phase="parallel_review"` entry is present.
+Hand off to `agentboard-parallel-review` (preferred — dispatches CSO + redteam in parallel via the Agent tool and logs a single `phase="parallel_review"` entry). `agentboard-parallel-review` auto-skips either side per `task.metadata.security_sensitive_plan` / `production_destined`, so it handles the "CSO-only" and "redteam-only" cases internally. The legacy sequential path (`agentboard-cso` → `agentboard-redteam` → `agentboard-approval`) is still accepted by `agentboard-approval` as a backward-compat fallback when no `phase="parallel_review"` entry is present.
 
 ---
 
 ## UI Preview integration (when ui_surface=True)
 
-After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `devboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `devboard_tui_capture_snapshot`, saves it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
+After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `agentboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `devboard_tui_capture_snapshot`, saves it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
 
-- Drift detected → surface diff to user and ask whether to continue TDD or branch to `devboard-rca`.
+- Drift detected → surface diff to user and ask whether to continue TDD or branch to `agentboard-rca`.
 - No drift → resume the Red-Green-Refactor loop with the next atomic_step.
 
 Optional re-run: after any subsequent step that visibly mutates UI state, call ui-preview Layer 1 again so the user sees incremental changes mid-loop instead of only at approval.

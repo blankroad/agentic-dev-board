@@ -169,7 +169,7 @@ def test_mcp_call_tool_dispatches_capture_snapshot(tmp_path: Path) -> None:
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_UI_PREVIEW_SKILL = _REPO_ROOT / "skills" / "devboard-ui-preview" / "SKILL.md"
+_UI_PREVIEW_SKILL = _REPO_ROOT / "skills" / "agentboard-ui-preview" / "SKILL.md"
 
 
 def _parse_frontmatter(md_path: Path) -> dict:
@@ -185,11 +185,11 @@ def _parse_frontmatter(md_path: Path) -> dict:
 
 
 def test_ui_preview_skill_has_valid_frontmatter() -> None:
-    """s_008: devboard-ui-preview SKILL.md exists with valid YAML
+    """s_008: agentboard-ui-preview SKILL.md exists with valid YAML
     frontmatter including name, description, when_to_use.
     """
     fm = _parse_frontmatter(_UI_PREVIEW_SKILL)
-    assert fm.get("name") == "devboard-ui-preview"
+    assert fm.get("name") == "agentboard-ui-preview"
     assert fm.get("description"), "description required"
     assert fm.get("when_to_use"), "when_to_use required"
 
@@ -212,40 +212,40 @@ def test_ui_preview_skill_includes_scenes_schema() -> None:
 
 
 def test_gauntlet_skill_chains_ui_preview() -> None:
-    """s_011: devboard-gauntlet SKILL.md mentions invoking
-    devboard-ui-preview when ui_surface is True (after arch step).
+    """s_011: agentboard-gauntlet SKILL.md mentions invoking
+    agentboard-ui-preview when ui_surface is True (after arch step).
     """
-    body = (_REPO_ROOT / "skills" / "devboard-gauntlet" / "SKILL.md").read_text(
+    body = (_REPO_ROOT / "skills" / "agentboard-gauntlet" / "SKILL.md").read_text(
         encoding="utf-8"
     )
-    assert "devboard-ui-preview" in body, (
-        "gauntlet SKILL.md must reference devboard-ui-preview"
+    assert "agentboard-ui-preview" in body, (
+        "gauntlet SKILL.md must reference agentboard-ui-preview"
     )
     assert "ui_surface" in body
 
 
 def test_tdd_skill_chains_ui_preview() -> None:
-    """s_012: devboard-tdd SKILL.md invokes devboard-ui-preview after
+    """s_012: agentboard-tdd SKILL.md invokes agentboard-ui-preview after
     first widget GREEN when ui_surface is True.
     """
-    body = (_REPO_ROOT / "skills" / "devboard-tdd" / "SKILL.md").read_text(
+    body = (_REPO_ROOT / "skills" / "agentboard-tdd" / "SKILL.md").read_text(
         encoding="utf-8"
     )
-    assert "devboard-ui-preview" in body, (
-        "tdd SKILL.md must reference devboard-ui-preview"
+    assert "agentboard-ui-preview" in body, (
+        "tdd SKILL.md must reference agentboard-ui-preview"
     )
     assert "ui_surface" in body
 
 
 def test_approval_skill_chains_ui_preview_svg() -> None:
-    """s_013: devboard-approval SKILL.md captures SVG via
-    devboard-ui-preview before push when ui_surface is True.
+    """s_013: agentboard-approval SKILL.md captures SVG via
+    agentboard-ui-preview before push when ui_surface is True.
     """
-    body = (_REPO_ROOT / "skills" / "devboard-approval" / "SKILL.md").read_text(
+    body = (_REPO_ROOT / "skills" / "agentboard-approval" / "SKILL.md").read_text(
         encoding="utf-8"
     )
-    assert "devboard-ui-preview" in body, (
-        "approval SKILL.md must reference devboard-ui-preview"
+    assert "agentboard-ui-preview" in body, (
+        "approval SKILL.md must reference agentboard-ui-preview"
     )
     assert "ui_surface" in body
     assert "include_svg" in body or "Layer 2" in body, (
@@ -270,10 +270,10 @@ def test_user_level_skill_mirrors_match_repo() -> None:
     approval).
     """
     for rel in (
-        "devboard-ui-preview/SKILL.md",
-        "devboard-gauntlet/SKILL.md",
-        "devboard-tdd/SKILL.md",
-        "devboard-approval/SKILL.md",
+        "agentboard-ui-preview/SKILL.md",
+        "agentboard-gauntlet/SKILL.md",
+        "agentboard-tdd/SKILL.md",
+        "agentboard-approval/SKILL.md",
     ):
         repo = _REPO_ROOT / "skills" / rel
         user = _USER_SKILLS / rel

@@ -67,13 +67,13 @@ async def test_mcp_generate_narrative_dispatch_returns_plan_summary_path(
 
 
 def test_approval_step_4_5_invokes_generator_when_ui_surface_true() -> None:
-    """Documentation integration: skills/devboard-approval/SKILL.md must
+    """Documentation integration: skills/agentboard-approval/SKILL.md must
     reference the new generator tool in Step 4.5 under a ui_surface
     guard, wrapped in try/except per challenge.md failure-mode #3."""
     skill_md = (
         Path(__file__).resolve().parent.parent
         / "skills"
-        / "devboard-approval"
+        / "agentboard-approval"
         / "SKILL.md"
     )
     assert skill_md.exists(), f"approval SKILL.md not found at {skill_md}"

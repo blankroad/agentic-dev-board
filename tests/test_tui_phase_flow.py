@@ -671,7 +671,7 @@ async def test_handle_tick_dispatches_newly_appended_row_not_max_iter(
 ) -> None:
     """s_024 HIGH: handle_tick must dispatch the row most recently
     appended to decisions.jsonl — not the max-iter row. During
-    devboard-replay the new run re-enters an older checkpoint, so the
+    agentboard-replay the new run re-enters an older checkpoint, so the
     appended iter can be LOWER than existing iters. decisions_for_task
     sorts by iter DESC and rows[0] was the stale max-iter row.
 
@@ -699,7 +699,7 @@ async def test_handle_tick_dispatches_newly_appended_row_not_max_iter(
         tc = flow.query_one(TabbedContent)
         assert tc.active == "overview"
 
-        # Append a LOWER-iter dev row, as devboard-replay would.
+        # Append a LOWER-iter dev row, as agentboard-replay would.
         decisions_path = (
             tmp_path
             / ".devboard"

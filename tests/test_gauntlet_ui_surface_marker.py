@@ -1,4 +1,4 @@
-"""Verify devboard-gauntlet SKILL.md sets task.metadata.ui_surface."""
+"""Verify agentboard-gauntlet SKILL.md sets task.metadata.ui_surface."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 SKILL_PATH = (
     Path(__file__).resolve().parents[1]
     / "skills"
-    / "devboard-gauntlet"
+    / "agentboard-gauntlet"
     / "SKILL.md"
 )
 

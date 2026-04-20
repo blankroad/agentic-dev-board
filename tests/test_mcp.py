@@ -275,12 +275,12 @@ def test_install_skills_copies_all(tmp_path: Path):
     installed = install_skills(tmp_path, overwrite=True)
     names = {p.name for p in installed}
     expected = {
-        "devboard-brainstorm", "devboard-gauntlet", "devboard-eng-review",
-        "devboard-tdd", "devboard-cso", "devboard-dep-audit",
-        "devboard-redteam", "devboard-rca",
-        "devboard-approval", "devboard-retro", "devboard-replay",
-        "devboard-parallel-review",
-        "devboard-ui-preview",
+        "agentboard-brainstorm", "agentboard-gauntlet", "agentboard-eng-review",
+        "agentboard-tdd", "agentboard-cso", "agentboard-dep-audit",
+        "agentboard-redteam", "agentboard-rca",
+        "agentboard-approval", "agentboard-retro", "agentboard-replay",
+        "agentboard-parallel-review",
+        "agentboard-ui-preview",
     }
     assert names == expected
 
@@ -384,7 +384,7 @@ def test_install_all_project_scope(tmp_path: Path):
     assert len(result["installed_hooks"]) == 3  # iron-law.sh + danger-guard.sh + activity-log.py
     assert result["mcp_config"] is not None
     assert result["settings"] is not None
-    assert (tmp_path / ".claude" / "skills" / "devboard-tdd" / "SKILL.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "agentboard-tdd" / "SKILL.md").exists()
     assert (tmp_path / ".mcp.json").exists()
 
 
@@ -401,7 +401,7 @@ def test_install_all_global_scope_no_hooks_or_mcp(tmp_path: Path, monkeypatch):
     assert len(result["installed_skills"]) == _expected_skill_count()
     assert result["installed_hooks"] == []
     assert result["mcp_config"] is None
-    assert (tmp_path / ".claude" / "skills" / "devboard-gauntlet" / "SKILL.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "agentboard-gauntlet" / "SKILL.md").exists()
 
 
 def test_install_all_rejects_bad_scope():

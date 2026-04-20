@@ -607,7 +607,7 @@ async def list_tools() -> list[Tool]:
                 "via Textual Pilot in-process. Presses `keys` sequentially after "
                 "mount, then extracts compositor output from export_screenshot. "
                 "Companion to devboard_tui_render_smoke — smoke is a crash gate, "
-                "this is frame extraction. Used by devboard-ui-preview skill at "
+                "this is frame extraction. Used by agentboard-ui-preview skill at "
                 "Layer 1 (text) and Layer 2 (SVG). Returns {scene_id, text, svg, "
                 "saved_txt, saved_svg, crashed, traceback, duration_s}."
             ),
@@ -884,7 +884,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "event_count": len(entries),
             "state": state,
             "resume_hint": {
-                "gauntlet_complete": "continue to devboard-tdd, start with first atomic step",
+                "gauntlet_complete": "continue to agentboard-tdd, start with first atomic step",
                 "tdd_red_complete": "GREEN phase next — write minimal impl",
                 "tdd_green_complete": "REFACTOR phase next (may skip)",
                 "tdd_refactor_complete": "move to next atomic step or verify",
@@ -903,7 +903,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         brainstorm_path = store._goals_dir(args["goal_id"]) / "brainstorm.md"
         warnings: list[str] = []
         if not brainstorm_path.exists():
-            warnings.append("brainstorm not found — consider running devboard-brainstorm first")
+            warnings.append("brainstorm not found — consider running agentboard-brainstorm first")
         plan = build_locked_plan(args["goal_id"], args["decide_json"])
         store.save_locked_plan(plan)
         plan_path = store._goals_dir(args["goal_id"]) / "plan.md"

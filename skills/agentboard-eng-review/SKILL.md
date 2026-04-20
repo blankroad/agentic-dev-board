@@ -1,5 +1,5 @@
 ---
-name: devboard-eng-review
+name: agentboard-eng-review
 description: Use when gauntlet flags ENG_REVIEW_NEEDED (>8 new files or ≥2 new abstractions in a greenfield system). Validates gauntlet plan before TDD begins — reads arch/challenge/frame outputs and checks architecture coherence, test strategy, integration risks, and edge case coverage.
 ---
 
@@ -21,8 +21,8 @@ You are the **Engineering Reviewer** — a pre-TDD gate for complex new systems.
 
 ## Preamble (MANDATORY before Step 1)
 
-1. `devboard_list_goals(project_root)` → identify the active goal. If no active goal, error out: "No active goal. devboard-brainstorm 또는 devboard-gauntlet을 먼저 실행하세요."
-2. `devboard_load_plan(project_root, goal_id)` → if plan is missing, error out: "Plan not locked yet. devboard-gauntlet을 먼저 완료하세요."
+1. `devboard_list_goals(project_root)` → identify the active goal. If no active goal, error out: "No active goal. agentboard-brainstorm 또는 agentboard-gauntlet을 먼저 실행하세요."
+2. `devboard_load_plan(project_root, goal_id)` → if plan is missing, error out: "Plan not locked yet. agentboard-gauntlet을 먼저 완료하세요."
 3. Receive `task_id`, `run_id` passed from gauntlet Finalize and save to scope. If not passed, use `devboard_list_runs(project_root)` and take task_id/run_id from the most recent active run.
 
 Output: `Plan: {goal title} ({goal_id}) — {N} atomic steps, {M} critical files, task={task_id}`
@@ -96,7 +96,7 @@ If any check fails, add a detail section below:
 
 ### Branching
 
-**Overall = PASS** → checkpoint + log_decision + invoke `devboard-tdd` via Skill tool immediately.
+**Overall = PASS** → checkpoint + log_decision + invoke `agentboard-tdd` via Skill tool immediately.
 
 **Overall = NEEDS REVISION** → AskUserQuestion:
 ```
@@ -105,8 +105,8 @@ Engineering review에서 {N}개 항목이 수정을 권장합니다.
 [진행] — 이슈를 known_risk로 기록하고 TDD 시작
 ```
 
-- User picks revise → call `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` then invoke `devboard-gauntlet` via Skill tool. Do NOT call tdd.
-- User picks proceed → log every FAIL item to `devboard_log_decision` as `known_risk`, then invoke `devboard-tdd` via Skill tool.
+- User picks revise → call `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` then invoke `agentboard-gauntlet` via Skill tool. Do NOT call tdd.
+- User picks proceed → log every FAIL item to `devboard_log_decision` as `known_risk`, then invoke `agentboard-tdd` via Skill tool.
 
 ---
 
@@ -125,8 +125,8 @@ Engineering review에서 {N}개 항목이 수정을 권장합니다.
 
 ## Handoff
 
-- PASS → invoke `devboard-tdd` via Skill tool (pass task_id, run_id in args)
-- NEEDS REVISION + revise → invoke `devboard-gauntlet` via Skill tool (revision_target=<step>)
-- NEEDS REVISION + proceed → invoke `devboard-tdd` via Skill tool
+- PASS → invoke `agentboard-tdd` via Skill tool (pass task_id, run_id in args)
+- NEEDS REVISION + revise → invoke `agentboard-gauntlet` via Skill tool (revision_target=<step>)
+- NEEDS REVISION + proceed → invoke `agentboard-tdd` via Skill tool
 
 eng-review owns the **single responsibility** of invoking tdd. After gauntlet hands off to eng-review, gauntlet does NOT call tdd directly.

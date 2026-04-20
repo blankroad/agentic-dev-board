@@ -5,7 +5,7 @@ Companion to `tui_smoke.py`. Roles stay distinct:
   * tui_capture — frame extraction (Pilot in-process, text + SVG export)
 
 Used by the `devboard_tui_capture_snapshot` MCP tool and the
-`devboard-ui-preview` skill at Layer 1 (text) and Layer 2 (SVG).
+`agentboard-ui-preview` skill at Layer 1 (text) and Layer 2 (SVG).
 """
 
 from __future__ import annotations

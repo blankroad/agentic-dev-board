@@ -1,5 +1,5 @@
 ---
-name: devboard-retro
+name: agentboard-retro
 description: Aggregate-style retrospective across goals, tasks, and runs. Invoke when the user says "retro", "retrospective", "how did last week go", "weekly report", "what have we shipped", "what patterns are emerging", "reflect on X", or after a major milestone / sprint boundary. Reads decisions.jsonl + run checkpoints. Your value-add is interpretation, not just stats - high retry count suggests a systematic gap; repeated failure modes are candidates for learning promotion; low convergence indicates plans are under-scoped; iron-law hits indicate TDD discipline is slipping. Do not soften bad signals - the whole point is to see and act on them. Tone is neutral and honest.
 when_to_use: User explicitly asks for retro / retrospective / weekly review / sprint review. Also invoke proactively at the end of a work week, after a major goal completion, or when the user wonders "didn't we fix this before?".
 ---

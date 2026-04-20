@@ -1,5 +1,5 @@
 ---
-name: devboard-brainstorm
+name: agentboard-brainstorm
 description: Use when the user describes a goal that is vague, short (<30 meaningful chars), lacks concrete success criteria, or uses words like "something like", "maybe", "kinda", "would be nice to". Proactively invoke before any planning or coding begins.
 when_to_use: User says "I want to build X but not sure", "something like", "maybe add Y", "think about adding Z", "would be nice to have", or any goal under 30 meaningful characters. Voice triggers — "brainstorm this", "help me think through this", "clarify this idea".
 ---
@@ -57,10 +57,10 @@ Eligible only when Phase 0 confirmed EXACTLY ONE request AND that request has: t
 
 ```
 ## Brainstorm
-CLEAR — no questions needed. Proceeding to devboard-gauntlet.
+CLEAR — no questions needed. Proceeding to agentboard-gauntlet.
 ```
 
-Then invoke `devboard-gauntlet` via Skill tool immediately.
+Then invoke `agentboard-gauntlet` via Skill tool immediately.
 
 ---
 
@@ -161,11 +161,11 @@ If the user proposes a modification, treat it as the selected approach and move 
 저장: .devboard/goals/{goal_id}/brainstorm.md
 선택 접근: Approach {X}
 
-devboard-gauntlet을 시작합니다.
+agentboard-gauntlet을 시작합니다.
 ```
 
 If the user refuses with "지금은 아니야", "나중에" etc.: save only and exit.
-Otherwise: invoke `devboard-gauntlet` via the Skill tool.
+Otherwise: invoke `agentboard-gauntlet` via the Skill tool.
 
 ---
 

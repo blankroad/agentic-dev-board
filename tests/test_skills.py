@@ -7,7 +7,7 @@ SKILLS_DIR = Path(__file__).parent.parent / "skills"
 
 def test_brainstorm_skill_calls_save_brainstorm():
     """Brainstorm SKILL.md must instruct Claude to call devboard_save_brainstorm."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     assert skill_md.exists()
     content = skill_md.read_text()
     assert "devboard_save_brainstorm" in content, (
@@ -17,7 +17,7 @@ def test_brainstorm_skill_calls_save_brainstorm():
 
 def test_gauntlet_skill_requires_approve_before_lock():
     """Gauntlet SKILL.md must instruct Claude to call devboard_approve_plan before lock_plan."""
-    skill_md = SKILLS_DIR / "devboard-gauntlet" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-gauntlet" / "SKILL.md"
     assert skill_md.exists()
     content = skill_md.read_text()
     assert "devboard_approve_plan" in content, (
@@ -29,7 +29,7 @@ def test_gauntlet_skill_requires_approve_before_lock():
 
 def test_brainstorm_frontmatter_references_3_phase():
     """s_001: SKILL.md frontmatter description must reference 3-Phase structure, not old 5-question style."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "5 clarifying questions" not in content, (
         "frontmatter still references the old '5 clarifying questions' behavior"
@@ -43,7 +43,7 @@ def test_brainstorm_frontmatter_references_3_phase():
 
 def test_brainstorm_preamble_has_list_goals_and_grep():
     """s_002: SKILL.md must instruct Claude to call devboard_list_goals and run Grep in preamble."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "devboard_list_goals" in content, (
         "SKILL.md preamble must include devboard_list_goals() call"
@@ -57,7 +57,7 @@ def test_brainstorm_preamble_has_list_goals_and_grep():
 
 def test_brainstorm_phase1_has_direction_validation_questions():
     """s_003: Phase 1 must contain direction-validation questions mapped to premises/risks."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "Phase 1" in content, "Phase 1 block missing"
     assert "premises" in content, "Q1→premises mapping missing"
@@ -69,7 +69,7 @@ def test_brainstorm_phase1_has_direction_validation_questions():
 
 def test_brainstorm_stop_marker_after_phase1():
     """s_004: A STOP marker must appear after the Phase 1 section header and before Phase 2 header."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "STOP" in content, "No STOP marker found in SKILL.md"
     # Use section headers (## Phase N) to avoid matching frontmatter text
@@ -88,7 +88,7 @@ def test_brainstorm_stop_marker_after_phase1():
 
 def test_brainstorm_phase2_mandatory_with_recommendation():
     """s_005: Phase 2 must be MANDATORY and include RECOMMENDATION."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "Phase 2" in content, "Phase 2 block missing"
     assert "MANDATORY" in content, "Phase 2 must be labeled MANDATORY"
@@ -99,7 +99,7 @@ def test_brainstorm_phase2_mandatory_with_recommendation():
 
 def test_brainstorm_stop_marker_after_phase2():
     """s_006: A second STOP marker must appear after the Phase 2 section header and before Phase 3."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     phase2_idx = content.find("## Phase 2")
     phase3_idx = content.find("## Phase 3")
@@ -115,7 +115,7 @@ def test_brainstorm_stop_marker_after_phase2():
 
 def test_brainstorm_phase3_mcp_mapping_correct():
     """s_007: Phase 3 devboard_save_brainstorm call must include all required parameters."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "## Phase 3" in content, "## Phase 3 section header missing"
     phase3_idx = content.find("## Phase 3")
@@ -129,13 +129,13 @@ def test_brainstorm_phase3_mcp_mapping_correct():
 # ── s_008: Phase 3 gauntlet handoff + decline path ───────────────────────────
 
 def test_brainstorm_phase3_gauntlet_handoff_and_decline():
-    """s_008: Phase 3 must invoke devboard-gauntlet and handle user decline gracefully."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    """s_008: Phase 3 must invoke agentboard-gauntlet and handle user decline gracefully."""
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     phase3_idx = content.find("## Phase 3")
     phase3_body = content[phase3_idx:]
-    assert "devboard-gauntlet" in phase3_body, (
-        "Phase 3 must instruct handoff to devboard-gauntlet"
+    assert "agentboard-gauntlet" in phase3_body, (
+        "Phase 3 must instruct handoff to agentboard-gauntlet"
     )
     # Check decline path exists somewhere after Phase 3
     assert "decline" in phase3_body.lower() or "거부" in phase3_body or "지금은" in phase3_body, (
@@ -147,14 +147,14 @@ def test_brainstorm_phase3_gauntlet_handoff_and_decline():
 
 def test_brainstorm_clear_fastpath_preserved():
     """s_009: CLEAR fast-path must be preserved for already-specific goals."""
-    skill_md = SKILLS_DIR / "devboard-brainstorm" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "CLEAR" in content, (
         "CLEAR fast-path must be preserved for specific goals"
     )
 
 
-GAUNTLET_DIR = SKILLS_DIR / "devboard-gauntlet"
+GAUNTLET_DIR = SKILLS_DIR / "agentboard-gauntlet"
 
 
 # ── g_001: bad example in atomic_steps guidance ───────────────────────────────
@@ -324,7 +324,7 @@ def test_gauntlet_finalize_sets_task_metadata():
 
 def test_cso_preamble_reads_task_metadata():
     """CSO must check task.metadata.security_sensitive_plan to decide auto-entry."""
-    skill_md = SKILLS_DIR / "devboard-cso" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-cso" / "SKILL.md"
     content = skill_md.read_text()
     assert "task.metadata" in content or "metadata" in content, (
         "CSO must reference task metadata"
@@ -336,7 +336,7 @@ def test_cso_preamble_reads_task_metadata():
 
 def test_redteam_preamble_reads_task_metadata():
     """Redteam must check task.metadata.production_destined to decide auto-entry."""
-    skill_md = SKILLS_DIR / "devboard-redteam" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-redteam" / "SKILL.md"
     content = skill_md.read_text()
     assert "production_destined" in content, (
         "Redteam must check production_destined marker"
@@ -356,7 +356,7 @@ def test_gauntlet_documents_integration_test_command():
 
 def test_approval_documents_smoke_gate():
     """Approval SKILL must describe smoke gate with integration_test_command."""
-    skill_md = SKILLS_DIR / "devboard-approval" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-approval" / "SKILL.md"
     content = skill_md.read_text()
     assert "integration_test_command" in content, (
         "Approval must document integration_test_command gate"
@@ -366,17 +366,17 @@ def test_approval_documents_smoke_gate():
 # ── P1-2b: dep-audit skill + approval CVE gate ──────────────────────────────
 
 def test_dep_audit_skill_exists_with_frontmatter():
-    skill_md = SKILLS_DIR / "devboard-dep-audit" / "SKILL.md"
-    assert skill_md.exists(), "devboard-dep-audit skill must exist"
+    skill_md = SKILLS_DIR / "agentboard-dep-audit" / "SKILL.md"
+    assert skill_md.exists(), "agentboard-dep-audit skill must exist"
     content = skill_md.read_text()
-    assert "name: devboard-dep-audit" in content
+    assert "name: agentboard-dep-audit" in content
     assert "devboard_check_dependencies" in content, (
         "Skill must call devboard_check_dependencies"
     )
 
 
 def test_approval_documents_dep_audit_gate():
-    skill_md = SKILLS_DIR / "devboard-approval" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-approval" / "SKILL.md"
     content = skill_md.read_text()
     assert "devboard_check_dependencies" in content, (
         "Approval must invoke dep audit tool"
@@ -386,7 +386,7 @@ def test_approval_documents_dep_audit_gate():
 # ── P1-5: retro auto-proposes learnings ─────────────────────────────────────
 
 def test_retro_skill_documents_learning_proposals():
-    skill_md = SKILLS_DIR / "devboard-retro" / "SKILL.md"
+    skill_md = SKILLS_DIR / "agentboard-retro" / "SKILL.md"
     content = skill_md.read_text()
     assert "learning_proposals" in content, (
         "Retro skill must document the learning_proposals field"

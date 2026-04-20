@@ -22,7 +22,7 @@ Items deferred from CEO review (2026-04-18). Fix before or shortly after merging
 
 ## LOW / FUTURE
 
-- [ ] **brainstorm.md in retro output** — `devboard-retro` doesn't surface brainstorm premises/risks. Track as separate issue once brainstorm feature lands.
+- [ ] **brainstorm.md in retro output** — `agentboard-retro` doesn't surface brainstorm premises/risks. Track as separate issue once brainstorm feature lands.
 
 - [ ] **concurrent session: stale board state** — same as load_board read lock above; low priority.
 
@@ -35,7 +35,7 @@ From approved design: `~/.gstack/projects/cli-dev-board/ctmctm-mcp-migration-des
 - [ ] `mcp_server.py` — add `devboard_save_brainstorm` tool
 - [ ] `mcp_server.py` — add `devboard_approve_plan` tool
 - [ ] `storage/file_store.py` — add `save_brainstorm()` / `load_brainstorm()` methods
-- [ ] `skills/devboard-brainstorm/SKILL.md` — 3-phase deep brainstorm (Premise Challenge → Alternatives → Save+handoff)
-- [ ] `skills/devboard-gauntlet/SKILL.md` — Plan Review gate before `devboard_lock_plan`
+- [ ] `skills/agentboard-brainstorm/SKILL.md` — 3-phase deep brainstorm (Premise Challenge → Alternatives → Save+handoff)
+- [ ] `skills/agentboard-gauntlet/SKILL.md` — Plan Review gate before `devboard_lock_plan`
 - [ ] `tests/test_mcp.py` — tests for both new tools
 - [ ] Resolve 5 Reviewer Concerns from design doc before implementing

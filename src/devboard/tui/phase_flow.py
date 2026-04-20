@@ -21,7 +21,7 @@ from textual.widgets import Static, TabbedContent, TabPane
 from devboard.tui.session_derive import SessionContext
 
 
-_EMPTY_PLAN = "_Plan not locked. Run `devboard-gauntlet`._"
+_EMPTY_PLAN = "_Plan not locked. Run `agentboard-gauntlet`._"
 
 # Dev-phase classifier: exact set + prefix set.
 # Real log_decision writes phases like tdd_red/tdd_green/tdd_refactor, so
@@ -399,7 +399,7 @@ class PhaseFlowView(Widget):
 
         mtime-gates a re-read of decisions.jsonl; on change, dispatches
         the most-recently-appended row (the last non-empty line on disk —
-        NOT the max-iter row, which can be stale during devboard-replay
+        NOT the max-iter row, which can be stale during agentboard-replay
         where newer writes have lower iter) to handle_new_decision.
         Honors pin + manual-override. Also refreshes badges.
         """

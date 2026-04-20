@@ -1,4 +1,4 @@
-"""Verify devboard-approval SKILL.md instructs the Outcome upsert step."""
+"""Verify agentboard-approval SKILL.md instructs the Outcome upsert step."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 SKILL_PATH = (
     Path(__file__).resolve().parents[1]
     / "skills"
-    / "devboard-approval"
+    / "agentboard-approval"
     / "SKILL.md"
 )
 

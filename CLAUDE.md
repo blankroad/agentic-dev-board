@@ -51,12 +51,12 @@ When the user's request matches an available skill, ALWAYS invoke it using the S
 tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
 
 Key routing rules:
-- Brainstorm a feature goal → invoke `devboard-brainstorm`
-- Build a locked plan → invoke `devboard-gauntlet`
-- Implement a locked plan with TDD → invoke `devboard-tdd`
-- Security / CSO review → invoke `devboard-cso`
-- Final approval + PR → invoke `devboard-approval`
-- Post-sprint retro → invoke `devboard-retro`
+- Brainstorm a feature goal → invoke `agentboard-brainstorm`
+- Build a locked plan → invoke `agentboard-gauntlet`
+- Implement a locked plan with TDD → invoke `agentboard-tdd`
+- Security / CSO review → invoke `agentboard-cso`
+- Final approval + PR → invoke `agentboard-approval`
+- Post-sprint retro → invoke `agentboard-retro`
 - CEO / architecture review → invoke `plan-ceo-review`
 - Bugs, errors → invoke `investigate`
 
@@ -68,7 +68,7 @@ Key routing rules:
 | MCP tool dispatch | `src/devboard/mcp_server.py:call_tool` |
 | File I/O safety | `src/devboard/storage/file_store.py` |
 | Iron Law check | `src/devboard/agents/iron_law.py` |
-| TDD skill | `skills/devboard-tdd/SKILL.md` |
+| TDD skill | `skills/agentboard-tdd/SKILL.md` |
 
 ## Known deferred issues
 

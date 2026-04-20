@@ -72,7 +72,7 @@ class PlanMarkdown(Widget):
         gid = self._session.active_goal_id
         if not gid:
             return (
-                "_Plan not locked. Run `devboard-gauntlet`._",
+                "_Plan not locked. Run `agentboard-gauntlet`._",
                 "_No raw artifacts._",
             )
         goal_dir: Path = self._session.store_root / ".devboard" / "goals" / gid
@@ -88,7 +88,7 @@ class PlanMarkdown(Widget):
                 "_plan.md unreadable (binary or permission denied)._",
             )
         else:
-            primary = "_Plan not locked. Run `devboard-gauntlet`._"
+            primary = "_Plan not locked. Run `agentboard-gauntlet`._"
 
         # Raw artifacts — always plan.md + all 5 gauntlet files
         raw_parts: list[str] = []

@@ -102,7 +102,7 @@ echo "{\"session_id\":\"$session_id\",\"kind\":\"impl_write\",\"path\":\"$file_p
 
 cat <<EOF
 {
-  "systemMessage": "⚠ TDD Iron Law: wrote $file_path without any matching test file or prior test write in this session. See skill devboard-tdd — write the failing test FIRST."
+  "systemMessage": "⚠ TDD Iron Law: wrote $file_path without any matching test file or prior test write in this session. See skill agentboard-tdd — write the failing test FIRST."
 }
 EOF
 exit 0

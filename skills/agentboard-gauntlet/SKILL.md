@@ -1,7 +1,7 @@
 ---
-name: devboard-gauntlet
+name: agentboard-gauntlet
 description: MANDATORY planning gate. Proactively invoke this skill (do NOT write code directly) when the user asks to build, implement, add, create, make, or extend anything involving more than one file, tests, auth, payments, sessions, databases, APIs, architecture decisions, or anything destined for main/production. Runs the 5-step Gauntlet (Frame→Scope→Arch→Challenge→Decide) and locks intent with a SHA256-hashed LockedPlan including atomic_steps and out_of_scope_guard. Skip only for hello-world, one-liners, typo fixes, pure config tweaks, or when the user explicitly says "skip planning".
-when_to_use: User asks to build/implement/create/add/make something with multiple files or tests. User says "plan this", "design this", "how should we approach", "think this through", "architect this". MANDATORY before devboard-tdd for non-trivial work. Also invoke when the user says `rethink` or requests replanning.
+when_to_use: User asks to build/implement/create/add/make something with multiple files or tests. User says "plan this", "design this", "how should we approach", "think this through", "architect this". MANDATORY before agentboard-tdd for non-trivial work. Also invoke when the user says `rethink` or requests replanning.
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -212,7 +212,7 @@ Right after receiving `task_id` from `devboard_start_task`, set the markers belo
 
 1. **production_destined**: default `true`. Only `false` if the user explicitly said "throwaway" or "prototype".
 2. **security_sensitive_plan**: concatenate the architecture/atomic_steps text from arch.md + decide.json into a single string, then call `devboard_check_security_sensitive(diff=<plan_text>)`. Use the returned `sensitive` value as-is.
-3. **ui_surface**: concatenate arch.md + decide.json into a single string, then scan case-insensitively for any of these keywords: `tui`, `textual`, `widget`, `pilot`, `browser`, `ui`, `frontend`. If any keyword is present → `True`, else `False`. This flag lets `devboard-approval` decide whether to capture a real-TTY screenshot via `devboard_tui_render_smoke` and write the `## Screenshots / Diagrams` section of plan.md.
+3. **ui_surface**: concatenate arch.md + decide.json into a single string, then scan case-insensitively for any of these keywords: `tui`, `textual`, `widget`, `pilot`, `browser`, `ui`, `frontend`. If any keyword is present → `True`, else `False`. This flag lets `agentboard-approval` decide whether to capture a real-TTY screenshot via `devboard_tui_render_smoke` and write the `## Screenshots / Diagrams` section of plan.md.
 
 Save all three values like this:
 
@@ -240,7 +240,7 @@ You MUST call these in order. Missing a call leaves `.devboard/` incomplete and 
 | Right after lock | `devboard_start_task(project_root, goal_id)` | Creates Task + starts run. Returns `{task_id, run_id}` — SAVE BOTH. |
 | After lock + start_task | `devboard_checkpoint(project_root, run_id, "gauntlet_complete", {...})` | Record Gauntlet completion with locked_hash + atomic_steps count |
 
-The `task_id` and `run_id` you receive from `devboard_start_task` MUST be threaded through to `devboard-tdd` and all subsequent MCP calls in this session.
+The `task_id` and `run_id` you receive from `devboard_start_task` MUST be threaded through to `agentboard-tdd` and all subsequent MCP calls in this session.
 
 ## Handoff
 
@@ -248,11 +248,11 @@ After locking + start_task + checkpoint:
 
 1. Read the Meta section of arch.md and check the `ENG_REVIEW_NEEDED` value
 2. Branch:
-   - **ENG_REVIEW_NEEDED = false** → invoke `devboard-tdd` via Skill tool immediately
+   - **ENG_REVIEW_NEEDED = false** → invoke `agentboard-tdd` via Skill tool immediately
    - **ENG_REVIEW_NEEDED = true** → AskUserQuestion:
      "이 계획은 {NEW_COUNT}개의 새 파일 + {NEW_ABSTRACTIONS}개 새 abstraction을 포함합니다. TDD 시작 전 engineering review를 실행할까요? (권장) [Y/n]"
-     - Y (default) → invoke `devboard-eng-review` via Skill tool. **After this, gauntlet does NOT call tdd directly** — eng-review invokes tdd itself when complete.
-     - n → invoke `devboard-tdd` via Skill tool immediately.
+     - Y (default) → invoke `agentboard-eng-review` via Skill tool. **After this, gauntlet does NOT call tdd directly** — eng-review invokes tdd itself when complete.
+     - n → invoke `agentboard-tdd` via Skill tool immediately.
 
 Thread `{task_id, run_id}` through all subsequent MCP calls.
 
@@ -263,6 +263,6 @@ Thread `{task_id, run_id}` through all subsequent MCP calls.
 Right after `arch.md` is written and BEFORE proceeding to Challenge, check `task.metadata.ui_surface`:
 
 - **ui_surface=False** → skip this section, go to Challenge as usual.
-- **ui_surface=True** → invoke `devboard-ui-preview` via the Skill tool with `layer=0` in the argument payload. That skill produces a Layer 0 ASCII mockup, asks the user to confirm, and records the confirmed mockup SHA back into arch.md so the gauntlet hash covers the visual intent. Only after user confirmation resume the Gauntlet at Step 4 (Challenge).
+- **ui_surface=True** → invoke `agentboard-ui-preview` via the Skill tool with `layer=0` in the argument payload. That skill produces a Layer 0 ASCII mockup, asks the user to confirm, and records the confirmed mockup SHA back into arch.md so the gauntlet hash covers the visual intent. Only after user confirmation resume the Gauntlet at Step 4 (Challenge).
 
-Rationale: arch.md describes layout in prose, which is lossy. For `ui_surface=True` tasks, the Layer 0 mockup is the cheapest way to let the user catch "that's not what I pictured" before any code is written. See `skills/devboard-ui-preview/SKILL.md` for the full Layer 0 flow.
+Rationale: arch.md describes layout in prose, which is lossy. For `ui_surface=True` tasks, the Layer 0 mockup is the cheapest way to let the user catch "that's not what I pictured" before any code is written. See `skills/agentboard-ui-preview/SKILL.md` for the full Layer 0 flow.

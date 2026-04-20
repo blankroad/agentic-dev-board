@@ -1,5 +1,5 @@
 ---
-name: devboard-dep-audit
+name: agentboard-dep-audit
 description: Use when approval Step 0 needs a dependency CVE check, or when the user says "dep audit", "check vulns", "audit deps", "security audit deps". Runs devboard_check_dependencies and verdicts CLEAN / VULNERABLE based on CRITICAL/HIGH findings.
 ---
 
@@ -73,7 +73,7 @@ Severity: CRITICAL={n} HIGH={n} MEDIUM={n} LOW={n}
 
 1. Log decision with verdict_source='CLEAN'
 2. Checkpoint `dep_audit_complete` with `{verdict: CLEAN, ...}`
-3. Hand off to `devboard-approval` (or return to caller)
+3. Hand off to `agentboard-approval` (or return to caller)
 
 ## Required MCP calls
 

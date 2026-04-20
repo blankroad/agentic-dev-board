@@ -50,7 +50,7 @@ agentboard install       # writes .claude/{hooks,settings.json} + .mcp.json (Pyt
 
 claude                   # open Claude Code — skills + MCP tools auto-load
 # You: "build calculator.py with add/sub/mul/div and pytest, div-by-zero raises"
-# Claude Code: devboard-brainstorm → devboard-gauntlet → approve → devboard-tdd → devboard-approval
+# Claude Code: agentboard-brainstorm → agentboard-gauntlet → approve → agentboard-tdd → agentboard-approval
 ```
 
 **Manual install** (if you prefer not to curl|bash):
@@ -118,17 +118,17 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 
 | Skill | Activates when | Enforces |
 |---|---|---|
-| `devboard-brainstorm` | Goal is short/vague | 4 sequential forcing questions (who/status-quo/pain/wedge) via AskUserQuestion, 3× push on vague answers, saves `brainstorm.md` |
-| `devboard-gauntlet` | New goal needs planning | Frame → Scope → Arch (with **Complexity Check**) → Challenge → Decide, **Plan Review gate**, locks with SHA256 hash |
-| `devboard-eng-review` | Gauntlet flags `ENG_REVIEW_NEEDED` (>8 new files or ≥2 new abstractions) | 4 checks: architecture coherence, test strategy, integration risks, edge case coverage |
-| `devboard-tdd` | Code changes | Iron Law of TDD + Red-Green-Refactor + atomic_steps |
-| `devboard-cso` | `task.metadata.security_sensitive_plan=true` or diff contains security keywords | OWASP Top 10 + STRIDE at 7/10 confidence gate |
-| `devboard-dep-audit` | Approval Step 0 or user says "check vulns" | Runs `pip-audit` / `npm audit`, verdicts CLEAN/VULNERABLE on CRITICAL/HIGH findings |
-| `devboard-redteam` | `task.metadata.production_destined=true`, after PASS | Adversarial QA — 3+ breaking scenarios |
-| `devboard-rca` | RETRY verdict or test failure | 4-phase root cause (no quick fixes) |
-| `devboard-approval` | Loop converged | **4-gate guard** (TDD complete + CSO not VULNERABLE + dep audit CLEAN) → smoke gate (`integration_test_command`) → squash policy → PR body → `gh pr create` |
-| `devboard-retro` | Periodic / on request | Aggregate decisions across goals + **auto-proposes learnings** from ≥3× recurring failure modes |
-| `devboard-replay` | "try different approach from iter N" | Time-travel branch from checkpoint |
+| `agentboard-brainstorm` | Goal is short/vague | 4 sequential forcing questions (who/status-quo/pain/wedge) via AskUserQuestion, 3× push on vague answers, saves `brainstorm.md` |
+| `agentboard-gauntlet` | New goal needs planning | Frame → Scope → Arch (with **Complexity Check**) → Challenge → Decide, **Plan Review gate**, locks with SHA256 hash |
+| `agentboard-eng-review` | Gauntlet flags `ENG_REVIEW_NEEDED` (>8 new files or ≥2 new abstractions) | 4 checks: architecture coherence, test strategy, integration risks, edge case coverage |
+| `agentboard-tdd` | Code changes | Iron Law of TDD + Red-Green-Refactor + atomic_steps |
+| `agentboard-cso` | `task.metadata.security_sensitive_plan=true` or diff contains security keywords | OWASP Top 10 + STRIDE at 7/10 confidence gate |
+| `agentboard-dep-audit` | Approval Step 0 or user says "check vulns" | Runs `pip-audit` / `npm audit`, verdicts CLEAN/VULNERABLE on CRITICAL/HIGH findings |
+| `agentboard-redteam` | `task.metadata.production_destined=true`, after PASS | Adversarial QA — 3+ breaking scenarios |
+| `agentboard-rca` | RETRY verdict or test failure | 4-phase root cause (no quick fixes) |
+| `agentboard-approval` | Loop converged | **4-gate guard** (TDD complete + CSO not VULNERABLE + dep audit CLEAN) → smoke gate (`integration_test_command`) → squash policy → PR body → `gh pr create` |
+| `agentboard-retro` | Periodic / on request | Aggregate decisions across goals + **auto-proposes learnings** from ≥3× recurring failure modes |
+| `agentboard-replay` | "try different approach from iter N" | Time-travel branch from checkpoint |
 
 ### Skill flow
 
@@ -136,10 +136,10 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 User prompt
     │
     ▼
-devboard-brainstorm   ← 4 sequential forcing questions (push 3× on vague answers)
+agentboard-brainstorm   ← 4 sequential forcing questions (push 3× on vague answers)
     │                    saves brainstorm.md + brainstorm-{ts}.md (versioned)
     ▼
-devboard-gauntlet     ← 5-step planning; Arch step runs Complexity Check
+agentboard-gauntlet     ← 5-step planning; Arch step runs Complexity Check
     │                    ([NEW]/[MODIFY] tags, >8 files → scope creep OR new-system flag)
     │                    presents plan for review
     ▼
@@ -149,21 +149,21 @@ devboard_lock_plan    ← SHA256 hash locked — immutable from here
     │
 devboard_update_task_status ← sets task.metadata {production_destined, security_sensitive_plan}
     │
-    ├── ENG_REVIEW_NEEDED → devboard-eng-review (4 checks)
+    ├── ENG_REVIEW_NEEDED → agentboard-eng-review (4 checks)
     │
     ▼
-devboard-tdd          ← Red-Green-Refactor per atomic_step
+agentboard-tdd          ← Red-Green-Refactor per atomic_step
     │                    logs RED/GREEN/RETRY decisions + checkpoints
     ▼
-devboard-cso           ← if metadata.security_sensitive_plan=true
-devboard-dep-audit     ← CVE gate (pip-audit / npm audit)
-devboard-redteam       ← if metadata.production_destined=true
-devboard-rca           ← if 3× same symptom
+agentboard-cso           ← if metadata.security_sensitive_plan=true
+agentboard-dep-audit     ← CVE gate (pip-audit / npm audit)
+agentboard-redteam       ← if metadata.production_destined=true
+agentboard-rca           ← if 3× same symptom
     │
     ▼
-devboard-approval     ← 4-gate Step 0 guard + smoke gate + squash → push → PR URL
+agentboard-approval     ← 4-gate Step 0 guard + smoke gate + squash → push → PR URL
     │
-devboard-retro         ← periodic; auto-proposes learnings from recurring modes
+agentboard-retro         ← periodic; auto-proposes learnings from recurring modes
 ```
 
 ---
@@ -238,7 +238,7 @@ All tools are **stateless** (read/write `.devboard/` directly) and **LLM-free** 
 | `iron-law-check.sh` | `PostToolUse` on `Write\|Edit` | Production file written with no matching test file → emits TDD reminder via `systemMessage` |
 | `activity-log.py` | `PostToolUse` on all tools | Appends every tool call + result to `.devboard/activity.jsonl` for trial-and-error review |
 
-Hooks work **independently of skills** — even if `devboard-tdd` isn't loaded, you get Iron Law reminders and DangerGuard blocks.
+Hooks work **independently of skills** — even if `agentboard-tdd` isn't loaded, you get Iron Law reminders and DangerGuard blocks.
 
 ---
 
@@ -341,11 +341,11 @@ agentboard config KEY VALUE  # set config (e.g., tdd.enabled false)
 ```
 You: "I want to add search to the bookmarks app"
 
-Claude auto-loads devboard-brainstorm (goal is vague):
+Claude auto-loads agentboard-brainstorm (goal is vague):
   → 4 clarifying questions (success criteria, storage, scope boundary, runtime)
   You answer → calls devboard_save_brainstorm() → brainstorm.md saved
 
-Claude auto-loads devboard-gauntlet:
+Claude auto-loads agentboard-gauntlet:
   Frame:  Problem extracted, non-goals listed
   Scope:  HOLD (well-scoped after brainstorm)
   Arch:   search.py module + tags table, SQLite FTS or LIKE
@@ -358,7 +358,7 @@ Claude auto-loads devboard-gauntlet:
   → calls devboard_approve_plan(approved=True)
   → calls devboard_lock_plan() → SHA256 hash, immutable
 
-Claude auto-loads devboard-tdd:
+Claude auto-loads agentboard-tdd:
   RED s_001: write test_search_url() → pytest fails "ImportError: no module search"
     → devboard_checkpoint(tdd_red_complete) + devboard_log_decision(RED_CONFIRMED)
   GREEN s_001: write search() → pytest passes
@@ -366,7 +366,7 @@ Claude auto-loads devboard-tdd:
   RETRY on s_002: tag schema wrong → devboard_log_decision(RETRY)
   ... fix + GREEN → converged
 
-Claude auto-loads devboard-approval:
+Claude auto-loads agentboard-approval:
   Diff stats + 3/3 checklist ✓ + 2 iter, 1 retry
   "Squash policy [1-4]?" → 1 (squash)
   "Push? [y/N]?" → y

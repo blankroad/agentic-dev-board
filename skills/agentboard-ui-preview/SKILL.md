@@ -1,7 +1,7 @@
 ---
-name: devboard-ui-preview
+name: agentboard-ui-preview
 description: 4-layer TUI visual preview — ASCII mockup (Layer 0), Pilot text snapshot (Layer 1), SVG capture (Layer 2), scenes.yaml gallery (Layer 3). Invoke whenever a task has ui_surface=True so the user sees "what this looks like" at plan, first-GREEN, and approval gates — not just at the end.
-when_to_use: Automatic after gauntlet arch.md on ui_surface=True (Layer 0). Automatic after first widget-mounting GREEN cycle in devboard-tdd (Layer 1). Automatic before git push in devboard-approval (Layer 2). Manual via scenes.yaml iteration when the goal directory contains that file (Layer 3). Also manually when the user says "show the UI", "preview", "mockup this", "snapshot the tui".
+when_to_use: Automatic after gauntlet arch.md on ui_surface=True (Layer 0). Automatic after first widget-mounting GREEN cycle in agentboard-tdd (Layer 1). Automatic before git push in agentboard-approval (Layer 2). Manual via scenes.yaml iteration when the goal directory contains that file (Layer 3). Also manually when the user says "show the UI", "preview", "mockup this", "snapshot the tui".
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -21,7 +21,7 @@ You are the **UI Preview Orchestrator**. Your job: make the TUI visible at every
 
 ## Layer 0 — ASCII Mockup (Claude direct, pre-implementation)
 
-**When**: immediately after `devboard-gauntlet` writes arch.md and `task.metadata.ui_surface == True`.
+**When**: immediately after `agentboard-gauntlet` writes arch.md and `task.metadata.ui_surface == True`.
 
 **What**: produce an ASCII art mockup of the intended layout inside the arch.md (or a sibling `arch_mockup.md`). Include:
 - Screen border and overall region partitioning
@@ -37,7 +37,7 @@ You are the **UI Preview Orchestrator**. Your job: make the TUI visible at every
 
 ## Layer 1 — Text Snapshot (first widget GREEN)
 
-**When**: in `devboard-tdd`, right after the first atomic_step that mounts a widget visible to the user turns GREEN and `task.metadata.ui_surface == True`. Also re-run after each subsequent step that mutates visible UI state.
+**When**: in `agentboard-tdd`, right after the first atomic_step that mounts a widget visible to the user turns GREEN and `task.metadata.ui_surface == True`. Also re-run after each subsequent step that mutates visible UI state.
 
 **What**: call the MCP tool to get a plain-text frame and stash it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`.
 
@@ -54,13 +54,13 @@ devboard_tui_capture_snapshot(
 )
 ```
 
-After capture, diff against the Layer 0 mockup ASCII and surface any drift (e.g. "mockup showed 4 tabs but capture shows 3 — mount wired incorrectly?"). If drift is material, invoke `devboard-rca` — do NOT proceed silently.
+After capture, diff against the Layer 0 mockup ASCII and surface any drift (e.g. "mockup showed 4 tabs but capture shows 3 — mount wired incorrectly?"). If drift is material, invoke `agentboard-rca` — do NOT proceed silently.
 
 ---
 
 ## Layer 2 — SVG Snapshot (before push)
 
-**When**: in `devboard-approval`, after reviewer/parallel-review PASS and before `git push`. Triggered when `task.metadata.ui_surface == True`.
+**When**: in `agentboard-approval`, after reviewer/parallel-review PASS and before `git push`. Triggered when `task.metadata.ui_surface == True`.
 
 **What**: capture high-fidelity SVG frames (colors, borders, focus state preserved) and attach paths to the PR body.
 
@@ -124,12 +124,12 @@ Fields:
 
 | Layer | Upstream skill | Downstream action |
 |---|---|---|
-| 0 | devboard-gauntlet | mockup confirmed → arch.md updated → gauntlet continues |
-| 1 | devboard-tdd | snapshot saved → drift check vs. Layer 0 → continue TDD or RCA |
-| 2 | devboard-approval | SVG saved → plan.md Screenshots section updated → push |
-| 3 | devboard-approval (when scenes.yaml present) | gallery sweep → all scenes saved → PR body lists them |
+| 0 | agentboard-gauntlet | mockup confirmed → arch.md updated → gauntlet continues |
+| 1 | agentboard-tdd | snapshot saved → drift check vs. Layer 0 → continue TDD or RCA |
+| 2 | agentboard-approval | SVG saved → plan.md Screenshots section updated → push |
+| 3 | agentboard-approval (when scenes.yaml present) | gallery sweep → all scenes saved → PR body lists them |
 
-On ANY capture `crashed=True`: do NOT proceed to next layer / push. Surface the traceback and escalate to `devboard-rca`.
+On ANY capture `crashed=True`: do NOT proceed to next layer / push. Surface the traceback and escalate to `agentboard-rca`.
 
 ---
 

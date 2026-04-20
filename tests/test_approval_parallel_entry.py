@@ -4,9 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-APPROVAL_MD = ROOT / "skills" / "devboard-approval" / "SKILL.md"
-TDD_MD = ROOT / "skills" / "devboard-tdd" / "SKILL.md"
-PARALLEL_MD = ROOT / "skills" / "devboard-parallel-review" / "SKILL.md"
+APPROVAL_MD = ROOT / "skills" / "agentboard-approval" / "SKILL.md"
+TDD_MD = ROOT / "skills" / "agentboard-tdd" / "SKILL.md"
+PARALLEL_MD = ROOT / "skills" / "agentboard-parallel-review" / "SKILL.md"
 
 
 def test_approval_recognizes_parallel_review_entry() -> None:
@@ -30,10 +30,10 @@ def test_approval_falls_back_to_legacy_cso_redteam() -> None:
 
 
 def test_tdd_handoff_points_to_parallel_review() -> None:
-    """TDD SKILL.md's handoff section must mention devboard-parallel-review (for reviewer PASS flow)."""
+    """TDD SKILL.md's handoff section must mention agentboard-parallel-review (for reviewer PASS flow)."""
     text = TDD_MD.read_text(encoding="utf-8")
-    assert "devboard-parallel-review" in text, (
-        "tdd SKILL.md handoff does not point to devboard-parallel-review"
+    assert "agentboard-parallel-review" in text, (
+        "tdd SKILL.md handoff does not point to agentboard-parallel-review"
     )
 
 

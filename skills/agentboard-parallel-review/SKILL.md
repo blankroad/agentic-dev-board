@@ -1,7 +1,7 @@
 ---
-name: devboard-parallel-review
-description: Parallel orchestrator that dispatches devboard-cso and devboard-redteam in parallel via the Claude Code Agent tool, then aggregates their verdicts and logs a single phase='parallel_review' decision. Use AFTER reviewer PASS, BEFORE devboard-approval. Replaces the sequential cso → redteam chain. On any BLOCKER (CSO VULNERABLE or redteam BROKEN) it routes back to devboard-tdd; on CLEAN it hands off to devboard-approval.
-when_to_use: Automatic after devboard-tdd issues reviewer PASS for production-destined code. Voice triggers — "parallel review", "run cso and redteam together", "speed up review".
+name: agentboard-parallel-review
+description: Parallel orchestrator that dispatches agentboard-cso and agentboard-redteam in parallel via the Claude Code Agent tool, then aggregates their verdicts and logs a single phase='parallel_review' decision. Use AFTER reviewer PASS, BEFORE agentboard-approval. Replaces the sequential cso → redteam chain. On any BLOCKER (CSO VULNERABLE or redteam BROKEN) it routes back to agentboard-tdd; on CLEAN it hands off to agentboard-approval.
+when_to_use: Automatic after agentboard-tdd issues reviewer PASS for production-destined code. Voice triggers — "parallel review", "run cso and redteam together", "speed up review".
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -46,8 +46,8 @@ Agent(
   description="CSO security review",
   subagent_type="general-purpose",
   prompt=(
-    "You are running the devboard-cso skill. Current task_id={task_id}, run_id={run_id}, "
-    "goal_id={goal_id}. Read the SKILL.md at skills/devboard-cso/SKILL.md and execute it "
+    "You are running the agentboard-cso skill. Current task_id={task_id}, run_id={run_id}, "
+    "goal_id={goal_id}. Read the SKILL.md at skills/agentboard-cso/SKILL.md and execute it "
     "against the current git diff. Return a structured report with: verdict "
     "(SECURE|VULNERABLE|INCOMPLETE), and a findings list where each finding has "
     "file (str|null), line (int|null), category (e.g. 'SQLi'), "
@@ -60,8 +60,8 @@ Agent(
   description="Redteam adversarial review",
   subagent_type="general-purpose",
   prompt=(
-    "You are running the devboard-redteam skill. Current task_id={task_id}, run_id={run_id}, "
-    "goal_id={goal_id}. Read skills/devboard-redteam/SKILL.md and execute against the "
+    "You are running the agentboard-redteam skill. Current task_id={task_id}, run_id={run_id}, "
+    "goal_id={goal_id}. Read skills/agentboard-redteam/SKILL.md and execute against the "
     "current diff. Return a structured report: verdict (SURVIVED|BROKEN|INCOMPLETE), and a "
     "findings list where each finding has file (str|null), line (int|null), category "
     "(EdgeInput|Boundary|Type|State|Concurrency|Missing), category_namespace='redteam', "
@@ -127,8 +127,8 @@ Branch on `verdict.status`:
 
 | Status | Action |
 |---|---|
-| `CLEAN` | Invoke `devboard-approval` via Skill tool. |
-| `BLOCKER` | Write a failing test reproducing the most severe finding, invoke `devboard-tdd` with that RED as the next step. |
+| `CLEAN` | Invoke `agentboard-approval` via Skill tool. |
+| `BLOCKER` | Write a failing test reproducing the most severe finding, invoke `agentboard-tdd` with that RED as the next step. |
 | `BOTH_BLOCKER` | Same as BLOCKER but pick the higher-severity finding across both lists. |
 | `INCOMPLETE` | Report the crash, do NOT proceed to approval, ask the user whether to retry parallel-review or fall back to sequential cso → redteam. |
 
@@ -139,5 +139,5 @@ The whole point of this skill is wall-clock improvement. After each run, compare
 ## Not your job
 
 - Do NOT rewrite CSO or redteam findings. You aggregate, you do not reinterpret.
-- Do NOT push. That is `devboard-approval`.
+- Do NOT push. That is `agentboard-approval`.
 - Do NOT silently drop an INCOMPLETE — always surface it to the user.

@@ -1,4 +1,4 @@
-"""Verify devboard-tdd SKILL.md exposes the Edge-Case RED Rule (axis 2)."""
+"""Verify agentboard-tdd SKILL.md exposes the Edge-Case RED Rule (axis 2)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 SKILL_PATH = (
     Path(__file__).resolve().parents[1]
     / "skills"
-    / "devboard-tdd"
+    / "agentboard-tdd"
     / "SKILL.md"
 )
 

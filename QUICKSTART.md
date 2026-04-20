@@ -61,10 +61,10 @@ build this goal using agentboard skills — gauntlet → tdd → approval.
 ```
 
 **기대 동작**:
-- `devboard-gauntlet` 스킬 auto-invoke → 5-step planning → `plan.md` + SHA256 hash 생성
-- `devboard-tdd` 스킬 auto-invoke → 각 atomic_step마다 RED → GREEN → REFACTOR
+- `agentboard-gauntlet` 스킬 auto-invoke → 5-step planning → `plan.md` + SHA256 hash 생성
+- `agentboard-tdd` 스킬 auto-invoke → 각 atomic_step마다 RED → GREEN → REFACTOR
 - 각 단계 `.devboard/runs/<run_id>.jsonl` + `decisions.jsonl`에 기록
-- 수렴 후 `devboard-approval` 이 squash 정책 묻고 PR 생성
+- 수렴 후 `agentboard-approval` 이 squash 정책 묻고 PR 생성
 
 ## 4. 실시간 관찰 (다른 터미널)
 
@@ -133,7 +133,7 @@ Claude Code 세션 안에서 skill이 **발동 안 했음**. 아래 중 하나:
 1. **skill이 로드됐는지 확인** — `.claude/skills/devboard-*/SKILL.md` 파일 존재 OR `~/.claude/skills/`에 있는지
 2. **`.mcp.json` 이 프로젝트 루트에 있는지** — `cat .mcp.json`
 3. **`.mcp.json`의 python path가 유효한지** — `agentboard install --python $(which python)` 으로 재설치
-4. **명시적 invoke** — "use devboard-gauntlet + devboard-tdd"
+4. **명시적 invoke** — "use agentboard-gauntlet + agentboard-tdd"
 5. **Claude Code `/mcp` 명령** — 연결된 MCP 서버 목록 확인
 
 ### 훅이 작동 안 함
@@ -143,7 +143,7 @@ Claude Code 세션 안에서 skill이 **발동 안 했음**. 아래 중 하나:
 `SKILL.md` 상단 `> **언어**: ... 한국어 ...` 블록이 강제해야 하는데 Claude Code가 skill context 밖에서 응답할 때는 적용 안 될 수 있음. 프로젝트 `.claude/settings.json`에 `"language": "korean"` 추가해서 전역으로 강제 가능.
 
 ### `gh` 없음
-`devboard-approval` 이 PR 생성 실패 → push만 실행하고 사용자에게 수동 PR 생성 요청. 설치 권장:
+`agentboard-approval` 이 PR 생성 실패 → push만 실행하고 사용자에게 수동 PR 생성 요청. 설치 권장:
 ```bash
 brew install gh && gh auth login
 ```

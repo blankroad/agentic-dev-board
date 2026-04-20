@@ -1,7 +1,7 @@
 ---
-name: devboard-cso
+name: agentboard-cso
 description: Chief Security Officer — OWASP Top 10 + STRIDE threat modeling with a 7/10 confidence gate. ALWAYS activate when the diff contains any of - auth, login, logout, session, token, jwt, password, credential, oauth, cookie, csrf, crypto, cipher, hash, hmac, secret, encrypt, decrypt, tls, ssl, sql, query, cursor, execute(, subprocess, os.system, exec(, eval(, shell=True, pickle, yaml.load, http, request, urllib, os.path, /etc/, chmod, setuid, sudo. Proactively invoke this skill (do NOT approve security-sensitive code) even if the reviewer already said PASS. Can FLIP a PASS verdict to RETRY if any CRITICAL or HIGH finding at confidence ≥ 7/10. Skip only on purely computational, UI-layout, or documentation-only changes.
-when_to_use: Any diff touching auth, crypto, SQL, subprocess, deserialization, or network. User says "review for security", "security check", "is this safe", "check for vulnerabilities". Automatic after devboard-tdd GREEN for security-sensitive diffs.
+when_to_use: Any diff touching auth, crypto, SQL, subprocess, deserialization, or network. User says "review for security", "security check", "is this safe", "check for vulnerabilities". Automatic after agentboard-tdd GREEN for security-sensitive diffs.
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -101,10 +101,10 @@ Do NOT give "defensive programming" suggestions unless they fix a real vulnerabi
 ## On VULNERABLE
 
 1. Call MCP tool `devboard_log_decision(iter, phase='cso', reasoning=<summary>, verdict_source='VULNERABLE', ...)`
-2. Hand back to `devboard-tdd` with the finding — the implementation must be fixed and re-verified.
+2. Hand back to `agentboard-tdd` with the finding — the implementation must be fixed and re-verified.
 3. Do NOT approve PRs with CSO findings outstanding.
 
 ## On SECURE
 
 1. Log decision with verdict_source='SECURE'
-2. Hand off to `devboard-redteam` (if enabled) or `devboard-approval`
+2. Hand off to `agentboard-redteam` (if enabled) or `agentboard-approval`

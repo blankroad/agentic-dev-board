@@ -1,7 +1,7 @@
 ---
-name: devboard-approval
+name: agentboard-approval
 description: Final approval gate before git push + PR. Proactively invoke this skill (do NOT git push directly) when the user says "ship it", "ship", "open a PR", "merge this", "push it", "deploy", "make a PR", "land this", OR after loop convergence (reviewer PASS + CSO SECURE + red-team SURVIVED + all checklist items verified). Summarizes diff stats, goal checklist verification, iteration stats, and key decisions. Prompts user for squash policy (squash/semantic/preserve/interactive). Builds PR body from LockedPlan + decisions automatically. Creates PR via `gh pr create`. NEVER force-pushes. REFUSES to push if any checklist item unverified or CSO returned VULNERABLE.
-when_to_use: User signals readiness to push/merge/ship. Automatic after devboard-redteam SURVIVED (or after devboard-tdd full green + checklist verified if red-team was skipped). Voice triggers - "ship it", "land it", "open a PR", "push this up".
+when_to_use: User signals readiness to push/merge/ship. Automatic after agentboard-redteam SURVIVED (or after agentboard-tdd full green + checklist verified if red-team was skipped). Voice triggers - "ship it", "land it", "open a PR", "push this up".
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -25,20 +25,20 @@ You are the **Approval Gate**. Loop converged → present to user → push on ap
 On entry, call `devboard_load_decisions(project_root, task_id)` and verify these conditions:
 
 1. **TDD complete check** — does a `phase="reflect"` or `phase="review_complete"` entry exist?
-   - If missing, **refuse**: "TDD가 완료되지 않았습니다. devboard-tdd를 먼저 실행하세요." → exit skill
+   - If missing, **refuse**: "TDD가 완료되지 않았습니다. agentboard-tdd를 먼저 실행하세요." → exit skill
 2. **Review gate — parallel_review (1st priority / preferred) OR legacy cso+redteam (fallback)**:
-   - **1순위 (preferred)**: a single `phase="parallel_review"` entry (produced by devboard-parallel-review) — if present, read its `metadata.overall`:
+   - **1순위 (preferred)**: a single `phase="parallel_review"` entry (produced by agentboard-parallel-review) — if present, read its `metadata.overall`:
      - `overall="CLEAN"` → pass this gate (no need to also check cso/redteam)
-     - `overall ∈ {"BLOCKER", "BOTH_BLOCKER"}` → **refuse**: "parallel-review returned {overall}. devboard-tdd로 복귀." → exit skill
+     - `overall ∈ {"BLOCKER", "BOTH_BLOCKER"}` → **refuse**: "parallel-review returned {overall}. agentboard-tdd로 복귀." → exit skill
      - `overall="INCOMPLETE"` → **refuse**: "parallel-review returned INCOMPLETE. 재시도 필요." → exit skill
    - **Legacy fallback (backward compat)**: if NO `phase="parallel_review"` entry exists, fall back to checking the separate `phase="cso"` + `phase="redteam"` pair:
      - If the diff or LockedPlan contains security-sensitive keywords (auth, password, token, crypto, SQL, subprocess, eval, exec), verify a `phase="cso"` entry exists.
-       - Missing → **refuse**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. devboard-cso 또는 devboard-parallel-review를 먼저 실행하세요." → exit skill
+       - Missing → **refuse**: "보안 민감 변경이 감지됐으나 CSO 검토가 없습니다. agentboard-cso 또는 agentboard-parallel-review를 먼저 실행하세요." → exit skill
      - If a `phase="cso"` entry exists and its `verdict_source="VULNERABLE"`, **refuse**: "CSO returned VULNERABLE. 이슈 해결 후 재시도." → exit skill
      - The legacy `phase="redteam"` entry is optional unless the task is production-destined (see task.metadata).
 3. **Dep audit check** — call `devboard_check_dependencies(project_root)`.
    - If `skipped_reason` is set → pass (audit unavailable)
-   - If `severity_counts.CRITICAL ≥ 1` or `severity_counts.HIGH ≥ 1` → **refuse**: "Dep audit VULNERABLE: CRITICAL={c}, HIGH={h}. devboard-dep-audit를 실행해서 세부 확인 후 업그레이드 필요." → exit skill
+   - If `severity_counts.CRITICAL ≥ 1` or `severity_counts.HIGH ≥ 1` → **refuse**: "Dep audit VULNERABLE: CRITICAL={c}, HIGH={h}. agentboard-dep-audit를 실행해서 세부 확인 후 업그레이드 필요." → exit skill
    - Otherwise → pass
 
 If all three conditions pass (TDD complete + review gate + dep audit), proceed to Step 1.
@@ -196,7 +196,7 @@ For non-UI tasks (`ui_surface` missing or `False`), this step is a no-op — use
 
 - **Push fails**: network / auth issues. Report error. Task remains in `awaiting_approval`.
 - **gh not installed**: fall back — push only, tell user to open PR manually with the pre-built body.
-- **Checklist has ✗ items**: refuse to push. Hand back to `devboard-tdd`.
+- **Checklist has ✗ items**: refuse to push. Hand back to `agentboard-tdd`.
 - **Uncommitted changes**: refuse — must be clean working tree first.
 
 ## Required MCP calls — ALL mandatory, in order
@@ -226,10 +226,10 @@ For non-UI tasks (`ui_surface` missing or `False`), this step is a no-op — use
 
 ## UI Preview integration (when ui_surface=True)
 
-Before `git push` and BEFORE PR body assembly, if `task.metadata.ui_surface == True`, invoke `devboard-ui-preview` via the Skill tool with `layer=2`. That skill calls `devboard_tui_capture_snapshot` with `include_svg=True` and writes both text + SVG frames under `.devboard/tui_snapshots/<goal_id>/layer2/`. The resulting paths are stamped into plan.md's `## Screenshots / Diagrams` section and referenced from the PR body so reviewers see the visual change before merging.
+Before `git push` and BEFORE PR body assembly, if `task.metadata.ui_surface == True`, invoke `agentboard-ui-preview` via the Skill tool with `layer=2`. That skill calls `devboard_tui_capture_snapshot` with `include_svg=True` and writes both text + SVG frames under `.devboard/tui_snapshots/<goal_id>/layer2/`. The resulting paths are stamped into plan.md's `## Screenshots / Diagrams` section and referenced from the PR body so reviewers see the visual change before merging.
 
 If the goal's directory contains `scenes.yaml`, run Layer 3: iterate every declared scene (`scene_id`, `keys`, `description`, `tags`) and capture one SVG per entry. Link every scene's SVG in the PR body with the scene description as caption.
 
-Refuse to push when any Layer 2/3 capture returns `crashed=True` — surface the traceback and route back to `devboard-rca`.
+Refuse to push when any Layer 2/3 capture returns `crashed=True` — surface the traceback and route back to `agentboard-rca`.
 
 Skip entirely when `ui_surface=False`. The legacy `devboard_tui_render_smoke` (crash gate) still runs independently.

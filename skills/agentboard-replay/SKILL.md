@@ -1,7 +1,7 @@
 ---
-name: devboard-replay
-description: Time-travel — branch a past run from iteration N with a variant strategy. Invoke when the user says "replay", "try different approach from iteration N", "what if we'd done X instead", "branch from checkpoint", "regression-test this past state", "go back to when X worked", or "explore alternative from iter N". Preserves the original run untouched; new run gets its own run_id and checkpoint trail. LockedPlan is still authoritative (out_of_scope_guard paths still cannot be touched). Useful after devboard-rca escalates (3 consecutive failures → rethink) to explore a different branch from an earlier checkpoint without losing the failed trail.
-when_to_use: User explicitly asks for replay, variant exploration, time-travel, or branching from a past checkpoint. Also proactively suggest after devboard-rca escalation, or when the user is debating "what if we'd taken approach X" for a completed run.
+name: agentboard-replay
+description: Time-travel — branch a past run from iteration N with a variant strategy. Invoke when the user says "replay", "try different approach from iteration N", "what if we'd done X instead", "branch from checkpoint", "regression-test this past state", "go back to when X worked", or "explore alternative from iter N". Preserves the original run untouched; new run gets its own run_id and checkpoint trail. LockedPlan is still authoritative (out_of_scope_guard paths still cannot be touched). Useful after agentboard-rca escalates (3 consecutive failures → rethink) to explore a different branch from an earlier checkpoint without losing the failed trail.
+when_to_use: User explicitly asks for replay, variant exploration, time-travel, or branching from a past checkpoint. Also proactively suggest after agentboard-rca escalation, or when the user is debating "what if we'd taken approach X" for a completed run.
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -53,7 +53,7 @@ The new run file at `.devboard/runs/<new_run_id>.jsonl` starts with a `replay_st
 - Create a new Task linked to the original goal (e.g., title: `[replay] <original>`)
 - Load the original LockedPlan (unchanged — atomic_steps and out_of_scope_guard still apply)
 - Inject the variant note into the next planner call as `previous_strategy`
-- Hand off to `devboard-tdd` at iteration N+1 with:
+- Hand off to `agentboard-tdd` at iteration N+1 with:
   - LockedPlan unchanged
   - Fresh convergence/blocked flags
   - `variant_note` as a planning hint
@@ -77,7 +77,7 @@ Retro reports surface both — variants become material for retrospective patter
 | New task | `devboard_start_task(project_root, goal_id, title="[replay] <original>")` — independent task for the variant |
 | Resume point | `devboard_checkpoint(project_root, new_run_id, "replay_resumed", {from_iteration, variant_note})` |
 
-Then hand off to `devboard-tdd` with the new `{task_id, run_id}` and `variant_note` as the initial `previous_strategy`.
+Then hand off to `agentboard-tdd` with the new `{task_id, run_id}` and `variant_note` as the initial `previous_strategy`.
 
 ## Discipline
 

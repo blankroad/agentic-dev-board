@@ -1,5 +1,5 @@
 ---
-name: devboard-rca
+name: agentboard-rca
 description: Systematic 4-phase root cause analysis (Investigate → Pattern → Hypothesis → Fix). Iron Law - NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST. If you catch yourself proposing a fix in Phase 1 or 2, STOP - you are skipping phases. Proactively invoke this skill (do NOT propose fixes directly) when the user reports errors, stack traces, 500 errors, unexpected behavior, "it was working yesterday", "why is this broken", "debug this", "fix this bug", test failures, or is troubleshooting why something stopped working. Escalates to `devboard rethink` after 3 consecutive failures on the same symptom (the architecture, not the code, is suspect).
 when_to_use: User reports a bug, test failure, unexpected behavior, error message, stack trace, regression, or asks to debug/investigate/fix. Also automatic on RETRY verdicts from reviewer. Voice triggers - "debug this", "why is this broken", "what went wrong", "investigate this error".
 ---
@@ -89,7 +89,7 @@ Only now:
     "escalate_if_3_plus": true
   },
   "root_cause": "one-line summary",
-  "next_strategy": "one-sentence instruction back to devboard-tdd",
+  "next_strategy": "one-sentence instruction back to agentboard-tdd",
   "learning": "optional — abstract lesson worth saving via devboard_save_learning"
 }
 ```
@@ -111,4 +111,4 @@ If this is the **3rd+ consecutive failure on the same symptom** (check `devboard
 ## Handoff
 
 1. If `escalate`: STOP. Hand to user with explicit "rethink needed" message.
-2. Otherwise hand `next_strategy` back to `devboard-tdd` as the next iteration's directive.
+2. Otherwise hand `next_strategy` back to `agentboard-tdd` as the next iteration's directive.

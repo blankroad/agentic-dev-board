@@ -1,4 +1,4 @@
-"""Verify devboard-retro SKILL.md instructs the Lessons upsert step."""
+"""Verify agentboard-retro SKILL.md instructs the Lessons upsert step."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 SKILL_PATH = (
     Path(__file__).resolve().parents[1]
     / "skills"
-    / "devboard-retro"
+    / "agentboard-retro"
     / "SKILL.md"
 )
 

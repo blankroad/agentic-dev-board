@@ -227,7 +227,7 @@ def diagnose_activations(store: FileStore) -> DiagnosticResult:
             "No skill events detected. Open Claude Code in a project with .mcp.json + .claude/skills/devboard-* installed."
         )
         result.suggestions.append(
-            "Try explicit invocation: 'use devboard-gauntlet + devboard-tdd to build <goal>'"
+            "Try explicit invocation: 'use agentboard-gauntlet + agentboard-tdd to build <goal>'"
         )
     elif "gauntlet_complete" not in metrics.skill_events_by_type:
         result.suggestions.append(

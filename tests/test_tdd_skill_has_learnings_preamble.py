@@ -1,4 +1,4 @@
-"""Verify devboard-tdd SKILL.md exposes the Learnings Preamble (axis 1).
+"""Verify agentboard-tdd SKILL.md exposes the Learnings Preamble (axis 1).
 
 These are plain-text assertions on the skill markdown. They fail if the
 preamble isn't present or if the original Project Guard / Iron Law /
@@ -13,7 +13,7 @@ from pathlib import Path
 SKILL_PATH = (
     Path(__file__).resolve().parents[1]
     / "skills"
-    / "devboard-tdd"
+    / "agentboard-tdd"
     / "SKILL.md"
 )
 
