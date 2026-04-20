@@ -310,8 +310,8 @@ def test_emit_mcp_config_creates_file(tmp_path: Path):
     assert path.exists()
     data = json.loads(path.read_text())
     assert "mcpServers" in data
-    assert "devboard" in data["mcpServers"]
-    assert data["mcpServers"]["devboard"]["args"] == ["-m", "devboard.mcp_server"]
+    assert "agentboard" in data["mcpServers"]
+    assert data["mcpServers"]["agentboard"]["args"] == ["-m", "devboard.mcp_server"]
 
 
 def test_emit_mcp_config_defaults_to_sys_executable(tmp_path: Path):
@@ -319,13 +319,13 @@ def test_emit_mcp_config_defaults_to_sys_executable(tmp_path: Path):
     import sys
     path = emit_mcp_config(tmp_path)
     data = json.loads(path.read_text())
-    assert data["mcpServers"]["devboard"]["command"] == sys.executable
+    assert data["mcpServers"]["agentboard"]["command"] == sys.executable
 
 
 def test_emit_mcp_config_respects_explicit_python(tmp_path: Path):
     path = emit_mcp_config(tmp_path, python_bin="/custom/python")
     data = json.loads(path.read_text())
-    assert data["mcpServers"]["devboard"]["command"] == "/custom/python"
+    assert data["mcpServers"]["agentboard"]["command"] == "/custom/python"
 
 
 def test_emit_mcp_config_preserves_existing_servers(tmp_path: Path):
@@ -335,7 +335,35 @@ def test_emit_mcp_config_preserves_existing_servers(tmp_path: Path):
     emit_mcp_config(tmp_path)
     data = json.loads(path.read_text())
     assert "other" in data["mcpServers"]
-    assert "devboard" in data["mcpServers"]
+    assert "agentboard" in data["mcpServers"]
+
+
+def test_emit_mcp_config_migrates_legacy_devboard_key(tmp_path: Path):
+    """Legacy 'devboard' server entry is removed when it points at the same
+    Python module — avoids two copies of the same tools after upgrade."""
+    path = tmp_path / ".mcp.json"
+    path.write_text(json.dumps({
+        "mcpServers": {
+            "devboard": {"command": "/old/py", "args": ["-m", "devboard.mcp_server"]},
+        },
+    }))
+    emit_mcp_config(tmp_path)
+    data = json.loads(path.read_text())
+    assert "agentboard" in data["mcpServers"]
+    assert "devboard" not in data["mcpServers"]
+
+
+def test_emit_opencode_config_writes_agentboard_entry(tmp_path: Path):
+    from devboard.install import emit_opencode_config
+
+    path = emit_opencode_config(tmp_path, python_bin="/custom/python")
+    data = json.loads(path.read_text())
+    assert data["$schema"] == "https://opencode.ai/config.json"
+    entry = data["mcp"]["agentboard"]
+    assert entry["type"] == "local"
+    assert entry["command"] == ["/custom/python", "-m", "devboard.mcp_server"]
+    assert entry["enabled"] is True
+    assert data["permission"]["mcp"] == "ask"
 
 
 def test_emit_settings_hooks_registers_both(tmp_path: Path):
@@ -377,15 +405,31 @@ def _expected_skill_count() -> int:
     return len([d for d in skills_dir.iterdir() if d.is_dir()])
 
 
-def test_install_all_project_scope(tmp_path: Path):
-    result = install_all(scope="project", project_root=tmp_path, overwrite=True)
+def test_install_all_project_scope_claude_only(tmp_path: Path):
+    """Default install_all target list includes both claude + opencode, so
+    explicit filter keeps test intent focused on Claude wiring."""
+    result = install_all(
+        scope="project", project_root=tmp_path, overwrite=True, targets=("claude",)
+    )
     assert result["scope"] == "project"
     assert len(result["installed_skills"]) == _expected_skill_count()
     assert len(result["installed_hooks"]) == 3  # iron-law.sh + danger-guard.sh + activity-log.py
     assert result["mcp_config"] is not None
     assert result["settings"] is not None
+    assert result["opencode_config"] is None
     assert (tmp_path / ".claude" / "skills" / "agentboard-tdd" / "SKILL.md").exists()
     assert (tmp_path / ".mcp.json").exists()
+
+
+def test_install_all_project_scope_both_targets(tmp_path: Path):
+    result = install_all(scope="project", project_root=tmp_path, overwrite=True)
+    assert result["targets"] == ["claude", "opencode"]
+    # Each target installs one copy of each skill.
+    assert len(result["installed_skills"]) == _expected_skill_count() * 2
+    assert result["mcp_config"] is not None
+    assert result["opencode_config"] is not None
+    assert (tmp_path / ".opencode" / "skills" / "agentboard-tdd" / "SKILL.md").exists()
+    assert (tmp_path / "opencode.json").exists()
 
 
 def test_install_all_global_scope_no_hooks_or_mcp(tmp_path: Path, monkeypatch):
@@ -396,12 +440,33 @@ def test_install_all_global_scope_no_hooks_or_mcp(tmp_path: Path, monkeypatch):
     # Also patch Path.home()
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
 
-    result = install_all(scope="global", overwrite=True)
+    result = install_all(scope="global", overwrite=True, targets=("claude",))
     assert result["scope"] == "global"
     assert len(result["installed_skills"]) == _expected_skill_count()
     assert result["installed_hooks"] == []
     assert result["mcp_config"] is None
     assert (tmp_path / ".claude" / "skills" / "agentboard-gauntlet" / "SKILL.md").exists()
+
+
+def test_install_all_global_scope_opencode_target(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+
+    result = install_all(scope="global", overwrite=True, targets=("opencode",))
+    assert result["scope"] == "global"
+    assert len(result["installed_skills"]) == _expected_skill_count()
+    expected = tmp_path / ".config" / "opencode" / "skills" / "agentboard-gauntlet" / "SKILL.md"
+    assert expected.exists()
+
+
+def test_install_all_rejects_empty_targets():
+    with pytest.raises(ValueError, match="targets must contain"):
+        install_all(scope="project", targets=())
+
+
+def test_install_all_rejects_unknown_target():
+    with pytest.raises(ValueError, match="unknown target"):
+        install_all(scope="project", targets=("copilot",))
 
 
 def test_install_all_rejects_bad_scope():

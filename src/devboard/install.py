@@ -84,15 +84,10 @@ def install_hooks(target: Path, overwrite: bool = False) -> list[Path]:
 
 
 def emit_mcp_config(target_dir: Path, python_bin: str | None = None) -> Path:
-    """Write .mcp.json so Claude Code loads the devboard MCP server.
+    """Write .mcp.json so Claude Code loads the agentboard MCP server.
 
     Defaults `python_bin` to `sys.executable` — the Python currently running
-    `devboard install`. This means:
-      - pip install -e . inside a venv → venv python
-      - pipx install → pipx's managed venv python
-      - system install → system python
-    In all cases the Python has the `mcp` + `devboard` packages available.
-    Users can override explicitly via --python flag.
+    `agentboard install`.
     """
     import sys
     config_path = target_dir / ".mcp.json"
@@ -104,10 +99,49 @@ def emit_mcp_config(target_dir: Path, python_bin: str | None = None) -> Path:
             pass
 
     servers = existing.setdefault("mcpServers", {})
-    servers["devboard"] = {
+    servers["agentboard"] = {
         "command": python_bin or sys.executable,
         "args": ["-m", "devboard.mcp_server"],
     }
+    # Clean up legacy "devboard" entry when it's the same server — avoids
+    # users seeing two copies of the same tools after upgrade.
+    if (
+        "devboard" in servers
+        and servers.get("devboard", {}).get("args") == ["-m", "devboard.mcp_server"]
+    ):
+        del servers["devboard"]
+    config_path.write_text(json.dumps(existing, indent=2) + "\n")
+    return config_path
+
+
+def emit_opencode_config(target_dir: Path, python_bin: str | None = None) -> Path:
+    """Write opencode.json so OpenCode loads the agentboard MCP server.
+
+    Mirrors emit_mcp_config but uses OpenCode's schema: ``mcp`` key with
+    ``type: local`` and ``command`` as an array. See
+    https://opencode.ai/docs/mcp-servers/ for the format.
+    """
+    import sys
+    config_path = target_dir / "opencode.json"
+    existing: dict = {}
+    if config_path.exists():
+        try:
+            existing = json.loads(config_path.read_text())
+        except json.JSONDecodeError:
+            pass
+
+    existing["$schema"] = "https://opencode.ai/config.json"
+    mcp = existing.setdefault("mcp", {})
+    mcp["agentboard"] = {
+        "type": "local",
+        "command": [python_bin or sys.executable, "-m", "devboard.mcp_server"],
+        "enabled": True,
+    }
+    # Default permission: ask for each tool — user can relax later.
+    # Only set a default when permission.mcp is not already configured, so
+    # re-running install does not clobber user's per-tool overrides.
+    perms = existing.setdefault("permission", {})
+    perms.setdefault("mcp", "ask")
     config_path.write_text(json.dumps(existing, indent=2) + "\n")
     return config_path
 
@@ -177,33 +211,79 @@ def install_all(
     with_hooks: bool = True,
     with_mcp: bool = True,
     python_bin: str | None = None,
+    targets: tuple[str, ...] = ("claude", "opencode"),
 ) -> dict:
-    """Install skills (+ optional hooks + MCP config).
+    """Install skills (+ optional hooks + MCP config) for Claude Code and/or OpenCode.
 
-    scope="global":  skills → ~/.claude/skills/, no project-level hooks/mcp (user manages manually)
-    scope="project": skills → <proj>/.claude/skills/, hooks + mcp config in <proj>
+    scope="global":  skills → ~/.claude/skills/ (claude) and/or
+                              ~/.config/opencode/skills/ (opencode).
+                     No project-level hooks/mcp (user manages per-project).
+    scope="project": skills → <proj>/.claude/skills/ (claude) and/or
+                              <proj>/.opencode/skills/ (opencode).
+                     Hooks + MCP configs in <proj>.
+
+    targets: subset of ("claude", "opencode"). Default installs both — OpenCode
+    natively reads the Anthropic Agent Skills spec so a single SKILL.md source
+    serves both agents; only the host directory differs.
     """
     if scope not in ("project", "global"):
         raise ValueError(f"scope must be 'project' or 'global', got {scope!r}")
+    if not targets:
+        raise ValueError("targets must contain at least one of 'claude', 'opencode'")
+    invalid = [t for t in targets if t not in ("claude", "opencode")]
+    if invalid:
+        raise ValueError(f"unknown target(s): {invalid}; valid: 'claude', 'opencode'")
 
-    result: dict = {"scope": scope, "installed_skills": [], "installed_hooks": [], "mcp_config": None, "settings": None}
+    result: dict = {
+        "scope": scope,
+        "targets": list(targets),
+        "installed_skills": [],
+        "installed_hooks": [],
+        "mcp_config": None,
+        "opencode_config": None,
+        "settings": None,
+    }
 
     if scope == "global":
-        skills_target = Path.home() / ".claude" / "skills"
-        result["installed_skills"] = [str(p) for p in install_skills(skills_target, overwrite=overwrite)]
-        # Global install does NOT write hooks or .mcp.json — user does this per-project
-        # (hooks/MCP are project-scoped in Claude Code)
-    else:
-        proj = (project_root or Path.cwd()).resolve()
+        if "claude" in targets:
+            target = Path.home() / ".claude" / "skills"
+            result["installed_skills"].extend(
+                str(p) for p in install_skills(target, overwrite=overwrite)
+            )
+        if "opencode" in targets:
+            target = Path.home() / ".config" / "opencode" / "skills"
+            result["installed_skills"].extend(
+                str(p) for p in install_skills(target, overwrite=overwrite)
+            )
+        return result
+
+    proj = (project_root or Path.cwd()).resolve()
+    if "claude" in targets:
         skills_target = proj / ".claude" / "skills"
-        result["installed_skills"] = [str(p) for p in install_skills(skills_target, overwrite=overwrite)]
+        result["installed_skills"].extend(
+            str(p) for p in install_skills(skills_target, overwrite=overwrite)
+        )
+    if "opencode" in targets:
+        skills_target = proj / ".opencode" / "skills"
+        result["installed_skills"].extend(
+            str(p) for p in install_skills(skills_target, overwrite=overwrite)
+        )
 
-        if with_hooks:
-            hook_target = proj / ".claude"
-            result["installed_hooks"] = [str(p) for p in install_hooks(hook_target, overwrite=overwrite)]
-            result["settings"] = str(emit_settings_hooks(proj))
+    if with_hooks and "claude" in targets:
+        # Hooks are Claude Code specific (PreToolUse/PostToolUse). OpenCode
+        # uses its own permission model instead of shell hooks, so skip there.
+        hook_target = proj / ".claude"
+        result["installed_hooks"] = [
+            str(p) for p in install_hooks(hook_target, overwrite=overwrite)
+        ]
+        result["settings"] = str(emit_settings_hooks(proj))
 
-        if with_mcp:
+    if with_mcp:
+        if "claude" in targets:
             result["mcp_config"] = str(emit_mcp_config(proj, python_bin=python_bin))
+        if "opencode" in targets:
+            result["opencode_config"] = str(
+                emit_opencode_config(proj, python_bin=python_bin)
+            )
 
     return result

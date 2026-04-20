@@ -65,8 +65,8 @@ fi
 
 # ── Install global skills ─────────────────────────────────────────────────────
 
-say "installing skills to ~/.claude/skills/"
-"$BIN" install --scope global --overwrite >/dev/null
+say "installing skills to ~/.claude/skills/ and ~/.config/opencode/skills/"
+"$BIN" install --scope global --overwrite --target both >/dev/null
 
 # ── Shell alias ───────────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ $(ok "agentic-dev-board installed")
 
    location: $INSTALL_DIR
    binary:   $BIN
-   skills:   ~/.claude/skills/devboard-* (9 skills)
+   skills:   ~/.claude/skills/agentboard-* + ~/.config/opencode/skills/agentboard-*
 
 $(say "next steps")
 
@@ -133,10 +133,12 @@ $(say "next steps")
    # use in any project
    cd ~/my-project
    agentboard init
-   agentboard install         # writes .mcp.json + hooks (Python auto-detected)
+   agentboard install                       # writes .mcp.json + opencode.json + hooks
+   # (or restrict target: --target claude | --target opencode)
 
-   # open Claude Code — skills and MCP tools auto-load
+   # open your agent (either works) — skills and MCP tools auto-load
    claude
+   opencode
 
 $(say "update later")
 

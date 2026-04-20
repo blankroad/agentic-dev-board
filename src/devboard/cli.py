@@ -65,23 +65,54 @@ def install(
     no_hooks: bool = typer.Option(False, "--no-hooks"),
     no_mcp: bool = typer.Option(False, "--no-mcp"),
     python_bin: Optional[str] = typer.Option(None, "--python"),
+    target: str = typer.Option(
+        "both",
+        "--target",
+        "-t",
+        help="claude | opencode | both — which agent host to install for",
+    ),
 ) -> None:
-    """Install skills + hooks + MCP config.
+    """Install skills + hooks + MCP config for Claude Code and/or OpenCode.
 
-    - scope=project (default): writes to ./.claude/{skills,hooks,settings.json} + ./.mcp.json
-    - scope=global: writes skills to ~/.claude/skills/ only (hooks/MCP are per-project in Claude Code)
+    - scope=project (default): writes to <proj>/.{claude,opencode}/skills + .mcp.json + opencode.json
+    - scope=global: writes skills to ~/.claude/skills/ and/or ~/.config/opencode/skills/
+    - target=both (default): install for both agents. Skills are spec-compatible; only host paths differ.
     """
-    from devboard.install import install_all, emit_mcp_config, emit_settings_hooks, install_hooks
+    from devboard.install import (
+        emit_mcp_config,
+        emit_opencode_config,
+        emit_settings_hooks,
+        install_all,
+        install_hooks,
+    )
+
+    if target not in ("claude", "opencode", "both"):
+        console.print(f"[red]invalid --target: {target!r}[/red] (valid: claude|opencode|both)")
+        raise typer.Exit(1)
+    targets: tuple[str, ...] = (
+        ("claude", "opencode") if target == "both" else (target,)
+    )
 
     if no_skills and scope == "project":
         # User wants just the project-level wiring (hooks + MCP), skills already global
         proj = Path.cwd().resolve()
-        result = {"scope": "project", "installed_skills": [], "installed_hooks": [], "mcp_config": None, "settings": None}
-        if not no_hooks:
+        result = {
+            "scope": "project",
+            "targets": list(targets),
+            "installed_skills": [],
+            "installed_hooks": [],
+            "mcp_config": None,
+            "opencode_config": None,
+            "settings": None,
+        }
+        if not no_hooks and "claude" in targets:
             result["installed_hooks"] = [str(p) for p in install_hooks(proj / ".claude", overwrite=overwrite)]
             result["settings"] = str(emit_settings_hooks(proj))
         if not no_mcp:
-            result["mcp_config"] = str(emit_mcp_config(proj, python_bin=python_bin))
+            if "claude" in targets:
+                result["mcp_config"] = str(emit_mcp_config(proj, python_bin=python_bin))
+            if "opencode" in targets:
+                result["opencode_config"] = str(emit_opencode_config(proj, python_bin=python_bin))
     else:
         result = install_all(
             scope=scope,
@@ -89,8 +120,9 @@ def install(
             with_hooks=not no_hooks,
             with_mcp=not no_mcp,
             python_bin=python_bin,
+            targets=targets,
         )
-    console.print(f"[green]✓[/green] scope=[bold]{scope}[/bold]")
+    console.print(f"[green]✓[/green] scope=[bold]{scope}[/bold] targets=[bold]{','.join(targets)}[/bold]")
     console.print(f"  Skills installed: [bold]{len(result['installed_skills'])}[/bold]")
     for p in result["installed_skills"][:3]:
         console.print(f"    [dim]{p}[/dim]")
@@ -101,10 +133,12 @@ def install(
         if result["installed_hooks"]:
             console.print(f"  Hooks installed: {len(result['installed_hooks'])}")
         if result["mcp_config"]:
-            console.print(f"  MCP config:     {result['mcp_config']}")
+            console.print(f"  Claude MCP:     {result['mcp_config']}")
+        if result.get("opencode_config"):
+            console.print(f"  OpenCode MCP:   {result['opencode_config']}")
         if result["settings"]:
             console.print(f"  Settings:       {result['settings']}")
-        console.print(f"\n[dim]Next: start Claude Code in this directory. Skills and MCP tools are auto-loaded.[/dim]")
+        console.print(f"\n[dim]Next: start your agent (claude / opencode) here — skills + MCP tools auto-load.[/dim]")
     else:
         console.print(f"\n[dim]Skills available globally. For hooks + MCP, run [bold]devboard install[/bold] in each project.[/dim]")
 
