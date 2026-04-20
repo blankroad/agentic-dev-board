@@ -71,7 +71,7 @@ class MetaPane(Widget):
         if not plan_json.exists():
             return "0/0"
         try:
-            data = json.loads(plan_json.read_text())
+            data = json.loads(plan_json.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, UnicodeDecodeError):
             return "0/0"
         steps = data.get("atomic_steps", [])

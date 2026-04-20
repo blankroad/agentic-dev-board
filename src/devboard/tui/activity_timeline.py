@@ -61,7 +61,7 @@ class ActivityTimeline(Widget):
             if not f.exists():
                 continue
             try:
-                text = f.read_text()
+                text = f.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 continue
             sections = [

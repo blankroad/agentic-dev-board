@@ -16,7 +16,7 @@ _GAUNTLET_ORDER = ("frame", "scope", "arch", "challenge", "decide")
 
 def _safe_read(path: Path, fallback: str = "") -> str:
     try:
-        return path.read_text()
+        return path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return fallback
 

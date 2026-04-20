@@ -36,7 +36,7 @@ def _derive_marker_and_status(goal_dir: Path, declared: str) -> tuple[str, str]:
             if not task_json.is_file():
                 continue
             try:
-                data = json.loads(task_json.read_text())
+                data = json.loads(task_json.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError, UnicodeDecodeError):
                 continue
             s = data.get("status")

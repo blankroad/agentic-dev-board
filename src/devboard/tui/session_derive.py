@@ -61,7 +61,7 @@ class SessionContext:
             return []
         rows: list[dict[str, Any]] = []
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             return []
         for raw_line in text.splitlines():
@@ -83,7 +83,7 @@ class SessionContext:
         if not state_file.exists():
             return []
         try:
-            data = json.loads(state_file.read_text())
+            data = json.loads(state_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, UnicodeDecodeError):
             return []
         raw = data.get("goals", [])
@@ -100,7 +100,7 @@ class SessionContext:
         if not diff_path.exists():
             return []
         try:
-            text = diff_path.read_text()
+            text = diff_path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             return []
         files: list[str] = []

@@ -51,7 +51,7 @@ class ContextViewer(Widget):
         plan_file = goal_dir / "plan.md"
         if plan_file.exists():
             try:
-                self.set_tab_body("plan", plan_file.read_text())
+                self.set_tab_body("plan", plan_file.read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError):
                 pass
         gauntlet_dir = goal_dir / "gauntlet"
@@ -61,7 +61,7 @@ class ContextViewer(Widget):
                 f = gauntlet_dir / f"{step}.md"
                 if f.exists():
                     try:
-                        parts.append(f"── {step}.md ──\n{f.read_text()}")
+                        parts.append(f"── {step}.md ──\n{f.read_text(encoding='utf-8')}")
                     except (OSError, UnicodeDecodeError):
                         continue
             if parts:
@@ -79,7 +79,7 @@ class ContextViewer(Widget):
         diffs = sorted((latest / "changes").glob("iter_*.diff")) if (latest / "changes").exists() else []
         if diffs:
             try:
-                self.set_tab_body("diff", diffs[-1].read_text())
+                self.set_tab_body("diff", diffs[-1].read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError):
                 pass
 
@@ -89,7 +89,7 @@ class ContextViewer(Widget):
 
             lines: list[str] = []
             try:
-                raw = decisions_file.read_text()
+                raw = decisions_file.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 raw = ""
             for raw_line in raw.splitlines():
