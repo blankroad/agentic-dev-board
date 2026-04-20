@@ -29,12 +29,15 @@ async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
+        # v2.2: center col is a single #phase-flow (4-tab) replacing the
+        # legacy #plan-markdown + #activity-timeline pair. #plan-body still
+        # exists as the Plan tab's Static inside PhaseFlowView.
         for wid in (
             "#status-bar-body",
             "#resources-goals",
             "#goal-side-legend",
+            "#phase-flow",
             "#plan-body",
-            "#raw-artifacts-collapsible",
             "#meta-body",
             "#files-changed-body",
             "#command-line",
@@ -206,33 +209,40 @@ async def test_goto_refreshes_plan_markdown_to_new_goal(tmp_path: Path) -> None:
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
-        before = str(app.query_one("#plan-body").content.markup)
+        flow = app.query_one("#phase-flow")
+        before = flow.plan_body_text()
         assert "BETA_PLAN" in before, f"precondition: beta should be initial; got {before!r}"
         app.commands.dispatch("goto g_alpha")
         await pilot.pause()
-        after = str(app.query_one("#plan-body").content.markup)
+        after = flow.plan_body_text()
         assert "ALPHA_PLAN" in after, (
-            f"goto must refresh PlanMarkdown to new goal's plan; still showing {after!r}"
+            f"goto must refresh PhaseFlowView Plan tab to new goal's plan; still showing {after!r}"
         )
 
 
 @pytest.mark.asyncio
-async def test_decisions_cmd_refreshes_activity_timeline(tmp_path: Path) -> None:
-    """Red-team r2 HIGH: :decisions t_other must refresh ActivityTimeline
-    rows to the target task's decisions. Current bug: timeline composed
-    once with initial task_id and never re-reads."""
-    from devboard.tui.activity_row import ActivityRow
+async def test_decisions_cmd_refreshes_phase_flow(tmp_path: Path) -> None:
+    """v2.2 (was: Red-team r2 HIGH): :decisions t_other must refresh
+    PhaseFlowView Dev tab to the target task's decisions. Timeline was
+    replaced by the Dev tab inside PhaseFlowView; the refresh contract
+    (command re-reads per-task state) must survive the swap."""
     from devboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
     goal_dir = tmp_path / ".devboard" / "goals" / "g_1"
-    for tid, phases in [("t_init", ["p_init"]), ("t_other", ["p_other_a", "p_other_b"])]:
+    # Use dev-phase names so they route into the Dev tab body. (Review
+    # phases would land in Review tab instead.)
+    for tid, phases in [
+        ("t_init", ["tdd_init"]),
+        ("t_other", ["tdd_other_a", "tdd_other_b"]),
+    ]:
         td = goal_dir / "tasks" / tid
         td.mkdir(parents=True)
         (td / "task.json").write_text(json.dumps({"id": tid, "status": "in_progress"}))
         (td / "decisions.jsonl").write_text(
             "\n".join(
-                json.dumps({"iter": i, "phase": p}) for i, p in enumerate(phases)
+                json.dumps({"iter": i, "phase": p, "verdict_source": p.upper()})
+                for i, p in enumerate(phases)
             )
             + "\n"
         )
@@ -246,61 +256,20 @@ async def test_decisions_cmd_refreshes_activity_timeline(tmp_path: Path) -> None
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
-        phases_before = sorted(
-            str(r.entry.get("phase")) for r in app.query(ActivityRow).results()
-        )
-        assert phases_before == ["p_init"], f"precondition: {phases_before}"
+        flow = app.query_one("#phase-flow")
+        before = flow.dev_body_text()
+        assert "TDD_INIT" in before, f"precondition: dev body should show t_init; got {before!r}"
         app.commands.dispatch("decisions t_other")
         await pilot.pause()
-        phases_after = sorted(
-            str(r.entry.get("phase")) for r in app.query(ActivityRow).results()
-        )
-        assert "p_other_a" in phases_after and "p_other_b" in phases_after, (
-            f"decisions must refresh ActivityTimeline; got {phases_after}"
+        after = flow.dev_body_text()
+        assert "TDD_OTHER_A" in after and "TDD_OTHER_B" in after, (
+            f"decisions must refresh Dev tab; got {after!r}"
         )
 
 
-@pytest.mark.asyncio
-async def test_clicking_activity_row_navigates_to_that_iter(tmp_path: Path) -> None:
-    """Clicking a timeline entry should jump Meta/Files to that iter —
-    otherwise the timeline is display-only and users have no way to drill
-    into a specific event."""
-    from devboard.tui.activity_row import ActivityRow
-    from devboard.tui.app import DevBoardApp
-
-    _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
-    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
-    changes = task_dir / "changes"
-    changes.mkdir(parents=True)
-    (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
-    (task_dir / "decisions.jsonl").write_text(
-        "\n".join(
-            json.dumps({"iter": i, "phase": "tdd_green"}) for i in (1, 2, 3)
-        )
-        + "\n"
-    )
-    (changes / "iter_1.diff").write_text("+++ b/src/one.py\n")
-    (changes / "iter_2.diff").write_text("+++ b/src/two.py\n")
-    (changes / "iter_3.diff").write_text("+++ b/src/three.py\n")
-
-    app = DevBoardApp(store_root=tmp_path)
-    async with app.run_test(size=(140, 42)) as pilot:
-        await pilot.pause()
-        # expand timeline so rows receive clicks
-        await pilot.press("h")
-        await pilot.pause()
-        rows = list(app.query(ActivityRow).results())
-        # find the iter=1 row (newest-first means rows[-1])
-        iter_one_row = next(r for r in rows if r.entry.get("iter") == 1)
-        await pilot.click(iter_one_row)
-        await pilot.pause()
-        assert app.selected_iter == 1, (
-            f"click on iter 1 row must set selected_iter; got {app.selected_iter}"
-        )
-        body = app.query_one("#files-changed-body")
-        assert "src/one.py" in str(body.render()), (
-            "FilesChanged pane must refresh to clicked iter"
-        )
+# v2.2: `test_clicking_activity_row_navigates_to_that_iter` removed —
+# ActivityRow + ActivityTimeline replaced by PhaseFlowView's Dev tab.
+# Click-to-select-iter belongs to the right-panel redesign (separate goal).
 
 
 @pytest.mark.asyncio
@@ -396,62 +365,14 @@ async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None
         )
 
 
-@pytest.mark.asyncio
-async def test_plan_toc_line_shows_h2_headings(tmp_path: Path) -> None:
-    """Spec: above the ActivityTimeline, a '#plan-toc' line lists the
-    active plan's H2 section titles so the user can see structure without
-    scrolling the plan pane."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
-    from devboard.tui.app import DevBoardApp
+# v2.2: `test_plan_toc_line_shows_h2_headings` removed — #plan-toc Static
+# is superseded by the 4-tab header of PhaseFlowView (tabs ARE the TOC).
+# Navigation covered by test_number_key_two_activates_dev_tab in
+# tests/test_tui_phase_flow.py.
 
-    (tmp_path / ".devboard").mkdir()
-    store = FileStore(tmp_path)
-    board = BoardState(active_goal_id="g_toc")
-    board.goals.append(Goal(id="g_toc", title="g", status=GoalStatus.active))
-    store.save_board(board)
-    gd = tmp_path / ".devboard" / "goals" / "g_toc"
-    gd.mkdir(parents=True)
-    (gd / "plan_summary.md").write_text(
-        "# Title\n\n## Problem\n\ntext\n\n## Architecture\n\nmore\n\n## Goal Checklist\n\n- a\n"
-    )
-
-    app = DevBoardApp(store_root=tmp_path)
-    async with app.run_test(size=(140, 42)) as pilot:
-        await pilot.pause()
-        toc = app.query_one("#plan-toc")
-        text = str(toc.render())
-        for section in ("Problem", "Architecture", "Goal Checklist"):
-            assert section in text, f"TOC missing {section}; got {text!r}"
-
-
-@pytest.mark.asyncio
-async def test_h_key_toggles_activity_timeline(tmp_path: Path) -> None:
-    """Spec: pressing 'h' anywhere (outside CommandLine Input) toggles
-    ActivityTimeline's collapsed state. Convenient shortcut for 'history'."""
-    from textual.widgets import Collapsible
-
-    from devboard.tui.app import DevBoardApp
-
-    _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
-    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
-    task_dir.mkdir(parents=True)
-    (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
-    (task_dir / "decisions.jsonl").write_text(
-        json.dumps({"iter": 1, "phase": "tdd_green"}) + "\n"
-    )
-
-    app = DevBoardApp(store_root=tmp_path)
-    async with app.run_test(size=(140, 42)) as pilot:
-        await pilot.pause()
-        col = app.query_one("#activity-collapsible", Collapsible)
-        assert col.collapsed is True
-        await pilot.press("h")
-        await pilot.pause()
-        assert col.collapsed is False, "'h' should expand the timeline"
-        await pilot.press("h")
-        await pilot.pause()
-        assert col.collapsed is True, "'h' pressed again should collapse"
+# v2.2: `test_h_key_toggles_activity_timeline` removed — 'h' binding
+# deleted along with ActivityTimeline. Equivalent navigation uses number
+# keys 1/2/3/4 (tested in tests/test_tui_phase_flow.py).
 
 
 @pytest.mark.asyncio

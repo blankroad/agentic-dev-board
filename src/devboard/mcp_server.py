@@ -588,6 +588,31 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="devboard_tui_capture_snapshot",
+            description=(
+                "Capture a plain-text (and optionally SVG) frame of DevBoardApp "
+                "via Textual Pilot in-process. Presses `keys` sequentially after "
+                "mount, then extracts compositor output from export_screenshot. "
+                "Companion to devboard_tui_render_smoke — smoke is a crash gate, "
+                "this is frame extraction. Used by devboard-ui-preview skill at "
+                "Layer 1 (text) and Layer 2 (SVG). Returns {scene_id, text, svg, "
+                "saved_txt, saved_svg, crashed, traceback, duration_s}."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "scene_id": {"type": "string", "default": "default"},
+                    "keys": {"type": "array", "items": {"type": "string"}, "default": []},
+                    "save_to": {"type": "string"},
+                    "include_svg": {"type": "boolean", "default": False},
+                    "fixture_goal_id": {"type": "string"},
+                    "timeout_s": {"type": "number", "default": 5.0},
+                },
+                "required": ["project_root"],
+            },
+        ),
+        Tool(
             name="devboard_generate_narrative",
             description=(
                 "Deterministically assemble plan_summary.md for a goal — a "
@@ -1227,6 +1252,20 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         result = run_tui_smoke(
             Path(args["project_root"]).resolve(),
             timeout_s=float(args.get("timeout_s", 3.0)),
+        )
+        return _text(result)
+
+    if name == "devboard_tui_capture_snapshot":
+        from devboard.mcp_tools.tui_capture import run as run_tui_capture
+
+        result = run_tui_capture(
+            project_root=Path(args["project_root"]).resolve(),
+            scene_id=args.get("scene_id", "default"),
+            keys=list(args.get("keys") or []),
+            save_to=args.get("save_to"),
+            include_svg=bool(args.get("include_svg", False)),
+            fixture_goal_id=args.get("fixture_goal_id"),
+            timeout_s=float(args.get("timeout_s", 5.0)),
         )
         return _text(result)
 

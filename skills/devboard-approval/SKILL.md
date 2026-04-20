@@ -221,3 +221,15 @@ For non-UI tasks (`ui_surface` missing or `False`), this step is a no-op — use
 - NEVER skip the checklist verification
 - NEVER push if CSO returned VULNERABLE
 - Always save the PR URL to the decisions log for future retros
+
+---
+
+## UI Preview integration (when ui_surface=True)
+
+Before `git push` and BEFORE PR body assembly, if `task.metadata.ui_surface == True`, invoke `devboard-ui-preview` via the Skill tool with `layer=2`. That skill calls `devboard_tui_capture_snapshot` with `include_svg=True` and writes both text + SVG frames under `.devboard/tui_snapshots/<goal_id>/layer2/`. The resulting paths are stamped into plan.md's `## Screenshots / Diagrams` section and referenced from the PR body so reviewers see the visual change before merging.
+
+If the goal's directory contains `scenes.yaml`, run Layer 3: iterate every declared scene (`scene_id`, `keys`, `description`, `tags`) and capture one SVG per entry. Link every scene's SVG in the PR body with the scene description as caption.
+
+Refuse to push when any Layer 2/3 capture returns `crashed=True` — surface the traceback and route back to `devboard-rca`.
+
+Skip entirely when `ui_surface=False`. The legacy `devboard_tui_render_smoke` (crash gate) still runs independently.

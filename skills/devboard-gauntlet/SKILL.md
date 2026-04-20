@@ -255,3 +255,14 @@ After locking + start_task + checkpoint:
      - n → invoke `devboard-tdd` via Skill tool immediately.
 
 Thread `{task_id, run_id}` through all subsequent MCP calls.
+
+---
+
+## UI Preview integration (when ui_surface=True)
+
+Right after `arch.md` is written and BEFORE proceeding to Challenge, check `task.metadata.ui_surface`:
+
+- **ui_surface=False** → skip this section, go to Challenge as usual.
+- **ui_surface=True** → invoke `devboard-ui-preview` via the Skill tool with `layer=0` in the argument payload. That skill produces a Layer 0 ASCII mockup, asks the user to confirm, and records the confirmed mockup SHA back into arch.md so the gauntlet hash covers the visual intent. Only after user confirmation resume the Gauntlet at Step 4 (Challenge).
+
+Rationale: arch.md describes layout in prose, which is lossy. For `ui_surface=True` tasks, the Layer 0 mockup is the cheapest way to let the user catch "that's not what I pictured" before any code is written. See `skills/devboard-ui-preview/SKILL.md` for the full Layer 0 flow.

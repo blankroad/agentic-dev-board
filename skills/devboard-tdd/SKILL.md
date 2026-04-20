@@ -232,3 +232,16 @@ After all atomic_steps are complete:
 All three above are independent events — log each one separately. Do not combine.
 
 Hand off to `devboard-parallel-review` (preferred — dispatches CSO + redteam in parallel via the Agent tool and logs a single `phase="parallel_review"` entry). `devboard-parallel-review` auto-skips either side per `task.metadata.security_sensitive_plan` / `production_destined`, so it handles the "CSO-only" and "redteam-only" cases internally. The legacy sequential path (`devboard-cso` → `devboard-redteam` → `devboard-approval`) is still accepted by `devboard-approval` as a backward-compat fallback when no `phase="parallel_review"` entry is present.
+
+---
+
+## UI Preview integration (when ui_surface=True)
+
+After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `devboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `devboard_tui_capture_snapshot`, saves it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
+
+- Drift detected → surface diff to user and ask whether to continue TDD or branch to `devboard-rca`.
+- No drift → resume the Red-Green-Refactor loop with the next atomic_step.
+
+Optional re-run: after any subsequent step that visibly mutates UI state, call ui-preview Layer 1 again so the user sees incremental changes mid-loop instead of only at approval.
+
+Skip entirely when `ui_surface=False`.

@@ -12,7 +12,6 @@ from devboard.config import DevBoardConfig, load_config
 from devboard.models import BoardState
 from devboard.storage.file_store import FileStore
 from devboard.tui.activity_row import ActivityRow
-from devboard.tui.activity_timeline import ActivityTimeline
 from devboard.tui.command_line import CommandLine
 from devboard.tui.command_registry import (
     CommandRegistry,
@@ -31,19 +30,25 @@ from devboard.tui.files_changed_pane import FilesChangedPane
 from devboard.tui.goal_side_list import GoalSideList  # noqa: F401 used via message
 from devboard.tui.live_status_line import LiveStatusLine
 from devboard.tui.meta_pane import MetaPane
-from devboard.tui.plan_markdown import PlanMarkdown
+from devboard.tui.phase_flow import PhaseFlowView
 from devboard.tui.session_derive import SessionContext
 from devboard.tui.status_bar import StatusBar
 
 
 class DevBoardApp(App):
-    """v2.1 Linear issue-style cockpit.
+    """v2.2 phase-flow cockpit.
 
     Layout:
       StatusBar (1 line)
-      Horizontal(GoalSideList 15% | Vertical(PlanMarkdown, ActivityTimeline) 65% | Vertical(MetaPane, FilesChangedPane) 20%)
+      Horizontal(GoalSideList 15% | PhaseFlowView 65% | Vertical(MetaPane, FilesChangedPane) 20%)
+      LiveStatusLine (1 line)
       CommandLine (dock bottom, 1 line)
       Footer
+
+    The center column is now a 4-tab PhaseFlowView (Plan / Dev / Result /
+    Review) that absorbs the legacy PlanMarkdown + ActivityTimeline pair.
+    Number keys 1/2/3/4 jump between tabs; ctrl+p pins the view so
+    live phase-auto-switch does not yank the current tab.
 
     Read-only — writes go through MCP tools. v2.0 commands (:goto/:diff/
     :decisions/:learn/:goals/:runs) still dispatch for backward compat.
@@ -61,7 +66,15 @@ class DevBoardApp(App):
         Binding("ctrl+q", "quit", "Quit"),
         Binding("colon", "open_command_line", "Cmd"),
         Binding("question_mark", "help", "Help"),
-        Binding("h", "toggle_timeline", "History"),
+        Binding("ctrl+p", "toggle_phase_flow_pin", "Pin", show=False, priority=True),
+        # 1/2/3/4 must be App-level: on boot, focus is on #resources-goals
+        # (ListView) and widget-level priority bindings on PhaseFlowView
+        # do not fire for character keys from that focus. App-level
+        # bindings are the only reliable path.
+        Binding("1", "phase_flow_tab('plan')", "Plan", show=False, priority=True),
+        Binding("2", "phase_flow_tab('dev')", "Dev", show=False, priority=True),
+        Binding("3", "phase_flow_tab('result')", "Result", show=False, priority=True),
+        Binding("4", "phase_flow_tab('review')", "Review", show=False, priority=True),
     ]
 
     selected_iter: reactive[int | None] = reactive(None)
@@ -116,8 +129,9 @@ class DevBoardApp(App):
         with Horizontal(id="main-row"):
             yield GoalSideList(self._session, id="goal-side-list")
             with Vertical(id="center-col"):
-                yield PlanMarkdown(self._session, id="plan-markdown")
-                yield ActivityTimeline(self._session, task_id=self._task_id, id="activity-timeline")
+                yield PhaseFlowView(
+                    self._session, task_id=self._task_id, id="phase-flow"
+                )
             with Vertical(id="right-col"):
                 initial_iter = self._initial_iter()
                 yield MetaPane(
@@ -157,12 +171,17 @@ class DevBoardApp(App):
             self.set_interval(0.1, self._tail_worker.poll_once)
 
     def on_stream_event(self, text: str, color: str | None) -> None:
-        """RunTailWorker callback. Updates both:
+        """RunTailWorker callback. Updates:
         (a) StatusBar — active-goal curated segments (selected_iter context)
-        (b) LiveStatusLine — raw tail feed of the latest event at bottom"""
+        (b) LiveStatusLine — raw tail feed of the latest event at bottom
+        (c) PhaseFlowView — mtime-gated phase auto-switch via handle_tick"""
         self._refresh_status_bar(latest_line=text)
         try:
             self.query_one("#live-status-line", LiveStatusLine).set_line(text, color)
+        except Exception:
+            pass
+        try:
+            self.query_one("#phase-flow", PhaseFlowView).handle_tick()
         except Exception:
             pass
 
@@ -202,26 +221,23 @@ class DevBoardApp(App):
         Called by command handlers (e.g. :goto) after mutating state."""
         self._task_id = self._pick_task_id()
         self.selected_iter = self._initial_iter()
-        for widget_id, method in (
-            ("#plan-markdown", "refresh_content"),
-            ("#activity-timeline", "refresh_for_task"),
-            ("#goal-side-list", "refresh_content"),
-        ):
-            try:
-                w = self.query_one(widget_id)
-                if method == "refresh_for_task":
-                    w.refresh_for_task(self._task_id)
-                else:
-                    getattr(w, method)()
-            except Exception:
-                pass
+        try:
+            flow = self.query_one("#phase-flow", PhaseFlowView)
+            flow.refresh_content(task_id=self._task_id)
+        except Exception:
+            pass
+        try:
+            self.query_one("#goal-side-list").refresh_content()
+        except Exception:
+            pass
         self._refresh_status_bar()
 
     def refresh_for_active_task(self) -> None:
-        """Re-render the ActivityTimeline + Meta + FilesChanged for a task
+        """Re-render PhaseFlowView + Meta + FilesChanged for a task
         switch (without changing active goal). Called by :decisions."""
         try:
-            self.query_one("#activity-timeline").refresh_for_task(self._task_id)
+            flow = self.query_one("#phase-flow", PhaseFlowView)
+            flow.refresh_content(task_id=self._task_id)
         except Exception:
             pass
         try:
@@ -251,14 +267,20 @@ class DevBoardApp(App):
         cl = self.query_one("#command-line", CommandLine)
         cl.open(return_to=self.focused)
 
-    def action_toggle_timeline(self) -> None:
+    def action_toggle_phase_flow_pin(self) -> None:
         try:
-            self.query_one("#activity-timeline").action_toggle_timeline()
+            self.query_one("#phase-flow", PhaseFlowView).action_toggle_pin()
+        except Exception:
+            pass
+
+    def action_phase_flow_tab(self, tab_id: str) -> None:
+        try:
+            self.query_one("#phase-flow", PhaseFlowView).action_activate_tab(tab_id)
         except Exception:
             pass
 
     def on_status_bar_clicked(self, _event: StatusBar.Clicked) -> None:
-        self.action_toggle_timeline()
+        pass
 
     def on_goal_side_list_goal_selected(
         self, event: GoalSideList.GoalSelected

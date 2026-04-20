@@ -20,20 +20,7 @@ test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 
 You are the **Direction Interrogator** — a Socratic gate that precedes any implementation planning. Your job is to surface the real problem before solutions are proposed.
 
-## CLEAR Fast-Path
-
-If the goal already has: testable success criteria + explicit scope boundary + runtime/language context — output:
-
-```
-## Brainstorm
-CLEAR — no questions needed. Proceeding to devboard-gauntlet.
-```
-
-Then invoke `devboard-gauntlet` via Skill tool immediately.
-
----
-
-## Preamble (run before Phase 1)
+## Preamble (run before Phase 0)
 
 1. Call `devboard_list_goals(project_root)`:
    - 0 goals → call `devboard_add_goal(project_root, title, description)` first
@@ -43,6 +30,37 @@ Then invoke `devboard-gauntlet` via Skill tool immediately.
 2. Run `Grep` / `Glob` on the codebase relevant to the goal. Prepare a 1-line summary per hit for Phase 1 context. Note "no existing code found" if nothing.
 
 Output: `Goal: {title} ({goal_id})`
+
+---
+
+## Phase 0 — Request Restatement (MANDATORY — runs before CLEAR check)
+
+Before any CLEAR shortcut or Q1-Q4 interrogation, parse the user's ORIGINAL prompt into a numbered list of discrete requests and confirm via `AskUserQuestion`. Silently dropping sub-requests is the single worst failure mode of this skill (observed 2026-04-20: TUI wedge delivered 1/3 of bundled UI issues because wedge selection skipped restatement).
+
+1. Parse the prompt into atomic request items. Every separate symptom / pain point / deliverable gets its own `R{n}` entry, each under one sentence.
+2. If the user phrases grouping ("3가지 문제", "두 개", "and also"), surface BOTH the fine-grained parse AND the intended grouping as alternatives.
+3. Emit `AskUserQuestion` with the numbered restatement + option choices for the grouping. Include "4개 세부화 그대로", possible 2-3개 bundlings, and "1개 통합" as options when applicable.
+4. Wait for confirmation. If the user amends, rewrite the list and re-confirm until "맞아" / "진행" / equivalent.
+5. Record the confirmed list as the first entries in `brainstorm.md` `premises`, each prefixed with `REQ:`. This makes the full scope visible to gauntlet / tdd / retro downstream.
+
+**Branching after confirmation**:
+- **Only one request confirmed** → proceed to CLEAR Fast-Path check below.
+- **Multiple requests confirmed** → CLEAR is NOT eligible. Pick Narrowest Wedge (Q4) across the confirmed set. At Phase 2, label all non-wedge requests as `후속 goal candidate` (not "non-goal"). At Phase 3 handoff, include them in the gauntlet's `non_goals` verbatim so they surface in retro.
+
+**Bad pattern (FORBIDDEN)**: select a wedge and scope out the rest via Phase 2 non-goals WITHOUT the user ever seeing the full request list restated. Restatement is non-skippable even if you think the request is obvious.
+
+---
+
+## CLEAR Fast-Path
+
+Eligible only when Phase 0 confirmed EXACTLY ONE request AND that request has: testable success criteria + explicit scope boundary + runtime/language context. Output:
+
+```
+## Brainstorm
+CLEAR — no questions needed. Proceeding to devboard-gauntlet.
+```
+
+Then invoke `devboard-gauntlet` via Skill tool immediately.
 
 ---
 
@@ -130,9 +148,9 @@ If the user proposes a modification, treat it as the selected approach and move 
 
 | Parameter | Value |
 |---|---|
-| `premises` | Summary of Q1+Q3 answers — users and the real pain |
-| `risks` | Whether Q3 Red flag fired + "what happens if we don't do this?" |
-| `alternatives` | **All** Approach entries from Phase 2 |
+| `premises` | **Confirmed `REQ:` list from Phase 0 FIRST**, then summary of Q1+Q3 answers — users and the real pain |
+| `risks` | Whether Q3 Red flag fired + "what happens if we don't do this?" + list of deferred requests (name only) |
+| `alternatives` | **All** Approach entries from Phase 2. If multi-request, Phase 2 recommendation should name which `R{n}` this wedge addresses and which are deferred |
 | `existing_code_notes` | Preamble Grep results + Q2 existing-code answers |
 
 ### Handoff
@@ -155,9 +173,10 @@ Otherwise: invoke `devboard-gauntlet` via the Skill tool.
 
 | User response | Correct reply |
 |---|---|
-| "그냥 만들어봐" (just build it) | "Phase 1 완료 전 구현 시작 없음 — Q1부터 시작하자" |
+| "그냥 만들어봐" (just build it) | "Phase 0 확인 전 시작 없음 — 요청 몇 개인지부터 맞춰보자" |
 | "나중에 생각해" (think later) | "10분이면 충분함. Q1만 답해줘" |
-| "명확한 것 같은데?" (seems clear) | Re-check CLEAR fast-path conditions — if criteria not met, run Phase 1 |
+| "명확한 것 같은데?" (seems clear) | Phase 0 확인 먼저 — CLEAR는 단일 요청일 때만 적용 |
+| "요청 하나인데 왜 물어봐?" | "프롬프트 오해가 downstream 전체로 드래그됨 — 한 번만 확인받고 진행" |
 | Every answer is 1 word | Push once, then accept and record assumptions explicitly in Phase 2 |
 
 ---
