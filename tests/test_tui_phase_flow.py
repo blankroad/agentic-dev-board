@@ -95,8 +95,8 @@ async def test_phase_flow_view_composes_four_tabs_in_order(tmp_path: Path) -> No
         tc = flow.query_one(TabbedContent)
         panes = list(tc.query(TabPane))
         pane_ids = [p.id for p in panes]
-        assert pane_ids == ["plan", "dev", "result", "review"], (
-            f"expected ordered [plan,dev,result,review], got {pane_ids}"
+        assert pane_ids == ["overview", "plan", "dev", "result", "review"], (
+            f"expected ordered [overview,plan,dev,result,review], got {pane_ids}"
         )
 
 
@@ -304,10 +304,8 @@ async def test_review_tab_lists_only_review_phases(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_number_key_two_activates_dev_tab(tmp_path: Path) -> None:
-    """s_010: Pressing key '2' activates the Dev tab (TabbedContent.active
-    becomes 'dev').
-    """
+async def test_number_key_three_activates_dev_tab(tmp_path: Path) -> None:
+    """s_010 (v3): With 5-tab overview-first layout, key '3' activates Dev."""
     _mk_goal(tmp_path, "g1", plan_md="# P")
     app = await _mount(tmp_path)
     async with app.run_test(size=(120, 30)) as pilot:
@@ -316,12 +314,14 @@ async def test_number_key_two_activates_dev_tab(tmp_path: Path) -> None:
 
         flow = app.query_one("#phase-flow")
         tc = flow.query_one(TabbedContent)
-        assert tc.active == "plan", f"initial active expected 'plan', got {tc.active!r}"
+        assert tc.active == "overview", (
+            f"initial active expected 'overview', got {tc.active!r}"
+        )
 
-        await pilot.press("2")
+        await pilot.press("3")
         await pilot.pause()
         assert tc.active == "dev", (
-            f"pressing '2' must activate Dev tab; active={tc.active!r}"
+            f"pressing '3' must activate Dev tab; active={tc.active!r}"
         )
 
 
@@ -358,7 +358,7 @@ async def test_handle_new_decision_reviewer_activates_review_tab(
         flow = app.query_one("#phase-flow")
         tc = flow.query_one(TabbedContent)
         assert flow.pinned is False
-        assert tc.active == "plan"
+        assert tc.active == "overview"
 
         flow.handle_new_decision({"iter": 99, "phase": "review"})
         await pilot.pause()
@@ -382,11 +382,11 @@ async def test_handle_new_decision_blocked_when_pinned(tmp_path: Path) -> None:
         tc = flow.query_one(TabbedContent)
         # Pin the view BEFORE the decision arrives.
         flow.pinned = True
-        assert tc.active == "plan"
+        assert tc.active == "overview"
 
         flow.handle_new_decision({"iter": 99, "phase": "review"})
         await pilot.pause()
-        assert tc.active == "plan", (
+        assert tc.active == "overview", (
             f"pin=True must block auto-switch; active={tc.active!r}"
         )
 
@@ -408,8 +408,9 @@ async def test_manual_switch_blocks_auto_switch_for_ten_seconds(
         tc = flow.query_one(TabbedContent)
         assert flow.pinned is False
 
-        # Manual switch to Plan via key '1' — establishes override window.
-        await pilot.press("1")
+        # Manual switch to Plan via key '2' (overview is now key '1');
+        # either way the press establishes the override window.
+        await pilot.press("2")
         await pilot.pause()
         assert tc.active == "plan"
 
@@ -428,6 +429,7 @@ async def test_manual_switch_blocks_auto_switch_for_ten_seconds(
         await pilot.pause()
         assert tc.active == "plan", (
             f"handle_new_decision within manual-override window must be skipped; "
+            f"user switched to plan via key '2', so stays at plan; "
             f"active={tc.active!r}"
         )
 
@@ -594,7 +596,7 @@ async def test_review_tab_accepts_canonical_review_phase(tmp_path: Path) -> None
         from textual.widgets import TabbedContent
 
         tc = flow.query_one(TabbedContent)
-        assert tc.active == "plan"
+        assert tc.active == "overview"
         flow.handle_new_decision({"iter": 5, "phase": "review"})
         await pilot.pause()
         assert tc.active == "review", (
@@ -623,13 +625,15 @@ async def test_number_keys_work_in_real_devboard_app(tmp_path: Path) -> None:
     async with app.run_test(size=(160, 40)) as pilot:
         await pilot.pause()
         tc = app.query_one("#phase-flow").query_one(TabbedContent)
-        assert tc.active == "plan", f"precondition: initial active=plan; got {tc.active!r}"
+        assert tc.active == "overview", (
+            f"precondition: initial active=overview; got {tc.active!r}"
+        )
         # Do NOT call .focus() — we must exercise the real default focus
         # chain (ListView #resources-goals).
-        await pilot.press("2")
+        await pilot.press("3")
         await pilot.pause()
         assert tc.active == "dev", (
-            f"press('2') in real DevBoardApp must switch to Dev tab regardless "
+            f"press('3') in real DevBoardApp must switch to Dev tab regardless "
             f"of sidebar focus; active={tc.active!r}"
         )
 
@@ -693,7 +697,7 @@ async def test_handle_tick_dispatches_newly_appended_row_not_max_iter(
 
         flow = app.query_one("#phase-flow")
         tc = flow.query_one(TabbedContent)
-        assert tc.active == "plan"
+        assert tc.active == "overview"
 
         # Append a LOWER-iter dev row, as devboard-replay would.
         decisions_path = (

@@ -499,6 +499,19 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="devboard_build_overview",
+            description="Build OverviewPayload dict from on-disk devboard artifacts (plan.json, brainstorm.md, decisions.jsonl, changes/iter_N.diff, learnings.jsonl). Pure, read-only. Used by TUI center-panel 5-tab view. Returns purpose, plan_digest, iterations, current_state, learnings, followups.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                    "task_id": {"type": ["string", "null"]},
+                },
+                "required": ["project_root", "goal_id"],
+            },
+        ),
+        Tool(
             name="devboard_list_runs",
             description="List all runs in .devboard/runs/ with metadata (events count, last_iteration, converged, blocked).",
             inputSchema={
@@ -1163,6 +1176,16 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         if args.get("save"):
             saved_path = str(save_retro(store, report))
         return _text({"markdown": md, "saved_path": saved_path})
+
+    if name == "devboard_build_overview":
+        from devboard.analytics.overview_payload import build_overview_payload
+
+        payload = build_overview_payload(
+            Path(args["project_root"]).resolve(),
+            args["goal_id"],
+            task_id=args.get("task_id"),
+        )
+        return _text(dict(payload))
 
     if name == "devboard_list_runs":
         store = _store(args["project_root"])

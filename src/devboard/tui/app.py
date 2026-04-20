@@ -71,10 +71,11 @@ class DevBoardApp(App):
         # (ListView) and widget-level priority bindings on PhaseFlowView
         # do not fire for character keys from that focus. App-level
         # bindings are the only reliable path.
-        Binding("1", "phase_flow_tab('plan')", "Plan", show=False, priority=True),
-        Binding("2", "phase_flow_tab('dev')", "Dev", show=False, priority=True),
-        Binding("3", "phase_flow_tab('result')", "Result", show=False, priority=True),
-        Binding("4", "phase_flow_tab('review')", "Review", show=False, priority=True),
+        Binding("1", "phase_flow_tab('overview')", "Overview", show=False, priority=True),
+        Binding("2", "phase_flow_tab('plan')", "Plan", show=False, priority=True),
+        Binding("3", "phase_flow_tab('dev')", "Dev", show=False, priority=True),
+        Binding("4", "phase_flow_tab('result')", "Result", show=False, priority=True),
+        Binding("5", "phase_flow_tab('review')", "Review", show=False, priority=True),
     ]
 
     selected_iter: reactive[int | None] = reactive(None)

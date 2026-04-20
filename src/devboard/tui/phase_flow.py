@@ -115,7 +115,7 @@ def _read_last_decision(path: Path) -> dict | None:
     return None
 
 
-_TAB_IDS: tuple[str, ...] = ("plan", "dev", "result", "review")
+_TAB_IDS: tuple[str, ...] = ("overview", "plan", "dev", "result", "review")
 
 
 class PhaseFlowView(Widget):
@@ -126,10 +126,11 @@ class PhaseFlowView(Widget):
     """
 
     BINDINGS = [
-        Binding("1", "activate_tab('plan')", "Plan", show=False, priority=True),
-        Binding("2", "activate_tab('dev')", "Dev", show=False, priority=True),
-        Binding("3", "activate_tab('result')", "Result", show=False, priority=True),
-        Binding("4", "activate_tab('review')", "Review", show=False, priority=True),
+        Binding("1", "activate_tab('overview')", "Overview", show=False, priority=True),
+        Binding("2", "activate_tab('plan')", "Plan", show=False, priority=True),
+        Binding("3", "activate_tab('dev')", "Dev", show=False, priority=True),
+        Binding("4", "activate_tab('result')", "Result", show=False, priority=True),
+        Binding("5", "activate_tab('review')", "Review", show=False, priority=True),
     ]
 
     can_focus = True
@@ -148,7 +149,11 @@ class PhaseFlowView(Widget):
         self.manual_override_until: float | None = None
 
     def compose(self) -> ComposeResult:
-        with TabbedContent(initial="plan"):
+        with TabbedContent(initial="overview"):
+            with TabPane("Overview", id="overview"):
+                yield Static(
+                    self._load_overview_body(), id="overview-body", markup=False
+                )
             with TabPane("Plan", id="plan"):
                 # Rich Markdown wrap so plan_summary.md renders with
                 # proper headings / lists in the TUI, and matches the
@@ -161,6 +166,49 @@ class PhaseFlowView(Widget):
                 yield Static(self._load_result_body(), id="result-body", markup=False)
             with TabPane("Review", id="review"):
                 yield Static(self._load_review_body(), id="review-body", markup=False)
+
+    def _build_payload(self) -> dict[str, object]:
+        from devboard.analytics.overview_payload import build_overview_payload
+
+        gid = self._session.active_goal_id
+        if not gid:
+            return {
+                "purpose": "",
+                "plan_digest": {},
+                "iterations": [],
+                "current_state": {"status": "awaiting_task"},
+                "learnings": [],
+                "followups": [],
+            }
+        try:
+            payload = build_overview_payload(
+                self._session.store_root, gid, task_id=self._task_id
+            )
+            return dict(payload)
+        except Exception:
+            return {
+                "purpose": "",
+                "plan_digest": {},
+                "iterations": [],
+                "current_state": {"status": "error"},
+                "learnings": [],
+                "followups": [],
+            }
+
+    def _load_overview_body(self) -> str:
+        from devboard.tui.overview_render import render_overview_body
+
+        try:
+            return render_overview_body(self._build_payload())
+        except Exception:
+            return "_Overview unavailable._"
+
+    def overview_body_text(self) -> str:
+        try:
+            content = self.query_one("#overview-body", Static).content
+        except Exception:
+            return ""
+        return str(content)
 
     def _load_plan_body(self) -> str:
         gid = self._session.active_goal_id
@@ -189,17 +237,19 @@ class PhaseFlowView(Widget):
         return str(content)
 
     def _load_dev_body(self) -> str:
-        if not self._task_id:
+        from devboard.tui.dev_timeline_render import render_dev_timeline
+
+        payload = self._build_payload()
+        # Filter to dev-phase iters so the Dev tab never leaks review-phase
+        # rows — matches legacy _is_dev_phase invariant.
+        iters = [
+            it for it in (payload.get("iterations") or [])
+            if _is_dev_phase(str(it.get("phase", "")))
+        ]
+        try:
+            return render_dev_timeline({"iterations": iters})
+        except Exception:
             return ""
-        rows = self._session.decisions_for_task(self._task_id)
-        lines: list[str] = []
-        for r in rows:
-            if _is_dev_phase(str(r.get("phase", ""))):
-                lines.append(
-                    f"iter {r.get('iter', '?')}  {r.get('phase', '?')}  "
-                    f"{r.get('verdict_source', '')}"
-                )
-        return "\n".join(lines)
 
     def dev_body_text(self) -> str:
         try:
@@ -209,35 +259,12 @@ class PhaseFlowView(Widget):
         return str(content)
 
     def _load_result_body(self) -> str:
-        gid = self._session.active_goal_id
-        if not gid:
-            return ""
-        plan_json = (
-            self._session.store_root / ".devboard" / "goals" / gid / "plan.json"
-        )
-        if not plan_json.exists():
-            return ""
+        from devboard.tui.result_timeline_render import render_result_timeline
+
         try:
-            data = json.loads(plan_json.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            return render_result_timeline(self._build_payload())
+        except Exception:
             return ""
-        steps = data.get("atomic_steps", [])
-        total = 0
-        done = 0
-        lines: list[str] = []
-        for s in steps:
-            if not isinstance(s, dict):
-                continue
-            total += 1
-            completed = bool(s.get("completed"))
-            if completed:
-                done += 1
-            mark = "[x]" if completed else "[ ]"
-            lines.append(
-                f"{mark} {s.get('id', '?')}  {s.get('behavior', '')}"
-            )
-        header = f"[{done}/{total} done]"
-        return header + "\n" + "\n".join(lines) if lines else header
 
     def result_body_text(self) -> str:
         try:
@@ -247,17 +274,30 @@ class PhaseFlowView(Widget):
         return str(content)
 
     def _load_review_body(self) -> str:
-        if not self._task_id:
-            return ""
-        rows = self._session.decisions_for_task(self._task_id)
-        lines: list[str] = []
-        for r in rows:
-            if _is_review_phase(str(r.get("phase", ""))):
-                lines.append(
-                    f"iter {r.get('iter', '?')}  {r.get('phase', '?')}  "
-                    f"{r.get('verdict_source', '')}"
-                )
-        return "\n".join(lines)
+        from devboard.tui.review_sections_render import render_review_sections
+
+        payload = self._build_payload()
+        try:
+            body = render_review_sections(payload)
+        except Exception:
+            body = ""
+        # Preserve v2.2 "recent review decisions" affordance: append a trailing
+        # subsection enumerating review-phase iters with their verdict_source.
+        # Without it, operators lose visibility into cso/redteam/approval verdicts
+        # that legacy tests and muscle-memory still expect to see on this tab.
+        if self._task_id:
+            rows = self._session.decisions_for_task(self._task_id)
+            review_rows = [
+                r for r in rows if _is_review_phase(str(r.get("phase", "")))
+            ]
+            if review_rows:
+                body += "\n\n## Recent review decisions\n"
+                for r in review_rows:
+                    body += (
+                        f"  iter {r.get('iter', '?')}  {r.get('phase', '?')}  "
+                        f"{r.get('verdict_source', '')}\n"
+                    )
+        return body.rstrip()
 
     def review_body_text(self) -> str:
         try:
@@ -310,6 +350,10 @@ class PhaseFlowView(Widget):
         """
         if task_id is not ...:
             self._task_id = task_id
+        try:
+            self.query_one("#overview-body", Static).update(self._load_overview_body())
+        except Exception:
+            pass
         try:
             self.query_one("#plan-body", Static).update(Markdown(self._load_plan_body()))
         except Exception:

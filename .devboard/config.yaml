@@ -1,0 +1,46 @@
+dry_run: false
+git_push_policy: squash
+llm:
+  executor_model: claude-sonnet-4-6
+  gauntlet_model: claude-opus-4-7
+  haiku_model: claude-haiku-4-5-20251001
+  max_tokens: 8192
+  planner_model: claude-opus-4-7
+  reviewer_model: claude-opus-4-7
+  thinking_budget: 5000
+max_iterations: 10
+tdd:
+  allow_refactor_skip: true
+  enabled: true
+  require_atomic_steps: false
+  strict: false
+  systematic_debug: true
+  verify_with_evidence: true
+token_ceiling: 500000
+tools:
+  sandbox_enabled: false
+  shell_allowlist:
+  - python
+  - pytest
+  - pip
+  - uv
+  - npm
+  - node
+  - make
+  - cargo
+  - go
+  - ruff
+  - mypy
+  - git
+  - gh
+  - ls
+  - cat
+  - head
+  - tail
+  - echo
+  - mkdir
+  - cp
+  - mv
+  - find
+  - grep
+  shell_timeout: 60
