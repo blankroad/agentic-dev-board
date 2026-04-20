@@ -655,3 +655,59 @@ def test_task_metadata_roundtrips_through_file_store(tmp_path: Path):
     store.save_task(task)
     reloaded = store.load_task(goal_id, task.id)
     assert reloaded.metadata == {"production_destined": True, "note": "x"}
+
+
+# ── parent_id support on devboard_add_goal (goal g_20260420_054657_bae0a8) ────
+
+def test_add_goal_with_valid_parent_id(tmp_path: Path):
+    """s_004: parent_id referencing an existing goal is persisted on the child."""
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    parent = _json_payload(_dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path), "title": "parent",
+    }))
+    parent_id = parent["goal_id"]
+
+    child = _json_payload(_dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path), "title": "child", "parent_id": parent_id,
+    }))
+    assert "error" not in child, f"unexpected error: {child}"
+
+    from devboard.storage.file_store import FileStore
+    board = FileStore(tmp_path).load_board()
+    child_goal = next(g for g in board.goals if g.id == child["goal_id"])
+    assert child_goal.parent_id == parent_id
+
+
+def test_add_goal_with_invalid_parent_id_rejects(tmp_path: Path):
+    """s_005: nonexistent parent_id returns error and does NOT mutate state.
+
+    Category: input validation. State must be atomic — either goal is
+    created AND valid, or not created at all.
+    """
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    _dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path), "title": "only",
+    })
+
+    result = _json_payload(_dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path), "title": "bad", "parent_id": "g_does_not_exist",
+    }))
+    assert "error" in result, f"expected error, got {result}"
+
+    from devboard.storage.file_store import FileStore
+    board = FileStore(tmp_path).load_board()
+    assert len(board.goals) == 1, "invalid parent_id must not persist new goal"
+
+
+def test_add_goal_default_parent_id_none(tmp_path: Path):
+    """s_006: omitting parent_id creates a root goal (parent_id=None)."""
+    # guards: mcp-required-field-check-must-reject-none — absent key is OK (root)
+    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    added = _json_payload(_dispatch_sync("devboard_add_goal", {
+        "project_root": str(tmp_path), "title": "solo",
+    }))
+
+    from devboard.storage.file_store import FileStore
+    board = FileStore(tmp_path).load_board()
+    goal = next(g for g in board.goals if g.id == added["goal_id"])
+    assert goal.parent_id is None

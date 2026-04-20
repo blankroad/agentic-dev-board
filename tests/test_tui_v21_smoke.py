@@ -377,9 +377,19 @@ async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None
         # initial active goal
         assert app.board.active_goal_id == "g_first"
         lv = app.query_one("#resources-goals")
-        # click the second ListItem
-        second_item = list(lv.children)[1]
-        await pilot.click(second_item)
+        # Sidebar now sorts roots by created_at desc, so index is not
+        # insertion-order. Locate the 'second' entry by label text.
+        target_item = None
+        for item in lv.children:
+            try:
+                text = str(item.query_one("Label").render())
+            except Exception:
+                continue
+            if "second" in text:
+                target_item = item
+                break
+        assert target_item is not None, "sidebar missing 'second' goal"
+        await pilot.click(target_item)
         await pilot.pause()
         assert app.board.active_goal_id == "g_second", (
             f"click on sidebar goal must switch active; got {app.board.active_goal_id}"
