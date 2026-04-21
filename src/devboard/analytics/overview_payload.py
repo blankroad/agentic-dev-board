@@ -26,6 +26,10 @@ class OverviewPayload(TypedDict):
     code_delta: dict[str, object]  # {base_commit, head_commit, files[], adds, dels}
     step_shipping: list[dict[str, object]]  # per atomic_step: shipping iter/ts/verdict
     risk_delta: dict[str, object]  # {resolved[], remaining[], learnings[], todos[]}
+    # AI-synthesized As-Is → To-Be Markdown saved at goals/<gid>/report.md.
+    # Empty string when the file is missing — overview_render falls back to
+    # the legacy plan_digest layout in that case.
+    report_md: str
 
 
 _PREMISE_BULLET = re.compile(r"^-\s+(.+?)\s*$")
@@ -711,6 +715,16 @@ def build_overview_payload(
         except Exception:
             pass
 
+    # report.md is AI-synthesized by agentboard-synthesize-report and
+    # consumed as raw Markdown by overview_render.render_overview_body.
+    report_md = ""
+    report_path = goal_dir / "report.md"
+    if report_path.exists():
+        try:
+            report_md = report_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            report_md = ""
+
     return OverviewPayload(
         purpose=purpose,
         plan_digest=plan_digest,
@@ -721,4 +735,5 @@ def build_overview_payload(
         code_delta=code_delta,
         step_shipping=step_shipping,
         risk_delta=risk_delta,
+        report_md=report_md,
     )

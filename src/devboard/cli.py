@@ -1135,16 +1135,77 @@ def export(
     format: str = typer.Option("md", "--format", "-f", help="md | html | confluence"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
     project_root: Optional[Path] = typer.Option(None, "--project-root", help="Project root (defaults to find_devboard_root)"),
+    source: str = typer.Option("plan", "--source", "-s", help="plan | report"),
 ) -> None:
-    """Export a goal's plan.md as md/html/confluence.
+    """Export a goal's plan.md or report.md.
 
-    Reads .devboard/goals/<goal_id>/plan.md and emits the requested format.
+    Reads .devboard/goals/<goal_id>/<source>.md and emits it:
+    - source=plan (default): render plan.md in the requested format (md/html/confluence).
+    - source=report: emit the AI-synthesized report.md verbatim (already Markdown,
+      no format rendering).
     Writes to stdout by default, or to --output file if provided.
     """
+    import re as _re
+
     from devboard.config import find_devboard_root
     from devboard.docs.export import render
 
     root = project_root or find_devboard_root() or Path.cwd()
+
+    # Reject goal_ids containing path separators or traversal tokens —
+    # prevents directory traversal via `--goal-id ../../etc/passwd`.
+    # Allow any `[A-Za-z0-9_-]+` for test-friendly short ids (e.g. g_cli).
+    # (redteam g_20260421_013203_33d3ef FM#1 fix)
+    _GOAL_ID_PATTERN = _re.compile(r"^[A-Za-z0-9_\-]+$")
+    if not _GOAL_ID_PATTERN.match(goal_id):
+        console.print(
+            f"[red]invalid goal_id {goal_id!r} — must be [A-Za-z0-9_-]+ "
+            f"(no path separators or dots)[/red]"
+        )
+        raise typer.Exit(1)
+
+    # Constrain --output under the project root. Absolute paths outside
+    # project_root are refused so export cannot be weaponised as an
+    # arbitrary-file-write primitive. (redteam FM#2 fix)
+    if output is not None:
+        try:
+            abs_output = output.resolve() if output.is_absolute() else (Path.cwd() / output).resolve()
+            root_resolved = root.resolve()
+            abs_output.relative_to(root_resolved)
+        except ValueError:
+            console.print(
+                f"[red]--output {str(output)!r} resolves outside project root "
+                f"{str(root)!r} — refused[/red]"
+            )
+            raise typer.Exit(1)
+
+    if source == "report":
+        report_path = root / ".devboard" / "goals" / goal_id / "report.md"
+        if not report_path.exists():
+            console.print(
+                f"[red]report.md not found for goal {goal_id} at {report_path}[/red]"
+            )
+            console.print(
+                "[dim]Generate it by running `agentboard-synthesize-report` after "
+                "approval, or ship a new goal to trigger auto-generation.[/dim]"
+            )
+            raise typer.Exit(1)
+        try:
+            rendered = report_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            console.print(f"[red]could not read report.md: {e}[/red]")
+            raise typer.Exit(2)
+        if output is not None:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(rendered, encoding="utf-8")
+        else:
+            print(rendered, end="")
+        return
+
+    if source != "plan":
+        console.print(f"[red]unknown --source {source!r} (expected plan|report)[/red]")
+        raise typer.Exit(1)
+
     plan_path = root / ".devboard" / "goals" / goal_id / "plan.md"
     if not plan_path.exists():
         console.print(f"[red]no plan.md for goal {goal_id} at {plan_path}[/red]")

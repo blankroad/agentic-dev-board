@@ -46,11 +46,27 @@ def render_overview_body(payload: dict[str, Any]) -> str:
     plan = payload.get("plan_digest") or {}
     iters = payload.get("iterations") or []
     state = payload.get("current_state") or {}
+    report_md = (payload.get("report_md") or "").strip()
 
     lines: list[str] = []
-    lines.append("## 목적 (Purpose)")
-    lines.append(f"  {purpose}")
-    lines.append("")
+
+    # AI-synthesized As-Is → To-Be report (agentboard-synthesize-report).
+    # When present, render at the top so Overview leads with a human-
+    # readable summary. Separator divides it from the legacy plan_digest
+    # block below. If the report already carries a '## 목적' heading,
+    # skip the legacy Purpose section to avoid duplicated headers
+    # (redteam FM#6 fix).
+    report_has_purpose = bool(report_md) and "## 목적" in report_md
+    if report_md:
+        lines.append(report_md)
+        lines.append("")
+        lines.append("─" * 72)
+        lines.append("")
+
+    if not report_has_purpose:
+        lines.append("## 목적 (Purpose)")
+        lines.append(f"  {purpose}")
+        lines.append("")
     lines.append("## 계획 요약 (Plan digest)")
     lines.append(f"  • locked_hash     : {plan.get('locked_hash', '-')}")
     lines.append(f"  • scope_decision  : {plan.get('scope_decision', '-')}")

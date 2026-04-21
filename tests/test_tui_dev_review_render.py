@@ -95,6 +95,11 @@ def test_out_of_scope_files_untouched() -> None:
     from pathlib import Path as _Path
 
     repo = _Path(__file__).resolve().parent.parent
+    # NOTE: this guard reflects the scope of goal g_20260420_231710_1acaa6
+    # (5-tab renderer rewrite) at the moment of shipping. Later goals may
+    # legitimately modify some of these files; entries are pruned as new
+    # goals' LockedPlans authorize them. `cli.py` was pruned by
+    # g_20260421_013203_33d3ef (LLM synthesis + export subcommand).
     guarded = [
         "src/devboard/models.py",
         "src/devboard/storage/file_store.py",
@@ -107,7 +112,6 @@ def test_out_of_scope_files_untouched() -> None:
         "src/devboard/tui/command_line.py",
         "src/devboard/tui/live_status_line.py",
         "src/devboard/mcp_server.py",
-        "src/devboard/cli.py",
     ]
     offenders: list[str] = []
     for base in ("main", "origin/main"):

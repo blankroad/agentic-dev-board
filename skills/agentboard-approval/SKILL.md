@@ -133,6 +133,30 @@ if task_meta.get("ui_surface", False):
         )
 ```
 
+### Step 4.5a.2 — Auto-invoke `agentboard-synthesize-report` (ALL goals)
+
+After `devboard_generate_narrative` (regardless of `ui_surface`), invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.devboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `devboard export <gid> --source report`).
+
+The synthesize skill is **non-blocking** by contract: it catches its own failures and logs `NARRATIVE_SKIPPED`. Wrap the Skill call in `try/except` here too so the approval flow never stalls on a missing/broken agent response.
+
+```
+try:
+    Skill(
+        skill="agentboard-synthesize-report",
+        args=f"goal_id={goal_id} task_id={task_id}",
+    )
+    # Skill writes report.md on success OR logs NARRATIVE_SKIPPED and returns silently.
+except Exception as exc:
+    devboard_log_decision(
+        project_root, task_id, iter=iteration,
+        phase="approval",
+        reasoning=f"synthesize-report hook skipped: {exc!r}",
+        verdict_source="NARRATIVE_SKIPPED",
+    )
+```
+
+Failure of this hook MUST NOT block Step 4.5b (Outcome), Step 4.6 (TTY smoke), converged checkpoint, or `task.status=pushed`.
+
 ### Step 4.5b — Write Outcome section
 
 ```python
