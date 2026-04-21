@@ -43,6 +43,9 @@ legacy = [
     "langchain-anthropic>=0.2",
 ]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.4"]
+# Optional OTel emitter (M2) — when installed + LANGFUSE_PUBLIC_KEY set,
+# every agentboard_log_decision iter write also emits a Langfuse span.
+langfuse = ["langfuse>=3"]
 
 [project.scripts]
 agentboard = "agentboard.cli:app"

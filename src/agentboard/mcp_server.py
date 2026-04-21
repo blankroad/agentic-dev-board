@@ -1078,6 +1078,16 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
                     "pile_error": str(exc),
                 })
 
+            # M2-langfuse: optional OTel emission. emit_iter is internally
+            # env-gated and swallows all SDK errors — never raises.
+            try:
+                from agentboard.telemetry import langfuse_emitter
+                langfuse_emitter.emit_iter(
+                    rid, iter_data, gid=gid, tid=args["task_id"],
+                )
+            except Exception:
+                pass
+
         return _text({"status": "logged", "phase": args["phase"], "iter": args["iter"]})
 
     if name == "devboard_log_parallel_review":
