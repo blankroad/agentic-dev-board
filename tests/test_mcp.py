@@ -282,6 +282,7 @@ def test_install_skills_copies_all(tmp_path: Path):
         "agentboard-parallel-review",
         "agentboard-ui-preview",
         "agentboard-synthesize-report",
+        "agentboard-design-review",
     }
     assert names == expected
 

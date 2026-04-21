@@ -263,6 +263,10 @@ Thread `{task_id, run_id}` through all subsequent MCP calls.
 Right after `arch.md` is written and BEFORE proceeding to Challenge, check `task.metadata.ui_surface`:
 
 - **ui_surface=False** → skip this section, go to Challenge as usual.
-- **ui_surface=True** → invoke `agentboard-ui-preview` via the Skill tool with `layer=0` in the argument payload. That skill produces a Layer 0 ASCII mockup, asks the user to confirm, and records the confirmed mockup SHA back into arch.md so the gauntlet hash covers the visual intent. Only after user confirmation resume the Gauntlet at Step 4 (Challenge).
+- **ui_surface=True** → invoke `agentboard-ui-preview` via the Skill tool with `layer=0` in the argument payload. That skill produces a Layer 0 ASCII mockup, asks the user to confirm, and records the confirmed mockup SHA back into arch.md so the gauntlet hash covers the visual intent. **After Layer 0 is confirmed, and BEFORE proceeding to Challenge, invoke `agentboard-design-review` via the Skill tool.** design-review scores the arch + mockup against a 7-pass UI/UX rubric (Information Architecture, Interaction State Coverage incl. modal stacking / focus trap / z-order, User Journey, AI Slop Risk, Design System Alignment, Responsive+Keyboard, Unresolved Decisions):
 
-Rationale: arch.md describes layout in prose, which is lossy. For `ui_surface=True` tasks, the Layer 0 mockup is the cheapest way to let the user catch "that's not what I pictured" before any code is written. See `skills/agentboard-ui-preview/SKILL.md` for the full Layer 0 flow.
+  - verdict `APPROVED` or `WARN` → resume the Gauntlet at Step 4 (Challenge). WARN means fix proposals were upserted into arch.md's `## Design Review` section for Challenge to read.
+  - verdict `BLOCKER` → return to Step 3 (Arch) for rewrite. design-review enforces a 1-retry cap + user override escape hatch (`BLOCKER_OVERRIDDEN` sentinel) so the loop cannot run forever.
+  - verdict `NOT_APPLICABLE` → the deliverable is not a mountable UI (e.g. a meta-goal whose impl_file is a markdown skill doc). Skip straight to Step 4.
+
+Rationale: arch.md describes layout in prose, which is lossy. For `ui_surface=True` tasks, the Layer 0 mockup is the cheapest way to let the user catch "that's not what I pictured" before any code is written, and the design-review gate catches interaction-level UX bugs (e.g. "화면 분할이 모달 뒤에서 일어남") before they reach TDD. See `skills/agentboard-ui-preview/SKILL.md` for the Layer 0 flow and `skills/agentboard-design-review/SKILL.md` for the 7-pass rubric.

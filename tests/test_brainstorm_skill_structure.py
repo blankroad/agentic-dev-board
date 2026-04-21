@@ -70,45 +70,12 @@ def test_frontmatter_preserved() -> None:
     assert "description:" in head, "frontmatter description field missing"
 
 
-def test_out_of_scope_unchanged() -> None:
-    """s_007 — guarded files outside this goal must have no diff vs main."""
-    import subprocess
-
-    guarded = [
-        "skills/agentboard-gauntlet/SKILL.md",
-        "skills/agentboard-tdd/SKILL.md",
-        "skills/agentboard-approval/SKILL.md",
-        "skills/agentboard-parallel-review/SKILL.md",
-        "skills/agentboard-cso/SKILL.md",
-        "skills/agentboard-redteam/SKILL.md",
-        "skills/agentboard-rca/SKILL.md",
-        "skills/agentboard-eng-review/SKILL.md",
-        "skills/agentboard-synthesize-report/SKILL.md",
-        "skills/agentboard-replay/SKILL.md",
-        "skills/agentboard-retro/SKILL.md",
-        "skills/agentboard-ui-preview/SKILL.md",
-        "skills/agentboard-dep-audit/SKILL.md",
-    ]
-    # Also guard: nothing in src/ changed
-    src_paths = ["src/devboard"]
-    offenders: list[str] = []
-    for base in ("main", "origin/main"):
-        proc = subprocess.run(
-            ["git", "-C", str(REPO), "diff", base, "--", *guarded, *src_paths],
-            capture_output=True, text=True,
-        )
-        if proc.returncode == 0:
-            if proc.stdout:
-                for line in proc.stdout.splitlines():
-                    if line.startswith("diff --git a/"):
-                        offenders.append(line.split()[2].removeprefix("a/"))
-            break
-    else:
-        import pytest as _pytest
-        _pytest.skip("no main/origin/main baseline available")
-    assert not offenders, (
-        f"out-of-scope files changed (scope_guard violation): {offenders}"
-    )
+# NOTE: `test_out_of_scope_unchanged` was removed after the brainstorm goal
+# g_20260421_041017_af7f7a shipped. Scope-guard snapshots only make sense
+# during a goal's in-flight TDD loop; once shipped they rot into false
+# positives every time a future goal legitimately touches one of the named
+# skills. Each goal's test suite now carries its own scope guard, scoped to
+# that goal's lifetime.
 
 
 def test_phase4_mandates_ideal_and_realistic_slots() -> None:
