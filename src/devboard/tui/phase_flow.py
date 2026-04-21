@@ -28,8 +28,10 @@ from devboard.tui.process_sparkline import ProcessSparkline
 from devboard.tui.dev_file_tree import DevFileTree
 from devboard.tui.dev_diff_viewer import DevDiffViewer
 from devboard.tui.dev_issues_pane import DevIssuesPane
+from devboard.tui.overview_cards import OverviewCards
 from devboard.analytics.verdict_timeline import build_matrix as _build_verdict_matrix
 from devboard.analytics.diff_parser import parse_unified_diff as _parse_unified_diff
+from devboard.analytics.overview_metrics import build_metrics as _build_overview_metrics
 
 
 _EMPTY_PLAN = "_Plan not locked. Run `agentboard-gauntlet`._"
@@ -165,6 +167,10 @@ class PhaseFlowView(Widget):
     def compose(self) -> ComposeResult:
         with TabbedContent(initial="overview"):
             with TabPane("Overview", id="overview"):
+                yield OverviewCards(
+                    cards=self._build_overview_cards(),
+                    id="overview-cards",
+                )
                 with VerticalScroll():
                     yield Static(
                         self._load_overview_body(), id="overview-body", markup=False
@@ -357,6 +363,25 @@ class PhaseFlowView(Widget):
             return list(self._session.decisions_for_task(self._task_id))
         except Exception:
             return []
+
+    def _load_plan_json(self) -> dict:
+        gid = self._session.active_goal_id
+        if not gid:
+            return {}
+        plan_path = self._session.store_root / ".devboard" / "goals" / gid / "plan.json"
+        if not plan_path.exists():
+            return {}
+        try:
+            return json.loads(plan_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            return {}
+
+    def _build_overview_cards(self):
+        return _build_overview_metrics(
+            decisions=self._load_decisions(),
+            plan=self._load_plan_json(),
+            diff_text=self._load_latest_diff_text(),
+        )
 
     def _load_latest_diff_text(self) -> str:
         """Load diff source with priority:
@@ -587,6 +612,14 @@ class PhaseFlowView(Widget):
         try:
             self.query_one("#dev-body", DevIssuesPane).refresh_render(
                 payload=self._build_payload(),
+            )
+        except Exception:
+            pass
+
+        # Overview tab: refresh #overview-cards with latest metrics.
+        try:
+            self.query_one("#overview-cards", OverviewCards).refresh_render(
+                cards=self._build_overview_cards(),
             )
         except Exception:
             pass
