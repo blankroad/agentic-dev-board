@@ -131,27 +131,45 @@ If the user volunteers audience info, record it in `premises` verbatim. Just don
 
 ## Phase 4 — Alternatives (2-3 approaches + recommendation)
 
-Based on Phase 1 R-list + Phase 3 answers (or CLEAR-path context), propose approaches:
+Based on Phase 1 R-list + Phase 3 answers (or CLEAR-path context), propose approaches.
+
+### MANDATORY slots (both must appear — 무조건)
+
+Every Phase 4 must include at least these two labeled alternatives so the user can compare ambition vs feasibility:
+
+1. **가장 이상적인 방안 (ideal)** — if unlimited time/scope. Names the "10점짜리" answer. Usually larger scope, reveals stretch vision. **NEVER omit.**
+2. **현실적인 방안 (realistic)** — 1-week buildable given current constraints. Smaller scope, ships fast.
+
+Optional third slot (when a qualitatively different axis exists):
+
+3. **Approach C (creative / alternative axis, optional)** — different framing (e.g. "do nothing + revisit", "reuse existing tool").
+
+### Format
 
 ```
-**Approach A (minimal):** {name}
-  - {1-2 sentence summary}
-  - Effort: S | Risk: Low
-  - Tradeoff: {what you give up vs gain}
+**가장 이상적인 방안 (ideal):** {name}
+  - {1-2 sentence summary — no constraint-trimming yet}
+  - Effort: M-L | Risk: Med
+  - Tradeoff: {what ambition buys vs what it costs}
 
-**Approach B (ideal):** {name}
+**현실적인 방안 (realistic):** {name}
+  - {1-2 sentence summary — what fits in ~1 week}
+  - Effort: S-M | Risk: Low
+  - Tradeoff: {what ships fast vs what gets deferred}
+
+**Approach C (optional):** {name}
   - ...
-  - Effort: M | Risk: Low-Med
 
-**Approach C (creative, optional):** {name}
-  - ...
-
-**RECOMMENDATION: Approach {X}** — {one-line reason tied to Phase 1 R-items / Phase 3 answers}
+**RECOMMENDATION: {가장 이상적 | 현실적 | Approach C}** — {one-line reason tied to Phase 1 R-items / Phase 3 answers}
 ```
 
-For multi-request plans, the recommendation names which `R{n}` items this approach addresses vs defers.
+### Why both are mandatory
 
-CLEAR-path note: when Phase 2 fast-pathed here, producing a single alternative (the obvious one) is acceptable — just label it as such.
+A single "recommended" alternative hides the ambition/feasibility trade. When only 현실적 is shown, the user loses the chance to say "actually let's go bigger". When only 이상적 is shown, the user can't anchor scope. Both side-by-side makes the choice explicit.
+
+For multi-request plans, the recommendation names which `R{n}` items each alternative addresses vs defers.
+
+CLEAR-path note: when Phase 2 fast-pathed here, the 현실적 slot is allowed to collapse to "the obvious 1-sentence approach"; the 가장 이상적 slot still MUST be filled so the user sees what a bigger version would look like.
 
 ---
 

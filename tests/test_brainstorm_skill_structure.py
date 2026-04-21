@@ -111,6 +111,34 @@ def test_out_of_scope_unchanged() -> None:
     )
 
 
+def test_phase4_mandates_ideal_and_realistic_slots() -> None:
+    """Follow-up to goal g_20260421_041017_af7f7a: Phase 4 Alternatives
+    must always include two explicit slot labels — `가장 이상적` and
+    `현실적` — so downstream readers can compare ambition vs feasibility
+    on every brainstorm. User directive: `가장 이상적인 방안은 반드시
+    있어야함`."""
+    text = _read()
+    phase4_idx = text.find("## Phase 4")
+    phase5_idx = text.find("## Phase 5")
+    assert phase4_idx != -1 and phase5_idx != -1, (
+        "Phase 4 / Phase 5 section headers missing"
+    )
+    phase4_block = text[phase4_idx:phase5_idx]
+    # Both Korean labels MUST appear inside the Phase 4 block.
+    assert "가장 이상적" in phase4_block, (
+        "Phase 4 must name a '가장 이상적' (most-ideal) slot as mandatory. "
+        f"Phase 4 block:\n{phase4_block[:600]}"
+    )
+    assert "현실적" in phase4_block, (
+        "Phase 4 must name a '현실적' (realistic) slot as mandatory. "
+        f"Phase 4 block:\n{phase4_block[:600]}"
+    )
+    # Mandatoriness must be explicit, not just a suggestion.
+    assert any(tok in phase4_block for tok in ("MANDATORY", "필수", "무조건")), (
+        "Phase 4 must mark the two slots as mandatory (MANDATORY / 필수 / 무조건)"
+    )
+
+
 def test_gstack_jargon_removed() -> None:
     """s_001 — the gstack/YC-pitch terms that motivated this rewrite must
     be gone from the body. These phrases were ambient in the previous
