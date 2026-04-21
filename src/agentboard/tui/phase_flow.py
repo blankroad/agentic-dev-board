@@ -36,6 +36,48 @@ from agentboard.analytics.overview_metrics import build_metrics as _build_overvi
 
 _EMPTY_PLAN = "_Plan not locked. Run `agentboard-gauntlet`._"
 
+
+# ── M1b helpers (Cinema Labor pile-source + view modes + responsive) ─
+
+_VIEW_MODE_FOR_KEY = {
+    "1": "final_diff",
+    "2": "all_iters",
+    "3": "per_file_timeline",
+}
+
+
+def dev_tab_default_view_mode() -> str:
+    """M1b m_013: default Dev tab view mode is final-diff (GitHub PR mental model)."""
+    return "final_diff"
+
+
+def dev_tab_view_mode_for_key(key: str) -> str | None:
+    """M1b m_014: 1/2/3 → final_diff / all_iters / per_file_timeline."""
+    return _VIEW_MODE_FOR_KEY.get(key)
+
+
+def dev_tab_responsive_layout(width: int) -> str:
+    """M1b m_015: thin wrapper over responsive_layout for explicit Dev-tab use."""
+    from agentboard.tui.responsive import responsive_layout
+    return responsive_layout(width)
+
+
+def dev_tab_load_files(store, rid: str | None) -> list:
+    """M1b m_012: pile-source DiffFile loader with no-rid fallback signal.
+
+    Returns the list of `DiffFile` records from `pile_diff_loader` when
+    `rid` is provided AND the pile exists. Returns `[]` otherwise so the
+    caller can fall back to the legacy `_load_latest_diff_text` git
+    subprocess path.
+    """
+    if not rid:
+        return []
+    try:
+        from agentboard.storage.pile_diff_loader import load_files_from_pile
+        return load_files_from_pile(rid, store)
+    except Exception:
+        return []
+
 # Dev-phase classifier: exact set + prefix set.
 # Real log_decision writes phases like tdd_red/tdd_green/tdd_refactor, so
 # we prefix-match 'tdd_' in addition to exact-matching pure tokens.
