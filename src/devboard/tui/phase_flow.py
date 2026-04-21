@@ -25,7 +25,11 @@ from devboard.tui.review_cards import ReviewCards
 from devboard.tui.review_timeline import ReviewTimeline
 from devboard.tui.process_swimlane import ProcessSwimlane
 from devboard.tui.process_sparkline import ProcessSparkline
+from devboard.tui.dev_file_tree import DevFileTree
+from devboard.tui.dev_diff_viewer import DevDiffViewer
+from devboard.tui.dev_issues_pane import DevIssuesPane
 from devboard.analytics.verdict_timeline import build_matrix as _build_verdict_matrix
+from devboard.analytics.diff_parser import parse_unified_diff as _parse_unified_diff
 
 
 _EMPTY_PLAN = "_Plan not locked. Run `agentboard-gauntlet`._"
@@ -155,6 +159,8 @@ class PhaseFlowView(Widget):
         self._session = session
         self._task_id = task_id
         self.manual_override_until: float | None = None
+        # Dev tab: session-only reviewed-file set (not persisted).
+        self._reviewed_paths: set[str] = set()
 
     def compose(self) -> ComposeResult:
         with TabbedContent(initial="overview"):
@@ -168,8 +174,21 @@ class PhaseFlowView(Widget):
                 with VerticalScroll():
                     yield Static(Markdown(self._load_plan_body()), id="plan-body")
             with TabPane("Dev", id="dev"):
+                diff_text = self._load_latest_diff_text()
+                files = _parse_unified_diff(diff_text)
                 with VerticalScroll():
-                    yield Static(self._load_dev_body(), id="dev-body", markup=False)
+                    yield DevFileTree(
+                        files=files,
+                        reviewed=self._reviewed_paths,
+                        id="dev-file-tree",
+                    )
+                    yield DevDiffViewer(diff_text=diff_text, id="dev-diff-viewer")
+                    # id="dev-body" retained so legacy tests that query
+                    # #dev-body (test_tui_phase_flow / test_tui_v21_smoke)
+                    # keep passing — issues pane IS the hoisted dev-body.
+                    yield DevIssuesPane(
+                        payload=self._build_payload(), id="dev-body",
+                    )
             with TabPane("Result", id="result"):
                 decisions = self._load_decisions()
                 yield ProcessSparkline(decisions=decisions, id="process-sparkline")
@@ -339,6 +358,50 @@ class PhaseFlowView(Widget):
         except Exception:
             return []
 
+    def _load_latest_diff_text(self) -> str:
+        """Load diff source with priority:
+          1. working tree git diff HEAD (most recent authoritative state)
+          2. latest saved iter_N.diff under the active task
+          3. empty string (viewer shows empty-state)
+        """
+        import subprocess
+
+        # 1) working tree
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(self._session.store_root), "diff", "HEAD"],
+                capture_output=True, text=True, timeout=5,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                return proc.stdout
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+        # 2) latest iter_N.diff for active task
+        if self._task_id:
+            gid = self._session.active_goal_id
+            if gid:
+                changes_dir = (
+                    self._session.store_root
+                    / ".devboard" / "goals" / gid
+                    / "tasks" / self._task_id / "changes"
+                )
+                if changes_dir.exists():
+                    try:
+                        candidates = sorted(
+                            changes_dir.glob("iter_*.diff"),
+                            key=lambda p: p.stat().st_mtime,
+                        )
+                        if candidates:
+                            try:
+                                return candidates[-1].read_text(encoding="utf-8", errors="replace")
+                            except OSError:
+                                pass
+                    except OSError:
+                        pass
+
+        return ""
+
     # ----- Badges -----
 
     def _dev_count(self) -> int:
@@ -483,9 +546,7 @@ class PhaseFlowView(Widget):
         self._refresh_new_widgets()
 
     def _refresh_new_widgets(self) -> None:
-        """Refresh the 4 new visual widgets with the latest decisions.jsonl
-        snapshot so Result/Review tabs reflect appends without tab toggles.
-        """
+        """Refresh the 4 Plan/Review/Result widgets + the 3 Dev widgets."""
         decisions = self._load_decisions()
         matrix = _build_verdict_matrix(decisions)
         for widget_id, payload_kind in (
@@ -505,6 +566,30 @@ class PhaseFlowView(Widget):
                     widget.refresh_render(matrix=matrix)
             except Exception:
                 pass
+
+        # Dev tab: reparse diff and push into file-tree + viewer.
+        # reviewed_paths is preserved across refresh; stale paths drop in
+        # DevFileTree.refresh_render via set intersection.
+        diff_text = self._load_latest_diff_text()
+        files = _parse_unified_diff(diff_text)
+        try:
+            self.query_one("#dev-file-tree", DevFileTree).refresh_render(
+                files=files, reviewed=self._reviewed_paths,
+            )
+        except Exception:
+            pass
+        try:
+            self.query_one("#dev-diff-viewer", DevDiffViewer).refresh_render(
+                diff_text=diff_text,
+            )
+        except Exception:
+            pass
+        try:
+            self.query_one("#dev-body", DevIssuesPane).refresh_render(
+                payload=self._build_payload(),
+            )
+        except Exception:
+            pass
 
     def handle_new_decision(self, decision: dict) -> None:
         """Called when a fresh decisions.jsonl row is observed.
