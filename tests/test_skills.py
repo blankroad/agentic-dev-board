@@ -68,19 +68,30 @@ def test_brainstorm_phase1_has_direction_validation_questions():
 # ── s_004: STOP marker after Phase 1 ─────────────────────────────────────────
 
 def test_brainstorm_stop_marker_after_phase1():
-    """s_004: A STOP marker must appear after the Phase 1 section header and before Phase 2 header."""
+    """s_004 (v2 — 6-phase rewrite, goal g_20260421_041017_af7f7a):
+    Phase 1 must end with an explicit branching instruction that directs
+    the reader to Phase 2 (CLEAR) or to Phase 3 (multi-request). The
+    legacy literal 'STOP' marker was an artifact of the old Q1-Q4 flow
+    — deterministic branching wording replaces it.
+
+    SCOPE: this relaxation applies ONLY to the brainstorm SKILL.md.
+    Other skill files that use literal 'STOP' as a reviewer-halt
+    semaphore (if any) are unaffected — their tests live elsewhere and
+    are not modified by this goal.
+    """
     skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
-    assert "STOP" in content, "No STOP marker found in SKILL.md"
-    # Use section headers (## Phase N) to avoid matching frontmatter text
     phase1_idx = content.find("## Phase 1")
     phase2_idx = content.find("## Phase 2")
     assert phase1_idx != -1, "## Phase 1 section header missing"
     assert phase2_idx != -1, "## Phase 2 section header missing"
-    stop_idx = content.find("STOP", phase1_idx)
-    assert stop_idx != -1, "No STOP marker found after ## Phase 1 header"
-    assert phase1_idx < stop_idx < phase2_idx, (
-        "STOP marker must appear between ## Phase 1 and ## Phase 2 headers"
+    phase1_block = content[phase1_idx:phase2_idx]
+    # Either the literal STOP marker (legacy) OR the new explicit branch
+    # instruction ("proceed to Phase 2" / "Phase 3 adaptive") must appear.
+    allowed = ["STOP", "proceed to Phase 2", "proceed to Phase 3", "Phase 2 CLEAR Fast-Path check", "Phase 3 adaptive loop"]
+    assert any(k in phase1_block for k in allowed), (
+        f"Phase 1 must end with an explicit branch instruction; "
+        f"none of {allowed} found in the Phase 1 block"
     )
 
 
@@ -98,16 +109,21 @@ def test_brainstorm_phase2_mandatory_with_recommendation():
 # ── s_006: STOP marker after Phase 2 ─────────────────────────────────────────
 
 def test_brainstorm_stop_marker_after_phase2():
-    """s_006: A second STOP marker must appear after the Phase 2 section header and before Phase 3."""
+    """s_006 (v2 — 6-phase rewrite): Phase 2 CLEAR Fast-Path must end with
+    an explicit 'Skip to Phase 4' or 'proceed to Phase 3' branching line
+    so Claude does not silently interrogate when CLEAR was available (or
+    vice versa). Literal 'STOP' marker is no longer required."""
     skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     phase2_idx = content.find("## Phase 2")
     phase3_idx = content.find("## Phase 3")
     assert phase2_idx != -1, "## Phase 2 section header missing"
     assert phase3_idx != -1, "## Phase 3 section header missing"
-    stop_after_p2 = content.find("STOP", phase2_idx)
-    assert stop_after_p2 != -1 and stop_after_p2 < phase3_idx, (
-        "STOP marker must appear between ## Phase 2 and ## Phase 3 headers"
+    phase2_block = content[phase2_idx:phase3_idx]
+    allowed = ["STOP", "Skip to Phase 4", "proceed to Phase 3", "proceed to Phase 4"]
+    assert any(k in phase2_block for k in allowed), (
+        f"Phase 2 must end with an explicit branch instruction; "
+        f"none of {allowed} found in the Phase 2 block"
     )
 
 
