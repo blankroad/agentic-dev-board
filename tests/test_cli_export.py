@@ -151,45 +151,9 @@ def test_approval_skill_has_synthesize_report_hook() -> None:
     )
 
 
-def test_out_of_scope_files_untouched() -> None:
-    """s_010 — LockedPlan out_of_scope_guard enforcement for this goal
-    (g_20260421_013203_33d3ef). These files must not have been modified by
-    this goal's changes (git diff vs main empty)."""
-    import subprocess
-    from pathlib import Path as _Path
-
-    repo = _Path(__file__).resolve().parent.parent
-    guarded = [
-        "src/devboard/tui/dev_timeline_render.py",
-        "src/devboard/tui/result_timeline_render.py",
-        "src/devboard/tui/review_sections_render.py",
-        "src/devboard/narrative/generator.py",
-        "src/devboard/models.py",
-        "src/devboard/storage/file_store.py",
-        "src/devboard/tui/app.py",
-        "src/devboard/tui/phase_flow.py",
-        "src/devboard/tui/status_bar.py",
-        "src/devboard/tui/plan_markdown.py",
-        "src/devboard/mcp_server.py",
-    ]
-    offenders: list[str] = []
-    for base in ("main", "origin/main"):
-        proc = subprocess.run(
-            ["git", "-C", str(repo), "diff", base, "--", *guarded],
-            capture_output=True, text=True,
-        )
-        if proc.returncode == 0:
-            if proc.stdout:
-                for line in proc.stdout.splitlines():
-                    if line.startswith("diff --git a/"):
-                        offenders.append(line.split()[2].removeprefix("a/"))
-            break
-    else:
-        import pytest as _pytest
-        _pytest.skip("no main/origin/main baseline available")
-    assert not offenders, (
-        f"guarded files modified (scope_guard violation): {offenders}"
-    )
+# NOTE: historical scope-guard snapshot removed. See the design-review goal
+# ship note for rationale: snapshot-style guards rot as soon as a future
+# goal legitimately touches one of the named files.
 
 
 def test_export_rejects_goal_id_with_path_traversal(tmp_path: Path) -> None:

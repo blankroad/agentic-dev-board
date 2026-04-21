@@ -20,6 +20,12 @@ from textual.widget import Widget
 from textual.widgets import Static, TabbedContent, TabPane
 
 from devboard.tui.session_derive import SessionContext
+from devboard.tui.plan_pipeline import PlanPipeline
+from devboard.tui.review_cards import ReviewCards
+from devboard.tui.review_timeline import ReviewTimeline
+from devboard.tui.process_swimlane import ProcessSwimlane
+from devboard.tui.process_sparkline import ProcessSparkline
+from devboard.analytics.verdict_timeline import build_matrix as _build_verdict_matrix
 
 
 _EMPTY_PLAN = "_Plan not locked. Run `agentboard-gauntlet`._"
@@ -158,19 +164,22 @@ class PhaseFlowView(Widget):
                         self._load_overview_body(), id="overview-body", markup=False
                     )
             with TabPane("Plan", id="plan"):
-                # Rich Markdown wrap so plan_summary.md renders with
-                # proper headings / lists in the TUI, and matches the
-                # legacy PlanMarkdown contract expected by
-                # tests/test_plan_markdown_narrative_scroll.py.
+                yield PlanPipeline(goal_dir=self._goal_dir(), id="plan-pipeline")
                 with VerticalScroll():
                     yield Static(Markdown(self._load_plan_body()), id="plan-body")
             with TabPane("Dev", id="dev"):
                 with VerticalScroll():
                     yield Static(self._load_dev_body(), id="dev-body", markup=False)
             with TabPane("Result", id="result"):
+                decisions = self._load_decisions()
+                yield ProcessSparkline(decisions=decisions, id="process-sparkline")
+                yield ProcessSwimlane(decisions=decisions, id="process-swimlane")
                 with VerticalScroll():
                     yield Static(self._load_result_body(), id="result-body", markup=False)
             with TabPane("Review", id="review"):
+                matrix = _build_verdict_matrix(self._load_decisions())
+                yield ReviewCards(matrix=matrix, id="review-cards")
+                yield ReviewTimeline(matrix=matrix, id="review-timeline")
                 with VerticalScroll():
                     yield Static(self._load_review_body(), id="review-body", markup=False)
 
@@ -313,6 +322,23 @@ class PhaseFlowView(Widget):
             return ""
         return str(content)
 
+    # ----- New-widget helpers -----
+
+    def _goal_dir(self) -> Path:
+        gid = self._session.active_goal_id
+        if not gid:
+            # fallback to store_root so render_pipeline returns 5 missing
+            return self._session.store_root / ".devboard" / "goals" / "_none"
+        return self._session.store_root / ".devboard" / "goals" / gid
+
+    def _load_decisions(self) -> list[dict]:
+        if not self._task_id:
+            return []
+        try:
+            return list(self._session.decisions_for_task(self._task_id))
+        except Exception:
+            return []
+
     # ----- Badges -----
 
     def _dev_count(self) -> int:
@@ -454,6 +480,31 @@ class PhaseFlowView(Widget):
         if latest is not None:
             self.handle_new_decision(latest)
         self.refresh_badges()
+        self._refresh_new_widgets()
+
+    def _refresh_new_widgets(self) -> None:
+        """Refresh the 4 new visual widgets with the latest decisions.jsonl
+        snapshot so Result/Review tabs reflect appends without tab toggles.
+        """
+        decisions = self._load_decisions()
+        matrix = _build_verdict_matrix(decisions)
+        for widget_id, payload_kind in (
+            ("process-sparkline", "decisions"),
+            ("process-swimlane", "decisions"),
+            ("review-cards", "matrix"),
+            ("review-timeline", "matrix"),
+        ):
+            try:
+                widget = self.query_one(f"#{widget_id}")
+            except Exception:
+                continue
+            try:
+                if payload_kind == "decisions":
+                    widget.refresh_render(decisions=decisions)
+                else:
+                    widget.refresh_render(matrix=matrix)
+            except Exception:
+                pass
 
     def handle_new_decision(self, decision: dict) -> None:
         """Called when a fresh decisions.jsonl row is observed.
