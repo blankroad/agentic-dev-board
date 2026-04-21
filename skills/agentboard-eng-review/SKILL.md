@@ -94,6 +94,77 @@ If any check fails, add a detail section below:
    Gauntlet step to redo: arch | challenge | decide
 ```
 
+### Upsert into arch.md (MANDATORY before checkpoint)
+
+Before recording the verdict in decisions.jsonl, write the 4-check result
+into a dedicated `## Engineering Review` section at the end of
+`.devboard/goals/<goal_id>/gauntlet/arch.md`. Upsert rule: **idempotent
+replace, not append** — if a prior `## Engineering Review` heading exists,
+locate its block (from that heading up to the next top-level `##` heading
+or EOF) and REPLACE it wholesale. A second eng-review run on the same
+goal must leave arch.md with exactly one `## Engineering Review` section.
+
+#### Body format — `| Check | Before | After | Fix |` table (MANDATORY)
+
+The body of `## Engineering Review` MUST be a markdown table with EXACTLY
+these four columns, in this order. Bullet lists or prose summaries are
+NOT allowed — they hide the before/after diff that reviewers rely on.
+The separator row is also mandatory so the doc renders as a real table.
+
+```markdown
+## Engineering Review
+- Verdict: PASS | NEEDS_REVISION
+- Reviewed: <utc_iso>
+
+| Check | Before | After | Fix |
+| --- | --- | --- | --- |
+| Architecture Coherence | n/a | PASS | — |
+| Test Strategy | n/a | FAIL | mock boundary for external API is unclear |
+| Integration Risks | n/a | PASS | — |
+| Edge Case Coverage | n/a | FAIL | concurrent mutation path (TOCTOU) missing |
+```
+
+Column semantics:
+- **Check** — the exact check name, in the order Check 1..4 above.
+- **Before** — the After value from the previous eng-review run on this
+  goal. On the first run, use the literal string `n/a`.
+- **After** — the verdict this run just produced: `PASS`, `FAIL`, or
+  (rarely) `SKIPPED` if the check is structurally inapplicable.
+- **Fix** — a one-line suggested fix if After = FAIL, else the em-dash `—`.
+  Fix cells are actionable — the user reads them when deciding revise
+  vs proceed-as-known-risk.
+
+#### Re-run: promote prior After into Before (carry over)
+
+On a re-review of the same goal (arch.md already contains
+`## Engineering Review`), carry over each row's prior After value into
+the new row's Before column before writing the new After. Algorithm:
+
+1. Read arch.md; if no `## Engineering Review` heading → first run, every
+   Before = `n/a`. Skip to step 4.
+2. Parse the existing table: for every row whose first cell matches a
+   known Check name, capture column 3 (After) as `prior_after[name]`.
+3. When emitting the new table, set `Before = prior_after.get(name, "n/a")`.
+   Best-effort match; if the parse fails (hand-edited table), fall back
+   to `n/a` and continue. Do NOT raise.
+4. Write the new `## Engineering Review` block, replacing (not appending)
+   the prior one.
+
+#### Execution order (strict)
+
+Within the Branching step below, the strict sequence is:
+
+1. **upsert** the `## Engineering Review` section into arch.md (this
+   subsection's algorithm).
+2. **checkpoint** `eng_review_complete` via `devboard_checkpoint`.
+3. **log_decision** via `devboard_log_decision` with phase=`eng_review`.
+4. **handoff** — invoke `agentboard-tdd` (PASS / proceed) or
+   `agentboard-gauntlet` (revise).
+
+If upsert fails (disk error, permission), fall through to
+`verdict="NEEDS_REVISION"` with `failed_checks=["arch_md_upsert_failed"]`
+and continue — do NOT silently skip the checkpoint.
+
 ### Branching
 
 **Overall = PASS** → checkpoint + log_decision + invoke `agentboard-tdd` via Skill tool immediately.

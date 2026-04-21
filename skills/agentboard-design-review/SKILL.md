@@ -150,16 +150,60 @@ and REPLACE it wholesale. Do not stack multiple blocks. A second design-review
 run on the same goal must leave arch.md with exactly one `## Design Review`
 section.
 
-Suggested body:
+### Body format — `| Pass | Before | After | Fix |` table (MANDATORY)
+
+The body of `## Design Review` MUST be a markdown table with EXACTLY these
+four columns, in this order. Do NOT use a bullet list, a prose paragraph,
+or a score tuple — those formats make the before/after diff invisible to
+reviewers. The separator row (`| --- | --- | --- | --- |`) is also
+mandatory so the document renders as a real table.
 
 ```markdown
 ## Design Review
 - Verdict: APPROVED | WARN | BLOCKER | BLOCKER_OVERRIDDEN
-- Scores: IA=<n> State=<n> Journey=<n> Slop=<n> DS=<n> Responsive=<n> Unresolved=<n>
-- Fix proposals (only if WARN/BLOCKER):
-  - <pass name>: <one-line fix>
 - Reviewed: <utc_iso>
+
+| Pass | Before | After | Fix |
+| --- | --- | --- | --- |
+| Information Architecture | n/a | 8 | — |
+| Interaction State Coverage | n/a | 5 | add z-order + focus-trap for modal M |
+| User Journey | n/a | 7 | — |
+| AI Slop Risk | n/a | 9 | — |
+| Design System Alignment | n/a | 8 | — |
+| Responsive + Keyboard | n/a | 6 | document mobile breakpoint for pane split |
+| Unresolved Decisions | n/a | 7 | — |
 ```
+
+Column semantics:
+- **Pass** — the exact 7-pass name, in the order listed above.
+- **Before** — the After score from the previous design-review run on
+  this same goal. On the first run, use the literal string `n/a`.
+- **After** — the score this run just produced (integer 0-10, or the
+  literal `PASS`/`FAIL` only if Phase 0 produced NOT_APPLICABLE — in
+  which case the whole table may be replaced with the single line
+  `Skipped — reason: <…>`).
+- **Fix** — a one-line fix proposal if After < 7, else the em-dash `—`.
+  Fix cells are what Challenge will read, so make them actionable.
+
+### Re-run: promote prior After into Before (carry over)
+
+On a re-review of the same goal (i.e. when arch.md already contains a
+`## Design Review` block), you MUST carry over each row's prior After
+value into the new row's Before column before writing the new After.
+Algorithm:
+
+1. Read arch.md; if no `## Design Review` heading → first run, every
+   Before = `n/a`. Skip to step 4.
+2. Parse the existing table: for every row whose first cell matches a
+   known Pass name, capture column 3 (After) as `prior_after[name]`.
+3. When emitting the new table, set `Before = prior_after.get(name, "n/a")`.
+   A best-effort match is fine — if the prior table was hand-edited and
+   the parse fails, fall back to `n/a` and continue. Do NOT raise.
+4. Write the new `## Design Review` block, replacing (not appending) the
+   prior one per the idempotent rule above.
+
+This means a reviewer can glance at arch.md and see exactly which pass
+scores moved during the rewrite, without opening decisions.jsonl.
 
 ## Phase 5 — Log & Handoff (MANDATORY — sentinel before return)
 

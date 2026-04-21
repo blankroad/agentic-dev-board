@@ -187,43 +187,8 @@ def test_gauntlet_invokes_design_review() -> None:
     )
 
 
-def test_out_of_scope_unchanged() -> None:
-    """s_010 — guarded files outside this goal must have no diff vs main."""
-    import subprocess
-
-    guarded = [
-        "skills/agentboard-brainstorm/SKILL.md",
-        "skills/agentboard-tdd/SKILL.md",
-        "skills/agentboard-cso/SKILL.md",
-        "skills/agentboard-redteam/SKILL.md",
-        "skills/agentboard-parallel-review/SKILL.md",
-        "skills/agentboard-approval/SKILL.md",
-        "skills/agentboard-rca/SKILL.md",
-        "skills/agentboard-retro/SKILL.md",
-        "skills/agentboard-replay/SKILL.md",
-        "skills/agentboard-eng-review/SKILL.md",
-        "skills/agentboard-synthesize-report/SKILL.md",
-        "skills/agentboard-ui-preview/SKILL.md",
-        "skills/agentboard-dep-audit/SKILL.md",
-        "src/devboard",
-        "pyproject.toml",
-        ".mcp.json",
-    ]
-    offenders: list[str] = []
-    for base in ("main", "origin/main"):
-        proc = subprocess.run(
-            ["git", "-C", str(REPO), "diff", base, "--", *guarded],
-            capture_output=True, text=True,
-        )
-        if proc.returncode == 0:
-            if proc.stdout:
-                for line in proc.stdout.splitlines():
-                    if line.startswith("diff --git a/"):
-                        offenders.append(line.split()[2].removeprefix("a/"))
-            break
-    else:
-        import pytest as _pytest
-        _pytest.skip("no main/origin/main baseline available")
-    assert not offenders, (
-        f"out-of-scope files changed (scope_guard violation): {offenders}"
-    )
+# NOTE: `test_out_of_scope_unchanged` was removed after the design-review
+# goal g_20260421_061435_8d70a3 shipped. Same reasoning as the earlier
+# brainstorm removal — scope-guard snapshots only make sense during a
+# goal's in-flight TDD loop; once shipped they rot into false positives
+# every time a future goal legitimately touches one of the named skills.
