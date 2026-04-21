@@ -7,13 +7,27 @@ from textual.widgets import Static
 from agentboard.analytics.diff_parser import DiffFile
 
 
-def render_tree(files: list[DiffFile], reviewed: set[str]) -> str:
+def render_tree(
+    files: list[DiffFile],
+    reviewed: set[str],
+    per_file_scrubber_data: dict[str, list[str]] | None = None,
+) -> str:
     """Render a plain-text file tree.
 
-    Each row: `[✓]/[ ] <path>  +N/-M` (or `binary` marker for binary files).
+    Each row: `[✓]/[ ] <path>  +N/-M [<sparkline>]`.
+
+    M1b-extra: when `per_file_scrubber_data` maps a path to a list of
+    phase markers, append a colored sparkline (Rich markup) after the
+    size column. Rows without data render legacy-style.
     """
     if not files:
         return "no changed files"
+
+    # Lazy import avoids circular dependency at module load
+    if per_file_scrubber_data:
+        from agentboard.tui.per_file_scrubber import render_sparkline
+    else:
+        render_sparkline = None  # type: ignore[assignment]
 
     lines: list[str] = []
     for f in files:
@@ -22,7 +36,12 @@ def render_tree(files: list[DiffFile], reviewed: set[str]) -> str:
             size = "binary"
         else:
             size = f"+{f.added}/-{f.removed}"
-        lines.append(f"{mark} {f.path}  {size}")
+        row = f"{mark} {f.path}  {size}"
+        if render_sparkline is not None:
+            phases = per_file_scrubber_data.get(f.path)  # type: ignore[union-attr]
+            if phases:
+                row += "  " + render_sparkline(phases)
+        lines.append(row)
     return "\n".join(lines)
 
 
@@ -33,11 +52,16 @@ class DevFileTree(Static):
         self,
         files: list[DiffFile] | None = None,
         reviewed: set[str] | None = None,
+        per_file_scrubber_data: dict[str, list[str]] | None = None,
         **kwargs,
     ) -> None:
+        # M1b-extra: enable Rich markup so render_tree's sparkline
+        # markup renders as colored cells instead of literal bracket text.
+        kwargs.setdefault("markup", True)
         super().__init__(**kwargs)
         self._files: list[DiffFile] = files or []
         self._reviewed: set[str] = reviewed if reviewed is not None else set()
+        self._scrubber_data: dict[str, list[str]] | None = per_file_scrubber_data
         self._cursor: int = 0
 
     @property
@@ -52,6 +76,7 @@ class DevFileTree(Static):
         self,
         files: list[DiffFile] | None = None,
         reviewed: set[str] | None = None,
+        per_file_scrubber_data: dict[str, list[str]] | None = None,
     ) -> None:
         if files is not None:
             self._files = files
@@ -60,7 +85,9 @@ class DevFileTree(Static):
             self._cursor = min(self._cursor, max(len(self._files) - 1, 0))
         if reviewed is not None:
             self._reviewed = reviewed
-        self.update(render_tree(self._files, self._reviewed))
+        if per_file_scrubber_data is not None:
+            self._scrubber_data = per_file_scrubber_data
+        self.update(render_tree(self._files, self._reviewed, self._scrubber_data))
 
     def toggle_current(self) -> None:
         """Toggle reviewed membership for the file at the current cursor."""

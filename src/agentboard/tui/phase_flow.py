@@ -28,6 +28,7 @@ from agentboard.tui.process_sparkline import ProcessSparkline
 from agentboard.tui.dev_file_tree import DevFileTree
 from agentboard.tui.dev_diff_viewer import DevDiffViewer
 from agentboard.tui.dev_issues_pane import DevIssuesPane
+from agentboard.tui.inline_drawer import DrawerContainer
 from agentboard.tui.overview_cards import OverviewCards
 from agentboard.analytics.verdict_timeline import build_matrix as _build_verdict_matrix
 from agentboard.analytics.diff_parser import parse_unified_diff as _parse_unified_diff
@@ -237,6 +238,10 @@ class PhaseFlowView(Widget):
                     yield DevIssuesPane(
                         payload=self._build_payload(), id="dev-body",
                     )
+                    # M1b-extra: DrawerContainer for progressive disclosure
+                    # (click on scrubber segment → open with iter diff).
+                    # Empty by default; no layout impact until opened.
+                    yield DrawerContainer(id="dev-drawer")
             with TabPane("Result", id="result"):
                 decisions = self._load_decisions()
                 yield ProcessSparkline(decisions=decisions, id="process-sparkline")
