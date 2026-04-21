@@ -30,6 +30,10 @@ from agentboard.tui.dev_diff_viewer import DevDiffViewer
 from agentboard.tui.dev_issues_pane import DevIssuesPane
 from agentboard.tui.inline_drawer import DrawerContainer
 from agentboard.tui.overview_cards import OverviewCards
+from agentboard.tui.per_file_scrubber import (
+    PerFileScrubber,
+    ScrubberSegmentClicked,
+)
 from agentboard.analytics.verdict_timeline import build_matrix as _build_verdict_matrix
 from agentboard.analytics.diff_parser import parse_unified_diff as _parse_unified_diff
 from agentboard.analytics.overview_metrics import build_metrics as _build_overview_metrics
@@ -238,6 +242,15 @@ class PhaseFlowView(Widget):
                     yield DevIssuesPane(
                         payload=self._build_payload(), id="dev-body",
                     )
+                    # M1c-interactive: clickable per-file scrubber. Populated
+                    # from digest.per_file_scrubber for the first (alphabetically
+                    # sorted) file on mount. Emits ScrubberSegmentClicked on click.
+                    primary_file, primary_phases = self._primary_file_scrubber()
+                    yield PerFileScrubber(
+                        file_path=primary_file,
+                        phases=primary_phases,
+                        id="dev-scrubber",
+                    )
                     # M1b-extra: DrawerContainer for progressive disclosure
                     # (click on scrubber segment → open with iter diff).
                     # Empty by default; no layout impact until opened.
@@ -428,6 +441,60 @@ class PhaseFlowView(Widget):
             decisions=self._load_decisions(),
             plan=self._load_plan_json(),
             diff_text=self._load_latest_diff_text(),
+        )
+
+    def _primary_file_scrubber(self) -> tuple[str, list[str]]:
+        """M1c-interactive c_001/c_002: pick the alphabetically-first file
+        from digest.per_file_scrubber and return its phase list.
+
+        Returns `("", [])` when pile absent/empty — widget renders empty
+        placeholder in that case.
+        """
+        rid = self._resolve_rid() if hasattr(self, "_resolve_rid") else None
+        if not rid:
+            return "", []
+        digest_path = self._session.store_root / ".devboard" / "runs" / rid / "digest.json"
+        if not digest_path.exists():
+            return "", []
+        try:
+            digest = json.loads(digest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return "", []
+        scrubber_map = digest.get("per_file_scrubber", {})
+        if not scrubber_map:
+            return "", []
+        # Deterministic first: sort paths alphabetically
+        primary_path = sorted(scrubber_map.keys())[0]
+        phases = list(scrubber_map.get(primary_path, []))
+        return primary_path, phases
+
+    def on_scrubber_segment_clicked(self, event: ScrubberSegmentClicked) -> None:
+        """M1c-interactive c_003/c_004: open DrawerContainer with the iter
+        diff for the clicked file × iter_n. Drawer content wrapped in
+        VerticalScroll so long diffs scroll.
+        """
+        rid = self._resolve_rid()
+        if not rid:
+            return
+        try:
+            from agentboard.storage.file_store import FileStore
+            from agentboard.storage.pile_diff_loader import iter_diff_for_file
+            store = FileStore(self._session.store_root)
+            diff_text = iter_diff_for_file(rid, event.file_path, event.iter_n, store)
+        except Exception:
+            return
+        if not diff_text:
+            diff_text = f"iter {event.iter_n} has no diff for {event.file_path}"
+        try:
+            drawer = self.query_one("#dev-drawer", DrawerContainer)
+            scrubber = self.query_one("#dev-scrubber", PerFileScrubber)
+        except Exception:
+            return
+        # Wrap in VerticalScroll for long diffs
+        content = VerticalScroll(Static(diff_text, markup=False))
+        self.run_worker(
+            drawer.open(content, trigger=scrubber),
+            exclusive=True,
         )
 
     def _resolve_rid(self) -> str | None:
