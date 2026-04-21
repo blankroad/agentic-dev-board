@@ -425,13 +425,78 @@ class PhaseFlowView(Widget):
             diff_text=self._load_latest_diff_text(),
         )
 
+    def _resolve_rid(self) -> str | None:
+        """M1b-wiring w_001/w_002: find the latest run jsonl whose task_id
+        matches `self._task_id`. Used to drive pile-source diff loading.
+
+        Scans `.devboard/runs/*.jsonl`, filters by task_id match
+        (reading the first event line of each file), picks the most
+        recent by file mtime. Returns the rid (basename without ext).
+        """
+        if not self._task_id:
+            return None
+        runs_dir = self._session.store_root / ".devboard" / "runs"
+        if not runs_dir.exists():
+            return None
+        candidates: list[tuple[float, str]] = []
+        for p in runs_dir.glob("*.jsonl"):
+            try:
+                first = p.read_text(encoding="utf-8", errors="replace").splitlines()[:1]
+                if not first:
+                    continue
+                row = json.loads(first[0])
+            except (OSError, json.JSONDecodeError, IndexError):
+                continue
+            if row.get("task_id") == self._task_id:
+                try:
+                    candidates.append((p.stat().st_mtime, p.stem))
+                except OSError:
+                    continue
+        if not candidates:
+            return None
+        candidates.sort(reverse=True)
+        return candidates[0][1]
+
+    def _load_pile_diff_text(self, rid: str) -> str:
+        """M1b-wiring w_003: pile-source diff for the given rid.
+
+        Aggregates per-file final diffs from pile_diff_loader. Returns
+        empty string when pile has no usable content so the caller can
+        fall through to the legacy git path.
+        """
+        try:
+            from agentboard.storage.file_store import FileStore
+            from agentboard.storage.pile_diff_loader import (
+                final_diff_for_file, load_files_from_pile,
+            )
+            store = FileStore(self._session.store_root)
+            files = load_files_from_pile(rid, store)
+            if not files:
+                return ""
+            parts: list[str] = []
+            for f in files:
+                slice_text = final_diff_for_file(rid, f.path, store)
+                if slice_text:
+                    parts.append(slice_text)
+            return "\n".join(parts)
+        except Exception:
+            return ""
+
     def _load_latest_diff_text(self) -> str:
         """Load diff source with priority:
+          0. canonical pile (M1b-wiring): pile_diff_loader when rid resolves
           1. working tree git diff HEAD (most recent authoritative state)
           2. latest saved iter_N.diff under the active task
           3. empty string (viewer shows empty-state)
         """
         import subprocess
+
+        # 0) pile-source (M1b-wiring)
+        rid = self._resolve_rid()
+        if rid:
+            pile_text = self._load_pile_diff_text(rid)
+            if pile_text.strip():
+                return pile_text
 
         # 1) working tree
         try:
