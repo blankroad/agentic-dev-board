@@ -14,6 +14,22 @@ def _uid(prefix: str) -> str:
     return f"{prefix}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid4().hex[:6]}"
 
 
+class GoalSummary(BaseModel):
+    """M2-fleet-data: compact per-goal aggregate for Fleet surface.
+
+    One row per goal showing current state without scanning disk:
+    iter count, latest phase / verdict, sparkline of last iters.
+    Consumed by agentboard_fleet_snapshot MCP tool + FleetView widget.
+    """
+    gid: str
+    title: str = ""
+    iter_count: int = 0
+    last_phase: str = ""
+    last_verdict: str = ""
+    sparkline_phases: list[str] = Field(default_factory=list)
+    updated_at_iso: str = ""
+
+
 class GoalStatus(str, Enum):
     active = "active"
     converged = "converged"

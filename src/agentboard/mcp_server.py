@@ -644,6 +644,23 @@ async def list_tools() -> list[Tool]:
                 "required": ["project_root", "goal_id"],
             },
         ),
+        # ── M2-fleet-data: multi-goal snapshot ──────────────────────────
+        Tool(
+            name="agentboard_fleet_snapshot",
+            description=(
+                "Return a compact summary of every goal under .devboard/goals/ "
+                "(gid, title, iter_count, last_phase, last_verdict, sparkline_phases, "
+                "updated_at_iso). Sorted by updated_at descending. Agent-readable "
+                "fleet overview — skip scanning decisions.jsonl / runs manually."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                },
+                "required": ["project_root"],
+            },
+        ),
         # ── M1a-data: Canonical pile read tools (Agent's Diary v3) ───────
         Tool(
             name="agentboard_get_session",
@@ -1424,6 +1441,16 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         from agentboard.mcp_tools.generate_narrative import run_generate_narrative
 
         return _text(run_generate_narrative(args))
+
+    # ── M2-fleet-data: fleet snapshot ──────────────────────────────────
+    if name == "devboard_fleet_snapshot":
+        from agentboard.analytics.fleet_aggregator import load_fleet
+        store = _store(args["project_root"])
+        summaries = load_fleet(store)
+        return _text({
+            "goals": [s.model_dump() for s in summaries],
+            "total": len(summaries),
+        })
 
     # ── M1a-data: pile read tools ───────────────────────────────────────
     if name == "devboard_get_session":
