@@ -44,7 +44,7 @@ You are the **UI Preview Orchestrator**. Your job: make the TUI visible at every
 **MCP invocation**:
 
 ```
-devboard_tui_capture_snapshot(
+agentboard_tui_capture_snapshot(
   project_root=<abs path>,
   scene_id="first_green" | "<atomic_step_id>",
   keys=[],                          # or scenario-specific sequence
@@ -67,7 +67,7 @@ After capture, diff against the Layer 0 mockup ASCII and surface any drift (e.g.
 **MCP invocation**:
 
 ```
-devboard_tui_capture_snapshot(
+agentboard_tui_capture_snapshot(
   project_root=<abs path>,
   scene_id="approval_final",
   keys=[],
@@ -109,14 +109,14 @@ Fields:
 - `keys` (required, may be empty): list of Pilot key strings applied sequentially after mount
 - `tags` (optional): free-form labels for grouping — used by future retro/gallery tooling
 
-**Iteration**: for each entry, call `devboard_tui_capture_snapshot(scene_id=..., keys=..., save_to="tui_snapshots/<gid>/layer3/<scene_id>.txt", include_svg=True)`. Write one heading per scene in the Screenshots section with description + .svg link.
+**Iteration**: for each entry, call `agentboard_tui_capture_snapshot(scene_id=..., keys=..., save_to="tui_snapshots/<gid>/layer3/<scene_id>.txt", include_svg=True)`. Write one heading per scene in the Screenshots section with description + .svg link.
 
 ---
 
 ## MCP Tool Reference
 
-- `devboard_tui_capture_snapshot` — primary engine. Pilot in-process, text + optional SVG, save_to path rooted at project_root.
-- `devboard_tui_render_smoke` — companion (NOT used by this skill). Real-pty crash gate only; different role.
+- `agentboard_tui_capture_snapshot` — primary engine. Pilot in-process, text + optional SVG, save_to path rooted at project_root.
+- `agentboard_tui_render_smoke` — companion (NOT used by this skill). Real-pty crash gate only; different role.
 
 ---
 

@@ -1,6 +1,6 @@
 """Tests for iter-diff numstat parser (s_001-s_002)."""
 
-from devboard.analytics.iter_diffstat import parse_numstat
+from agentboard.analytics.iter_diffstat import parse_numstat
 
 
 def test_parse_numstat_regular_row() -> None:

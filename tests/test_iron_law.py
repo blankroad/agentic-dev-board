@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from devboard.agents.iron_law import check_iron_law
-from devboard.tools.base import ToolCall
+from agentboard.agents.iron_law import check_iron_law
+from agentboard.tools.base import ToolCall
 
 
 def _tc(tool_name: str, path: str) -> ToolCall:
@@ -15,15 +15,15 @@ def _tc(tool_name: str, path: str) -> ToolCall:
 
 def test_write_to_impl_without_test_is_violation():
     """Claude Code 'Write' to production file with no prior test → violated."""
-    calls = [_tc("Write", "src/devboard/foo.py")]
+    calls = [_tc("Write", "src/agentboard/foo.py")]
     verdict = check_iron_law(calls)
     assert verdict.violated is True
-    assert "src/devboard/foo.py" in verdict.impl_writes
+    assert "src/agentboard/foo.py" in verdict.impl_writes
 
 
 def test_edit_to_impl_without_test_is_violation():
     """Claude Code 'Edit' to production file with no prior test → violated."""
-    calls = [_tc("Edit", "src/devboard/bar.py")]
+    calls = [_tc("Edit", "src/agentboard/bar.py")]
     verdict = check_iron_law(calls)
     assert verdict.violated is True
 
@@ -32,7 +32,7 @@ def test_write_test_then_write_impl_is_ok():
     """Test file written before impl → not violated."""
     calls = [
         _tc("Write", "tests/test_foo.py"),
-        _tc("Write", "src/devboard/foo.py"),
+        _tc("Write", "src/agentboard/foo.py"),
     ]
     verdict = check_iron_law(calls)
     assert verdict.violated is False
@@ -42,7 +42,7 @@ def test_write_test_then_write_impl_is_ok():
 def test_write_impl_then_test_is_violation():
     """Impl written before test (wrong order) → violated."""
     calls = [
-        _tc("Write", "src/devboard/foo.py"),
+        _tc("Write", "src/agentboard/foo.py"),
         _tc("Write", "tests/test_foo.py"),
     ]
     verdict = check_iron_law(calls)

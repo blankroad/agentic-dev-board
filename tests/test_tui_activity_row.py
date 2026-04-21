@@ -7,7 +7,7 @@ import pytest
 async def test_activity_row_format() -> None:
     from textual.app import App, ComposeResult
 
-    from devboard.tui.activity_row import ActivityRow
+    from agentboard.tui.activity_row import ActivityRow
 
     entry = {
         "iter": 3,
@@ -39,7 +39,7 @@ async def test_activity_row_verdict_is_colored() -> None:
     at a glance."""
     from textual.app import App, ComposeResult
 
-    from devboard.tui.activity_row import ActivityRow
+    from agentboard.tui.activity_row import ActivityRow
 
     class _Host(App):
         def compose(self) -> ComposeResult:
@@ -77,7 +77,7 @@ async def test_activity_row_verdict_is_colored() -> None:
 async def test_enter_toggles_expansion() -> None:
     from textual.app import App, ComposeResult
 
-    from devboard.tui.activity_row import ActivityRow
+    from agentboard.tui.activity_row import ActivityRow
 
     entry = {"iter": 1, "phase": "tdd_red", "reasoning": "why", "ts": "2026-04-18 01:02:03+00:00"}
 

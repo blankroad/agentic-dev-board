@@ -6,15 +6,15 @@ import subprocess
 
 import pytest
 
-from devboard.models import DecisionEntry, LockedPlan
-from devboard.gauntlet.lock import build_locked_plan
-from devboard.orchestrator.approval import (
+from agentboard.models import DecisionEntry, LockedPlan
+from agentboard.gauntlet.lock import build_locked_plan
+from agentboard.orchestrator.approval import (
     POLICIES,
     apply_squash_policy,
     build_pr_body,
     get_diff_stats,
 )
-from devboard.orchestrator.push import push_and_create_pr, PushResult
+from agentboard.orchestrator.push import push_and_create_pr, PushResult
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ def test_apply_preserve_policy_is_noop(tmp_path: Path):
 
 def test_apply_squash_policy_calls_git(tmp_path: Path):
     with (
-        patch("devboard.orchestrator.approval.subprocess.run") as mock_run,
+        patch("agentboard.orchestrator.approval.subprocess.run") as mock_run,
     ):
         mock_run.return_value = MagicMock(returncode=0)
         result = apply_squash_policy(tmp_path, "feat/x", "main", "squash", "squash commit")
@@ -119,8 +119,8 @@ def test_get_diff_stats_graceful_on_error(tmp_path: Path):
 
 def test_push_and_pr_success(tmp_path: Path):
     with (
-        patch("devboard.orchestrator.push.git_push", return_value=True),
-        patch("devboard.orchestrator.push.gh_pr_create", return_value="https://github.com/org/repo/pull/42"),
+        patch("agentboard.orchestrator.push.git_push", return_value=True),
+        patch("agentboard.orchestrator.push.gh_pr_create", return_value="https://github.com/org/repo/pull/42"),
     ):
         result = push_and_create_pr(tmp_path, "feat/x", "My PR", "body")
 
@@ -129,7 +129,7 @@ def test_push_and_pr_success(tmp_path: Path):
 
 
 def test_push_and_pr_push_fails(tmp_path: Path):
-    with patch("devboard.orchestrator.push.git_push", return_value=False):
+    with patch("agentboard.orchestrator.push.git_push", return_value=False):
         result = push_and_create_pr(tmp_path, "feat/x", "My PR", "body")
 
     assert not result.success
@@ -138,8 +138,8 @@ def test_push_and_pr_push_fails(tmp_path: Path):
 
 def test_push_and_pr_gh_fails(tmp_path: Path):
     with (
-        patch("devboard.orchestrator.push.git_push", return_value=True),
-        patch("devboard.orchestrator.push.gh_pr_create", return_value=""),
+        patch("agentboard.orchestrator.push.git_push", return_value=True),
+        patch("agentboard.orchestrator.push.gh_pr_create", return_value=""),
     ):
         result = push_and_create_pr(tmp_path, "feat/x", "My PR", "body")
 

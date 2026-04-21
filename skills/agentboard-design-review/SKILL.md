@@ -7,7 +7,7 @@ description: |
   State Coverage, User Journey, AI Slop Risk, Design System Alignment,
   Responsive+Keyboard, Unresolved Decisions). Verdict (APPROVED / WARN /
   BLOCKER) is upserted into arch.md's ## Design Review section and logged
-  via devboard_log_decision with phase="design_review". Skip entirely when
+  via agentboard_log_decision with phase="design_review". Skip entirely when
   ui_surface=False or the deliverable is not a mountable UI.
 when_to_use: |
   Invoked automatically by agentboard-gauntlet after Layer 0 mockup confirmation.
@@ -208,11 +208,11 @@ scores moved during the rewrite, without opening decisions.jsonl.
 ## Phase 5 — Log & Handoff (MANDATORY — sentinel before return)
 
 Before returning control to the gauntlet, you MUST log a single
-decisions.jsonl entry via `devboard_log_decision`. Without this sentinel,
+decisions.jsonl entry via `agentboard_log_decision`. Without this sentinel,
 retros cannot grep for whether design-review ran at all.
 
 ```
-devboard_log_decision(
+agentboard_log_decision(
   project_root=<abs path>,
   task_id=<task_id>,
   iter=<current_iter>,

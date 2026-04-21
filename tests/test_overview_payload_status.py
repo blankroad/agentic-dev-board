@@ -10,8 +10,8 @@ from pathlib import Path
 def _bootstrap_pushed_task(tmp_path: Path) -> tuple[str, str]:
     """Create a goal + task whose task.json says status='pushed'. Returns
     (goal_id, task_id)."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -35,7 +35,7 @@ def _bootstrap_pushed_task(tmp_path: Path) -> tuple[str, str]:
 def test_current_state_status_reflects_task_json(tmp_path: Path) -> None:
     """payload.current_state.status must be 'pushed' when task.json says so.
     Before fix: hardcoded 'in_progress' regardless of task state."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     goal_id, task_id = _bootstrap_pushed_task(tmp_path)
     payload = build_overview_payload(tmp_path, goal_id, task_id=task_id)

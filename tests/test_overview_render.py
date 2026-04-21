@@ -1,6 +1,6 @@
 """Tests for render_overview_body (s_008)."""
 
-from devboard.tui.overview_render import render_overview_body
+from agentboard.tui.overview_render import render_overview_body
 
 
 def test_render_overview_body_four_sections() -> None:

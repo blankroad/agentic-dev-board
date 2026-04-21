@@ -32,7 +32,7 @@ Default: last 5 goals.
 
 ## Step 2 — Collect data
 
-Call MCP tool `devboard_generate_retro(goal_id=None, last_n_goals=5)` which aggregates:
+Call MCP tool `agentboard_generate_retro(goal_id=None, last_n_goals=5)` which aggregates:
 
 - **Runs**: total, converged, blocked, convergence rate
 - **Per goal**: tasks count, iterations, reviews, retries, passes, iron_law_hits, redteam_broken, rca_escalations
@@ -70,7 +70,7 @@ Write a markdown report including:
 - {repeated failure modes, RCA escalations, red-team catches}
 
 ## Emerging patterns (candidates for learnings promotion)
-- {observations that recur across goals — worth saving as tagged learnings via devboard_save_learning}
+- {observations that recur across goals — worth saving as tagged learnings via agentboard_save_learning}
 
 ## Action items
 - {concrete changes to skills/plans/process for next period}
@@ -122,7 +122,7 @@ For each goal processed, note it in the retro output as `Lessons written → <go
 
 ## On repeating patterns — automatic proposals
 
-`devboard_generate_retro` response now includes `learning_proposals` — a list of candidates whose failure-mode key appeared ≥3 times. Each entry contains `{name, content, tags, category, confidence, count}`.
+`agentboard_generate_retro` response now includes `learning_proposals` — a list of candidates whose failure-mode key appeared ≥3 times. Each entry contains `{name, content, tags, category, confidence, count}`.
 
 Workflow:
 
@@ -133,19 +133,19 @@ Workflow:
    - "flaky timing race in X" × 4 occurrences
    ```
 2. AskUserQuestion: "위 프로포절을 학습으로 저장할까요? [모두 저장 / 개별 선택 / 건너뜀]"
-3. "모두 저장" (save all) → for each proposal, call `devboard_save_learning(name=proposal['name'], content=proposal['content'], tags=proposal['tags'], category=proposal['category'], confidence=proposal['confidence'])`
+3. "모두 저장" (save all) → for each proposal, call `agentboard_save_learning(name=proposal['name'], content=proposal['content'], tags=proposal['tags'], category=proposal['category'], confidence=proposal['confidence'])`
 4. "개별 선택" (pick individually) → ask y/N for each proposal one at a time
 5. "건너뜀" (skip) → exit without saving
 
-Manual promotion is still allowed — if the AI detects a pattern outside the proposals, call `devboard_save_learning` directly.
+Manual promotion is still allowed — if the AI detects a pattern outside the proposals, call `agentboard_save_learning` directly.
 
 ## Required MCP calls
 
 | When | Tool |
 |---|---|
-| Data gathering | `devboard_generate_retro(project_root, goal_id=None, last_n_goals=5, save=True)` — primary tool; returns markdown + saves to `.devboard/retros/` |
-| Context | `devboard_list_goals(project_root)` + `devboard_list_runs(project_root)` — if you need more than the aggregate |
-| On pattern detection | `devboard_save_learning(project_root, name, content, tags=["retrospective", <topic>], category="pattern", confidence=0.7)` |
+| Data gathering | `agentboard_generate_retro(project_root, goal_id=None, last_n_goals=5, save=True)` — primary tool; returns markdown + saves to `.devboard/retros/` |
+| Context | `agentboard_list_goals(project_root)` + `agentboard_list_runs(project_root)` — if you need more than the aggregate |
+| On pattern detection | `agentboard_save_learning(project_root, name, content, tags=["retrospective", <topic>], category="pattern", confidence=0.7)` |
 
 ## Tone
 

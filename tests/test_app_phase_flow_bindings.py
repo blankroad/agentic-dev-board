@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def test_app_forwards_keys_1_through_5() -> None:
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     key_actions: dict[str, str] = {}
     for b in DevBoardApp.BINDINGS:

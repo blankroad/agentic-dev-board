@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from devboard.models import BoardState, Goal, GoalStatus
-from devboard.storage.file_store import FileStore
-from devboard.tui.app_legacy import DevBoardApp
-from devboard.tui.gauntlet_view import GauntletView
+from agentboard.models import BoardState, Goal, GoalStatus
+from agentboard.storage.file_store import FileStore
+from agentboard.tui.app_legacy import DevBoardApp
+from agentboard.tui.gauntlet_view import GauntletView
 
 
 # ── Gauntlet step state machine ───────────────────────────────────────────────
@@ -61,7 +61,7 @@ async def test_board_view_renders_goals(tmp_path: Path):
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
         # The board view should be mounted
-        from devboard.tui.board_view import BoardView
+        from agentboard.tui.board_view import BoardView
         bv = app.query_one("#board-view", BoardView)
         from textual.widgets import DataTable
         table = bv.query_one("#goal-table", DataTable)
@@ -110,7 +110,7 @@ async def test_log_view_writes(tmp_path: Path):
 
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
-        from devboard.tui.log_view import LogView
+        from agentboard.tui.log_view import LogView
         lv = app.query_one("#log-view", LogView)
         lv.write_step("Plan", "step 1: create hello.py")
         lv.write_verdict("PASS", 1)
@@ -130,7 +130,7 @@ async def test_goal_selection_updates_task_view(tmp_path: Path):
     store.save_board(board)
     store.save_goal(goal)
 
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     plan = build_locked_plan(goal.id, {
         "problem": "Build calculator",
         "non_goals": [],
@@ -150,7 +150,7 @@ async def test_goal_selection_updates_task_view(tmp_path: Path):
         app._on_goal_selected(goal.id)
         await pilot.pause()
 
-        from devboard.tui.task_view import TaskView
+        from agentboard.tui.task_view import TaskView
         from textual.widgets import Static as TStatic
         tv = app.query_one("#task-view", TaskView)
         title_widget = tv.query_one("#task-title", TStatic)

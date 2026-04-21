@@ -6,8 +6,8 @@ import pytest
 
 
 def _mk_goal(tmp_path: Path, gid: str, plan: str, gauntlet: dict[str, str] | None = None) -> None:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
@@ -30,8 +30,8 @@ def _mk_goal(tmp_path: Path, gid: str, plan: str, gauntlet: dict[str, str] | Non
 async def _mount(tmp_path: Path):
     from textual.app import App, ComposeResult
 
-    from devboard.tui.plan_markdown import PlanMarkdown
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.plan_markdown import PlanMarkdown
+    from agentboard.tui.session_derive import SessionContext
 
     ctx = SessionContext(tmp_path)
 
@@ -137,8 +137,8 @@ async def test_plan_markdown_raw_artifacts_collapsed_by_default(tmp_path: Path) 
 async def test_plan_markdown_handles_binary_plan_md_without_crash(tmp_path: Path) -> None:
     """Red-team: a corrupted / binary plan.md must not crash the App.
     Gauntlet sections already tolerate bad files; plan.md must too."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)

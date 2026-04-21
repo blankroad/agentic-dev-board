@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from devboard.tui.tail_worker import FileTail
+from agentboard.tui.tail_worker import FileTail
 
 
 def test_worker_emits_appended_lines_in_order(tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-"""Unit tests for src/devboard/narrative/sources.py — pure readers that
+"""Unit tests for src/agentboard/narrative/sources.py — pure readers that
 parse .devboard artifacts into dataclasses carrying source-citation
 metadata. See goal g_20260420_032908_54200a."""
 
@@ -11,7 +11,7 @@ from pathlib import Path
 def test_parse_plan_sections_extracts_problem_from_canonical_plan(tmp_path: Path) -> None:
     """Happy-path: a plan.md with all canonical H2 sections yields a
     PlanSections whose `problem` field holds the raw Problem-section text."""
-    from devboard.narrative.sources import parse_plan_sections
+    from agentboard.narrative.sources import parse_plan_sections
 
     plan = tmp_path / "plan.md"
     plan.write_text(
@@ -34,7 +34,7 @@ def test_parse_plan_sections_reports_missing_sections(tmp_path: Path) -> None:
     """A plan.md missing one canonical H2 section surfaces it in
     `missing_sections` so the generator can flag partial coverage in
     the output's metadata line."""
-    from devboard.narrative.sources import parse_plan_sections
+    from agentboard.narrative.sources import parse_plan_sections
 
     plan = tmp_path / "plan.md"
     plan.write_text(
@@ -54,7 +54,7 @@ def test_parse_plan_sections_reports_missing_sections(tmp_path: Path) -> None:
 def test_group_decisions_by_iter_tolerates_missing_fields(tmp_path: Path) -> None:
     """Older decisions.jsonl rows may omit `verdict_source`. The reader
     must coerce the missing value to '?' rather than raise KeyError."""
-    from devboard.narrative.sources import group_decisions_by_iter
+    from agentboard.narrative.sources import group_decisions_by_iter
 
     jsonl = tmp_path / "decisions.jsonl"
     jsonl.write_text(

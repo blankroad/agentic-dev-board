@@ -7,7 +7,7 @@ import pytest
 async def test_status_bar_renders_all_segments() -> None:
     from textual.app import App, ComposeResult
 
-    from devboard.tui.status_bar import StatusBar
+    from agentboard.tui.status_bar import StatusBar
 
     class _Host(App):
         def compose(self) -> ComposeResult:

@@ -112,8 +112,8 @@ def test_decision_log_handoff_present() -> None:
     text = _read(SKILL_PATH)
     # Cut off YAML frontmatter so we only check the executable body
     body = text.split("\n---\n", 1)[1] if "\n---\n" in text else text
-    assert "devboard_log_decision" in body, (
-        "body (not just frontmatter) must instruct devboard_log_decision"
+    assert "agentboard_log_decision" in body, (
+        "body (not just frontmatter) must instruct agentboard_log_decision"
     )
     # phase label must be the literal 'design_review'
     phase_variants = ['phase="design_review"', "phase='design_review'", "phase=design_review"]

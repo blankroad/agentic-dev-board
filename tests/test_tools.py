@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from devboard.tools.base import ToolDef, ToolRegistry
-from devboard.tools.fs import make_fs_tools
-from devboard.tools.shell import make_shell_tool, _is_allowed, _is_dangerous
+from agentboard.tools.base import ToolDef, ToolRegistry
+from agentboard.tools.fs import make_fs_tools
+from agentboard.tools.shell import make_shell_tool, _is_allowed, _is_dangerous
 
 
 # ── ToolRegistry ─────────────────────────────────────────────────────────────

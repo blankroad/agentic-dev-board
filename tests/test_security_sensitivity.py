@@ -1,4 +1,4 @@
-from devboard.security.sensitivity import SECURITY_KEYWORDS, check_security_sensitive
+from agentboard.security.sensitivity import SECURITY_KEYWORDS, check_security_sensitive
 
 
 def test_security_keywords_has_seven_categories():
@@ -38,21 +38,21 @@ def test_multiple_categories_aggregated():
 def test_mcp_tool_registered():
     import asyncio
 
-    from devboard.mcp_server import list_tools
+    from agentboard.mcp_server import list_tools
 
     tools = asyncio.run(list_tools())
     names = [t.name for t in tools]
-    assert "devboard_check_security_sensitive" in names
+    assert "agentboard_check_security_sensitive" in names
 
 
 def test_mcp_dispatch_returns_result():
     import asyncio
 
-    from devboard.mcp_server import call_tool
+    from agentboard.mcp_server import call_tool
 
     result = asyncio.run(
         call_tool(
-            "devboard_check_security_sensitive",
+            "agentboard_check_security_sensitive",
             {"diff": "+password = 'x'\n"},
         )
     )

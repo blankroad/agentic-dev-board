@@ -23,7 +23,7 @@ You are the **Time-travel Replay Agent**. You re-execute runs from past checkpoi
 ## Step 1 — Identify source run
 
 Ask user:
-- Which run? (call `devboard_list_runs()` → show id/goal/last_iteration/converged)
+- Which run? (call `agentboard_list_runs()` → show id/goal/last_iteration/converged)
 - From which iteration? (iter 1, 2, ..., N)
 - What variant? ("try async instead", "use different library", free-form annotation)
 
@@ -31,7 +31,7 @@ Ask user:
 
 Call MCP tool:
 ```
-devboard_replay(
+agentboard_replay(
   source_run_id="run_abc",
   from_iteration=2,
   variant_note="try async instead of threads"
@@ -72,10 +72,10 @@ Retro reports surface both — variants become material for retrospective patter
 
 | When | Tool |
 |---|---|
-| Discovery | `devboard_list_runs(project_root)` — show user the candidate runs |
-| Branch | `devboard_replay(project_root, source_run_id, from_iteration, variant_note)` — creates new run_id + initial state |
-| New task | `devboard_start_task(project_root, goal_id, title="[replay] <original>")` — independent task for the variant |
-| Resume point | `devboard_checkpoint(project_root, new_run_id, "replay_resumed", {from_iteration, variant_note})` |
+| Discovery | `agentboard_list_runs(project_root)` — show user the candidate runs |
+| Branch | `agentboard_replay(project_root, source_run_id, from_iteration, variant_note)` — creates new run_id + initial state |
+| New task | `agentboard_start_task(project_root, goal_id, title="[replay] <original>")` — independent task for the variant |
+| Resume point | `agentboard_checkpoint(project_root, new_run_id, "replay_resumed", {from_iteration, variant_note})` |
 
 Then hand off to `agentboard-tdd` with the new `{task_id, run_id}` and `variant_note` as the initial `previous_strategy`.
 

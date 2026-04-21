@@ -90,23 +90,23 @@ Only now:
   },
   "root_cause": "one-line summary",
   "next_strategy": "one-sentence instruction back to agentboard-tdd",
-  "learning": "optional — abstract lesson worth saving via devboard_save_learning"
+  "learning": "optional — abstract lesson worth saving via agentboard_save_learning"
 }
 ```
 
 ## Escalation
 
-If this is the **3rd+ consecutive failure on the same symptom** (check `devboard_load_decisions` for the task), set `escalate_if_3_plus: true` and set risk to HIGH. The orchestrator should HALT and the user should run `devboard rethink <goal_id>`. The architecture itself is suspect — more iterations won't fix it.
+If this is the **3rd+ consecutive failure on the same symptom** (check `agentboard_load_decisions` for the task), set `escalate_if_3_plus: true` and set risk to HIGH. The orchestrator should HALT and the user should run `devboard rethink <goal_id>`. The architecture itself is suspect — more iterations won't fix it.
 
 ## Required MCP calls
 
 | When | Tool |
 |---|---|
-| After phase 4 output | `devboard_checkpoint(project_root, run_id, "rca_complete", {root_cause, risk, consecutive_failures, escalate})` |
-| After phase 4 | `devboard_log_decision(project_root, task_id, iter=N, phase="reflect", reasoning=<root_cause>, next_strategy=<...>, verdict_source="RCA_DONE"\|"RCA_ESCALATED")` |
-| Before phase 1 | `devboard_load_decisions(project_root, task_id)` — count prior RETRY phases on same symptom. If ≥ 2 prior, set `consecutive_failures >= 3` and escalate. |
-| On abstract lesson | `devboard_save_learning(project_root, name, content, tags=["debugging", <topic>], category="pattern", confidence=0.7)` |
-| On escalate | `devboard_checkpoint(project_root, run_id, "blocked", {reason: "RCA escalation — rethink needed"})` then STOP. |
+| After phase 4 output | `agentboard_checkpoint(project_root, run_id, "rca_complete", {root_cause, risk, consecutive_failures, escalate})` |
+| After phase 4 | `agentboard_log_decision(project_root, task_id, iter=N, phase="reflect", reasoning=<root_cause>, next_strategy=<...>, verdict_source="RCA_DONE"\|"RCA_ESCALATED")` |
+| Before phase 1 | `agentboard_load_decisions(project_root, task_id)` — count prior RETRY phases on same symptom. If ≥ 2 prior, set `consecutive_failures >= 3` and escalate. |
+| On abstract lesson | `agentboard_save_learning(project_root, name, content, tags=["debugging", <topic>], category="pattern", confidence=0.7)` |
+| On escalate | `agentboard_checkpoint(project_root, run_id, "blocked", {reason: "RCA escalation — rethink needed"})` then STOP. |
 
 ## Handoff
 

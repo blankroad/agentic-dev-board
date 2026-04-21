@@ -34,8 +34,8 @@ def _mk_goal(
     plan_summary_md: str | None = None,
     plan_json: dict | None = None,
 ) -> None:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
@@ -59,8 +59,8 @@ async def _mount(tmp_path: Path, task_id: str | None = None):
     from textual.app import App, ComposeResult
     from textual.binding import Binding
 
-    from devboard.tui.phase_flow import PhaseFlowView
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.session_derive import SessionContext
 
     ctx = SessionContext(tmp_path)
 
@@ -495,8 +495,8 @@ async def test_app_center_col_mounts_phase_flow_view(tmp_path: Path) -> None:
     pair.
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from devboard.tui.app import DevBoardApp
-    from devboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.phase_flow import PhaseFlowView
 
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
@@ -520,8 +520,8 @@ async def test_app_on_stream_event_delegates_to_phase_flow_handle_tick(
     phase_flow_view.handle_tick() at least once per event.
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from devboard.tui.app import DevBoardApp
-    from devboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.phase_flow import PhaseFlowView
 
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
@@ -551,8 +551,8 @@ async def test_app_refresh_for_active_goal_reloads_phase_flow(
     phase_flow_view.refresh_content().
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from devboard.tui.app import DevBoardApp
-    from devboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.phase_flow import PhaseFlowView
 
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
@@ -619,7 +619,7 @@ async def test_review_tab_accepts_canonical_review_phase(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
-async def test_number_keys_work_in_real_devboard_app(tmp_path: Path) -> None:
+async def test_number_keys_work_in_real_agentboard_app(tmp_path: Path) -> None:
     """s_022 CRITICAL: when the real DevBoardApp boots, initial focus goes
     to the sidebar ListView (#resources-goals, see app.py:154). Widget-
     level BINDINGS with priority=True on PhaseFlowView then fail to fire
@@ -631,7 +631,7 @@ async def test_number_keys_work_in_real_devboard_app(tmp_path: Path) -> None:
     # guards: widget-binding-focus-chain
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
     from textual.widgets import TabbedContent
 
     app = DevBoardApp(store_root=tmp_path)
@@ -738,7 +738,7 @@ def test_help_modal_documents_phase_flow_keys() -> None:
     (tab jump) and 'ctrl+p' (pin) so the user can discover phase-flow
     controls.
     """
-    from devboard.tui.help_modal import DEFAULT_ENTRIES
+    from agentboard.tui.help_modal import DEFAULT_ENTRIES
 
     haystack = " ".join(e.haystack for e in DEFAULT_ENTRIES).lower()
     assert "1/2/3/4" in haystack or ("1" in haystack and "2" in haystack and "3" in haystack and "4" in haystack and "tab" in haystack), (
@@ -755,8 +755,8 @@ async def test_plan_tab_empty_state_when_no_plan_files(tmp_path: Path) -> None:
     neither plan_summary.md nor plan.md exists for the active goal.
     """
     # Goal dir exists (active) but no plan files inside.
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)

@@ -1,6 +1,6 @@
 ---
 name: agentboard-tdd
-description: ALWAYS activate for any task that writes or modifies production code — new features, bug fixes, refactoring, behavior changes. Iron Law of TDD enforced - NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST. Violations require restart (delete the pre-test code, not "keep as reference"). Runs atomic Red-Green-Refactor cycles with deterministic devboard_verify evidence after each cycle. Proactively invoke this skill (do NOT write production code directly) whenever the user requests code changes. Skip only for generated code, config files, or throwaway prototypes with explicit user approval logged to decisions.jsonl.
+description: ALWAYS activate for any task that writes or modifies production code — new features, bug fixes, refactoring, behavior changes. Iron Law of TDD enforced - NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST. Violations require restart (delete the pre-test code, not "keep as reference"). Runs atomic Red-Green-Refactor cycles with deterministic agentboard_verify evidence after each cycle. Proactively invoke this skill (do NOT write production code directly) whenever the user requests code changes. Skip only for generated code, config files, or throwaway prototypes with explicit user approval logged to decisions.jsonl.
 when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after agentboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
 ---
 
@@ -30,13 +30,13 @@ Call these MCP tools in order (they already exist — do not wrap, do not reimpl
 
 1. **Primary (semantic match on current task)**:
    ```
-   devboard_relevant_learnings(project_root, query="<goal title + short arch summary>")
+   agentboard_relevant_learnings(project_root, query="<goal title + short arch summary>")
    ```
    This returns learnings ranked by relevance to the task's natural-language description.
 
 2. **Secondary (tag-based broad sweep)**:
    ```
-   devboard_search_learnings(project_root, tags=["redteam", "<tech_tag>"])
+   agentboard_search_learnings(project_root, tags=["redteam", "<tech_tag>"])
    ```
    Where `<tech_tag>` is chosen from the task's domain — e.g. `"textual"` / `"tui"` / `"mcp"` / `"storage"` / `"async"`. Run once per domain involved.
 
@@ -172,9 +172,9 @@ Run the full suite after each change. Suite stays green throughout or REVERT.
 
 ## After each cycle
 
-1. Call MCP tool `devboard_verify(checklist, project_root)` → fresh pytest evidence
-2. Call MCP tool `devboard_log_decision(iter, phase='tdd_green', reasoning=<summary>, ...)`
-3. Call MCP tool `devboard_save_iter_diff(task_id, iter_n, diff)` with the current diff
+1. Call MCP tool `agentboard_verify(checklist, project_root)` → fresh pytest evidence
+2. Call MCP tool `agentboard_log_decision(iter, phase='tdd_green', reasoning=<summary>, ...)`
+3. Call MCP tool `agentboard_save_iter_diff(task_id, iter_n, diff)` with the current diff
 4. Commit locally: `git add -A && git commit -m "devboard: task <id> iter <n> [GREEN]"`
 
 ## Legacy / untested code
@@ -188,7 +188,7 @@ For existing code without tests: add tests for existing behavior BEFORE modifyin
 
 ## Required MCP calls — Logging is NOT optional
 
-**DO NOT batch phases.** Each of RED / GREEN / REFACTOR is a separate transition and MUST produce its own `devboard_checkpoint` call. Writing code without logging the RED checkpoint first = skipping the audit trail = breaks retro + replay + diagnose. If you "know" the test will fail before writing it, log RED anyway — the checkpoint is the proof of discipline, not just observation.
+**DO NOT batch phases.** Each of RED / GREEN / REFACTOR is a separate transition and MUST produce its own `agentboard_checkpoint` call. Writing code without logging the RED checkpoint first = skipping the audit trail = breaks retro + replay + diagnose. If you "know" the test will fail before writing it, log RED anyway — the checkpoint is the proof of discipline, not just observation.
 
 **Anti-pattern (FORBIDDEN)**:
 ```
@@ -206,15 +206,15 @@ Per atomic_step, per cycle:
 
 | Phase | Tool | Purpose |
 |---|---|---|
-| After RED written + verified fails | `devboard_checkpoint(project_root, run_id, "tdd_red_complete", {iteration, current_step_id, test_file, status})` | Record RED confirmation |
-| After RED verified | `devboard_log_decision(project_root, task_id, iter=N, phase="tdd_red", reasoning="...", verdict_source="RED_CONFIRMED")` | Audit the "why" in decisions.jsonl |
-| After GREEN passes + suite green | `devboard_checkpoint(... "tdd_green_complete", {iteration, current_step_id, impl_file, status})` | Record GREEN |
-| After GREEN | `devboard_log_decision(... phase="tdd_green", verdict_source="GREEN_CONFIRMED")` | Audit |
-| After REFACTOR (or skip) | `devboard_checkpoint(... "tdd_refactor_complete", {iteration, current_step_id, status: SKIPPED\|REFACTORED})` | Record |
-| After REFACTOR | `devboard_log_decision(... phase="tdd_refactor", verdict_source="SKIPPED"\|"REFACTORED")` | Audit |
-| After each verify run | `devboard_verify(project_root, checklist)` | Fresh evidence (see output, use it) |
-| After each diff | `devboard_save_iter_diff(project_root, task_id, iter_n, diff)` | Per-iter diff archive |
-| On Iron Law suspicion | `devboard_check_iron_law(tool_calls=[...])` | Audit tool call sequence |
+| After RED written + verified fails | `agentboard_checkpoint(project_root, run_id, "tdd_red_complete", {iteration, current_step_id, test_file, status})` | Record RED confirmation |
+| After RED verified | `agentboard_log_decision(project_root, task_id, iter=N, phase="tdd_red", reasoning="...", verdict_source="RED_CONFIRMED")` | Audit the "why" in decisions.jsonl |
+| After GREEN passes + suite green | `agentboard_checkpoint(... "tdd_green_complete", {iteration, current_step_id, impl_file, status})` | Record GREEN |
+| After GREEN | `agentboard_log_decision(... phase="tdd_green", verdict_source="GREEN_CONFIRMED")` | Audit |
+| After REFACTOR (or skip) | `agentboard_checkpoint(... "tdd_refactor_complete", {iteration, current_step_id, status: SKIPPED\|REFACTORED})` | Record |
+| After REFACTOR | `agentboard_log_decision(... phase="tdd_refactor", verdict_source="SKIPPED"\|"REFACTORED")` | Audit |
+| After each verify run | `agentboard_verify(project_root, checklist)` | Fresh evidence (see output, use it) |
+| After each diff | `agentboard_save_iter_diff(project_root, task_id, iter_n, diff)` | Per-iter diff archive |
+| On Iron Law suspicion | `agentboard_check_iron_law(tool_calls=[...])` | Audit tool call sequence |
 
 Thread `task_id` + `run_id` through all calls.
 
@@ -222,12 +222,12 @@ Thread `task_id` + `run_id` through all calls.
 
 After all atomic_steps are complete:
 
-1. Run full suite via `devboard_verify(project_root, checklist)`
+1. Run full suite via `agentboard_verify(project_root, checklist)`
 2. Issue review verdict — call:
-   - `devboard_checkpoint(... "review_complete", {verdict: "PASS"|"RETRY", checklist_verified: true})` **(required)**
-   - `devboard_log_decision(... phase="review", verdict_source="PASS"|"RETRY", reasoning=<summary>)` **(required)**
+   - `agentboard_checkpoint(... "review_complete", {verdict: "PASS"|"RETRY", checklist_verified: true})` **(required)**
+   - `agentboard_log_decision(... phase="review", verdict_source="PASS"|"RETRY", reasoning=<summary>)` **(required)**
 3. Mark TDD done:
-   - `devboard_checkpoint(... "tdd_complete", {total_iterations, checklist_verified: true})` **(required)**
+   - `agentboard_checkpoint(... "tdd_complete", {total_iterations, checklist_verified: true})` **(required)**
 
 All three above are independent events — log each one separately. Do not combine.
 
@@ -237,7 +237,7 @@ Hand off to `agentboard-parallel-review` (preferred — dispatches CSO + redteam
 
 ## UI Preview integration (when ui_surface=True)
 
-After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `agentboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `devboard_tui_capture_snapshot`, saves it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
+After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `agentboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `agentboard_tui_capture_snapshot`, saves it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
 
 - Drift detected → surface diff to user and ask whether to continue TDD or branch to `agentboard-rca`.
 - No drift → resume the Red-Green-Refactor loop with the next atomic_step.

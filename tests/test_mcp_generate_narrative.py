@@ -1,4 +1,4 @@
-"""MCP dispatch tests for devboard_generate_narrative.
+"""MCP dispatch tests for agentboard_generate_narrative.
 
 Goal: g_20260420_032908_54200a. Ensures the new MCP tool is
 discoverable via list_tools() and produces a plan_summary.md when
@@ -13,25 +13,25 @@ from pathlib import Path
 
 
 async def test_mcp_server_registers_generate_narrative() -> None:
-    """list_tools() must include devboard_generate_narrative so MCP
+    """list_tools() must include agentboard_generate_narrative so MCP
     clients (Claude Code) can discover and call it."""
-    from devboard.mcp_server import list_tools
+    from agentboard.mcp_server import list_tools
 
     tools = await list_tools()
     names = [t.name for t in tools]
 
-    assert "devboard_generate_narrative" in names, (
-        f"devboard_generate_narrative missing from tool registry, got {names!r}"
+    assert "agentboard_generate_narrative" in names, (
+        f"agentboard_generate_narrative missing from tool registry, got {names!r}"
     )
 
 
 async def test_mcp_generate_narrative_dispatch_returns_plan_summary_path(
     tmp_path: Path,
 ) -> None:
-    """call_tool('devboard_generate_narrative', {...}) must execute the
+    """call_tool('agentboard_generate_narrative', {...}) must execute the
     generator against a tmp_path fixture goal and return a dict whose
     plan_summary_path points at an existing file."""
-    from devboard.mcp_server import call_tool
+    from agentboard.mcp_server import call_tool
 
     goal_id = "g_mcp_fixture"
     goal_dir = tmp_path / ".devboard" / "goals" / goal_id
@@ -50,7 +50,7 @@ async def test_mcp_generate_narrative_dispatch_returns_plan_summary_path(
     )
 
     result = await call_tool(
-        "devboard_generate_narrative",
+        "agentboard_generate_narrative",
         {"project_root": str(tmp_path), "goal_id": goal_id},
     )
 
@@ -79,8 +79,8 @@ def test_approval_step_4_5_invokes_generator_when_ui_surface_true() -> None:
     assert skill_md.exists(), f"approval SKILL.md not found at {skill_md}"
 
     text = skill_md.read_text(encoding="utf-8")
-    assert "devboard_generate_narrative" in text, (
-        "SKILL.md Step 4.5 does not reference devboard_generate_narrative"
+    assert "agentboard_generate_narrative" in text, (
+        "SKILL.md Step 4.5 does not reference agentboard_generate_narrative"
     )
     assert "ui_surface" in text, (
         "SKILL.md Step 4.5 is not gated by ui_surface"

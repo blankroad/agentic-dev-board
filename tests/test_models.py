@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 
-from devboard.models import Goal
+from agentboard.models import Goal
 
 
 def test_goal_parent_id_default_none() -> None:

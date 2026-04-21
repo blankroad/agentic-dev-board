@@ -1,4 +1,4 @@
-"""Goal #2 — devboard_lock_plan writes a ## Metadata section to plan.md.
+"""Goal #2 — agentboard_lock_plan writes a ## Metadata section to plan.md.
 
 Tests for the Metadata block written at lock time (git identity + branch +
 ISO locked_at + locked_hash). Covers happy path + git-config-absent fallback
@@ -18,7 +18,7 @@ import pytest
 
 
 def _dispatch_sync(tool_name: str, args: dict):
-    from devboard.mcp_server import call_tool
+    from agentboard.mcp_server import call_tool
     return asyncio.run(call_tool(tool_name, args))
 
 
@@ -52,18 +52,18 @@ def _decide_json() -> dict:
 def _init_and_lock(project_root: Path) -> tuple[str, Path]:
     """Run the usual init→add_goal→approve→lock_plan dance under
     ``project_root`` and return (goal_id, plan_md_path)."""
-    _dispatch_sync("devboard_init", {"project_root": str(project_root)})
+    _dispatch_sync("agentboard_init", {"project_root": str(project_root)})
     add = _dispatch_sync(
-        "devboard_add_goal",
+        "agentboard_add_goal",
         {"project_root": str(project_root), "title": "t", "description": "d"},
     )
     goal_id = _json_payload(add)["goal_id"]
     _dispatch_sync(
-        "devboard_approve_plan",
+        "agentboard_approve_plan",
         {"project_root": str(project_root), "goal_id": goal_id, "approved": True},
     )
     result = _dispatch_sync(
-        "devboard_lock_plan",
+        "agentboard_lock_plan",
         {
             "project_root": str(project_root),
             "goal_id": goal_id,
@@ -172,11 +172,11 @@ def test_lock_plan_is_idempotent_on_rerun(tmp_path: Path) -> None:
     # save_locked_plan clears the approval review file? — check first run
     # output to be safe; we just drive the same dispatch twice.
     _dispatch_sync(
-        "devboard_approve_plan",
+        "agentboard_approve_plan",
         {"project_root": str(tmp_path), "goal_id": goal_id, "approved": True},
     )
     _dispatch_sync(
-        "devboard_lock_plan",
+        "agentboard_lock_plan",
         {
             "project_root": str(tmp_path),
             "goal_id": goal_id,

@@ -7,8 +7,8 @@ import pytest
 
 
 def _mk_decisions(tmp_path: Path) -> tuple[str, str]:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -37,8 +37,8 @@ async def test_timeline_collapsed_by_default_with_summary_title(tmp_path: Path) 
     from textual.app import App, ComposeResult
     from textual.widgets import Collapsible
 
-    from devboard.tui.activity_timeline import ActivityTimeline
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.activity_timeline import ActivityTimeline
+    from agentboard.tui.session_derive import SessionContext
 
     _mk_decisions(tmp_path)
     ctx = SessionContext(tmp_path)
@@ -63,9 +63,9 @@ async def test_timeline_collapsed_by_default_with_summary_title(tmp_path: Path) 
 async def test_timeline_renders_rows_newest_first(tmp_path: Path) -> None:
     from textual.app import App, ComposeResult
 
-    from devboard.tui.activity_row import ActivityRow
-    from devboard.tui.activity_timeline import ActivityTimeline
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.activity_row import ActivityRow
+    from agentboard.tui.activity_timeline import ActivityTimeline
+    from agentboard.tui.session_derive import SessionContext
 
     _mk_decisions(tmp_path)
     ctx = SessionContext(tmp_path)

@@ -1,10 +1,10 @@
-"""Tests for src/devboard/parallel/models.py — Finding / DedupedReport / OverallVerdict."""
+"""Tests for src/agentboard/parallel/models.py — Finding / DedupedReport / OverallVerdict."""
 from __future__ import annotations
 
 
 def test_finding_model_accepts_optional_file_line() -> None:
     """Finding has required fields and file/line are Optional (redteam edge outputs may omit them)."""
-    from devboard.parallel.models import Finding
+    from agentboard.parallel.models import Finding
 
     # file/line present (CSO style)
     f1 = Finding(

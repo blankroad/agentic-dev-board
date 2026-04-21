@@ -5,7 +5,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Button
 
-from devboard.tui.command_line import CommandLine
+from agentboard.tui.command_line import CommandLine
 
 
 class _SpikeApp(App):

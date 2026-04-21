@@ -6,7 +6,7 @@ from __future__ import annotations
 
 
 def test_review_sections_source_from_payload_fields() -> None:
-    from devboard.tui.review_sections_render import render_review_sections
+    from agentboard.tui.review_sections_render import render_review_sections
 
     payload = {
         "risk_delta": {

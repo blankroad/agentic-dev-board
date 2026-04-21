@@ -14,8 +14,8 @@ def _mk_goal(
     parent_id: str | None = None,
     status: str = "active",
 ) -> None:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
@@ -41,8 +41,8 @@ def _mk_goal(
 async def _mount(tmp_path: Path):
     from textual.app import App, ComposeResult
 
-    from devboard.tui.goal_side_list import GoalSideList
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.goal_side_list import GoalSideList
+    from agentboard.tui.session_derive import SessionContext
 
     ctx = SessionContext(tmp_path)
 
@@ -125,7 +125,7 @@ async def test_goal_side_list_shows_inline_legend(tmp_path: Path) -> None:
 def test_goal_side_list_has_toggle_archived_binding() -> None:
     """s_014: GoalSideList.BINDINGS exposes the 'a' key bound to
     action 'toggle_archived' so users can reveal completed goals."""
-    from devboard.tui.goal_side_list import GoalSideList
+    from agentboard.tui.goal_side_list import GoalSideList
 
     bindings = getattr(GoalSideList, "BINDINGS", [])
     hit = False
@@ -154,7 +154,7 @@ async def test_goal_side_list_toggle_archived_flips_state(tmp_path: Path) -> Non
     app = await _mount(tmp_path)
     async with app.run_test(size=(40, 20)) as pilot:
         await pilot.pause()
-        from devboard.tui.goal_side_list import GoalSideList
+        from agentboard.tui.goal_side_list import GoalSideList
 
         gsl = app.query_one(GoalSideList)
         assert gsl._show_archived is False

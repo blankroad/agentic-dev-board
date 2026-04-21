@@ -9,7 +9,7 @@ _MIGRATED_V20_TESTS = {
     # as a 45% pane — all of which v2.1 replaces with StatusBar, PlanMarkdown,
     # ActivityTimeline, MetaPane, FilesChangedPane. v2.1 equivalents live in
     # tests/test_tui_v21_smoke.py and the per-widget test files.
-    "test_app_launches_with_empty_devboard_shows_empty_state",
+    "test_app_launches_with_empty_agentboard_shows_empty_state",
     "test_colon_runs_populates_runs_list",
     "test_colon_diff_loads_diff_tab",
     "test_colon_decisions_loads_decisions_tab",

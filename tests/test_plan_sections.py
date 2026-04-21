@@ -5,14 +5,14 @@ from pathlib import Path
 def test_plan_section_enum_has_four_known_members() -> None:
     """# guards: edge-case-red-rule
     edge: empty — enum must be stable and enumerable without instantiation."""
-    from devboard.docs.plan_sections import PlanSection
+    from agentboard.docs.plan_sections import PlanSection
     assert {m.value for m in PlanSection} == {
         "Metadata", "Outcome", "Screenshots / Diagrams", "Lessons",
     }
 
 
 def test_upsert_appends_when_section_missing(tmp_path: Path) -> None:
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
     plan = tmp_path / "plan.md"
     plan.write_text("# Goal\n\n## Problem\n\nexisting body\n")
     upsert_plan_section(plan, PlanSection.OUTCOME, "status: pushed")
@@ -26,7 +26,7 @@ def test_upsert_appends_when_section_missing(tmp_path: Path) -> None:
 def test_upsert_replaces_when_section_exists(tmp_path: Path) -> None:
     """# guards: edge-case-red-rule
     edge: cached stale — second upsert must replace, not stack."""
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
     plan = tmp_path / "plan.md"
     plan.write_text("# G\n\n## Problem\n\nx\n")
     upsert_plan_section(plan, PlanSection.OUTCOME, "first")
@@ -40,7 +40,7 @@ def test_upsert_replaces_when_section_exists(tmp_path: Path) -> None:
 def test_upsert_creates_file_when_missing(tmp_path: Path) -> None:
     """# guards: edge-case-red-rule
     edge: empty input — plan.md doesn't exist yet."""
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
     plan = tmp_path / "plan.md"
     assert not plan.exists()
     upsert_plan_section(plan, PlanSection.METADATA, "goal_id: g_xxx")
@@ -50,7 +50,7 @@ def test_upsert_creates_file_when_missing(tmp_path: Path) -> None:
 
 
 def test_upsert_on_empty_file_writes_single_block(tmp_path: Path) -> None:
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
     plan = tmp_path / "plan.md"
     plan.write_text("")
     upsert_plan_section(plan, PlanSection.LESSONS, "learned X")
@@ -63,7 +63,7 @@ def test_upsert_does_not_clobber_binary_plan(tmp_path: Path) -> None:
     """# guards: read-text-in-compose-must-catch-unicode
     edge: binary / non-UTF-8 file — must NOT overwrite a corrupted file
     with a fresh block (data loss risk). Should fall through quietly."""
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     bad = b"\xff\xfe\x00garbled"
@@ -82,7 +82,7 @@ def test_upsert_is_safe_under_concurrent_writes(tmp_path: Path) -> None:
     must both succeed without data loss."""
     import threading
 
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     plan.write_text("# Goal\n\n## Problem\n\np\n")

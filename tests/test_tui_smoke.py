@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from devboard.tui.app import DevBoardApp
+from agentboard.tui.app import DevBoardApp
 
 
 async def _run_cmd(pilot, cmd: str) -> None:
@@ -28,8 +28,8 @@ async def _run_cmd(pilot, cmd: str) -> None:
 
 
 def _bootstrap_board(tmp_path: Path, *goals) -> None:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
@@ -41,8 +41,8 @@ def _bootstrap_board(tmp_path: Path, *goals) -> None:
 
 @pytest.mark.asyncio
 async def test_colon_goals_focuses_resources_goals(tmp_path: Path) -> None:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
@@ -95,7 +95,7 @@ async def test_colon_goto_ambiguous_hints(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
-    from devboard.tui.help_modal import DEFAULT_ENTRIES, fuzzy_filter
+    from agentboard.tui.help_modal import DEFAULT_ENTRIES, fuzzy_filter
 
     hits = fuzzy_filter(DEFAULT_ENTRIES, "dff", threshold=70)
     assert any("diff" in e.name for e in hits), f"dff should fuzzy-match diff; got {[e.name for e in hits]}"
@@ -103,7 +103,7 @@ async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_help_modal_opens_without_crash(tmp_path: Path) -> None:
-    from devboard.tui.help_modal import HelpModal
+    from agentboard.tui.help_modal import HelpModal
 
     app = DevBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:

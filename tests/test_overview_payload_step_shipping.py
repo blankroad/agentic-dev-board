@@ -22,8 +22,8 @@ def _bootstrap_task_with_plan(
 ) -> tuple[str, str]:
     """Create a goal + task + plan.json + decisions.jsonl fixture.
     Returns (goal_id, task_id)."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -39,21 +39,21 @@ def _bootstrap_task_with_plan(
             "behavior": "overview tab wraps VerticalScroll",
             "test_file": "tests/test_tui_center_scroll.py",
             "test_name": "test_overview_tab_wraps_static_in_vertical_scroll",
-            "impl_file": "src/devboard/tui/phase_flow.py",
+            "impl_file": "src/agentboard/tui/phase_flow.py",
         },
         {
             "id": "s_002",
             "behavior": "all five tabs wrap body",
             "test_file": "tests/test_tui_center_scroll.py",
             "test_name": "test_all_five_tabs_wrap_body_in_vertical_scroll",
-            "impl_file": "src/devboard/tui/phase_flow.py",
+            "impl_file": "src/agentboard/tui/phase_flow.py",
         },
         {
             "id": "s_003",
             "behavior": "down key scrolls",
             "test_file": "tests/test_tui_center_scroll.py",
             "test_name": "test_down_key_scrolls_plan_viewport",
-            "impl_file": "src/devboard/tui/phase_flow.py",
+            "impl_file": "src/agentboard/tui/phase_flow.py",
         },
     ]
     (goal_dir / "plan.json").write_text(json.dumps({"atomic_steps": steps}))
@@ -80,7 +80,7 @@ def test_step_shipping_from_decisions_jsonl_tdd_green(tmp_path: Path) -> None:
     """s_004 — payload.step_shipping[*].shipped must be True for every
     atomic_step whose id appears in a tdd_green decision row's reasoning.
     Previously relied on plan.json.completed (never set → always 0)."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     # 3 atomic_steps, but only s_001 and s_003 have tdd_green with matching
     # reasoning. s_002 must stay shipped=False.
@@ -109,9 +109,9 @@ def test_risk_delta_does_not_blanket_resolve_on_clean(tmp_path: Path) -> None:
     the rest stay in remaining even if CLEAN."""
     import json as _json
 
-    from devboard.analytics.overview_payload import build_overview_payload
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.analytics.overview_payload import build_overview_payload
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -161,9 +161,9 @@ def test_risk_delta_cross_ref_uses_evidence_corpus(tmp_path: Path) -> None:
     avoids false-resolved risks."""
     import json as _json
 
-    from devboard.analytics.overview_payload import build_overview_payload
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.analytics.overview_payload import build_overview_payload
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -215,7 +215,7 @@ def test_step_shipping_uses_index_fallback_when_reasoning_lacks_step_id(
     heuristic (iter N → atomic_steps[N-1]). Real-world TDD runs often phrase
     reasoning as `overview TabPane 본문을 VerticalScroll로 래핑` without
     explicitly re-stating `s_001`."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     decisions = [
         {"iter": 1, "phase": "tdd_green", "verdict_source": "GREEN_CONFIRMED",
@@ -239,7 +239,7 @@ def test_step_shipping_uses_index_fallback_when_reasoning_lacks_step_id(
 def test_iterations_include_step_cross_ref_fields(tmp_path: Path) -> None:
     """s_003 — iterations[i] must include behavior/test_file/test_name/impl_file
     copied from the matched atomic_step."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     goal_id, task_id = _bootstrap_task_with_plan(tmp_path)
     payload = build_overview_payload(tmp_path, goal_id, task_id=task_id)
@@ -253,13 +253,13 @@ def test_iterations_include_step_cross_ref_fields(tmp_path: Path) -> None:
         f"test_file missing or wrong: {first.get('test_file')!r}"
     )
     assert first.get("test_name") == "test_overview_tab_wraps_static_in_vertical_scroll"
-    assert first.get("impl_file") == "src/devboard/tui/phase_flow.py"
+    assert first.get("impl_file") == "src/agentboard/tui/phase_flow.py"
 
 
 def test_iterations_include_step_id_with_regex_priority(tmp_path: Path) -> None:
     """s_002 — reasoning containing 's_003' must yield step_id='s_003' even if
     the iter index would suggest a different step. Tests regex-first priority."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     # Put iter 1 with reasoning that says 's_003' — index heuristic would pick
     # s_001 (atomic_steps[0]), but regex must win.

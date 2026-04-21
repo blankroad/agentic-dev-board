@@ -6,18 +6,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devboard.agents.redteam import _parse_survived
-from devboard.agents.router import route, budget_tier, _DOWNGRADE_AT, _EMERGENCY_AT
-from devboard.config import LLMConfig
-from devboard.llm.client import BudgetTracker
-from devboard.memory.retriever import load_relevant_learnings, _tokenize
-from devboard.models import Goal, BoardState, LockedPlan
-from devboard.orchestrator.interrupt import HintQueue, get_hint_queue, reset_hint_queue
-from devboard.replay.replay import branch_run, find_state_at_iteration, list_runs
-from devboard.orchestrator.checkpointer import Checkpointer
-from devboard.storage.file_store import FileStore
-from devboard.tools.fs import make_fs_tools, _check_scope
-from devboard.tools.base import ToolRegistry
+from agentboard.agents.redteam import _parse_survived
+from agentboard.agents.router import route, budget_tier, _DOWNGRADE_AT, _EMERGENCY_AT
+from agentboard.config import LLMConfig
+from agentboard.llm.client import BudgetTracker
+from agentboard.memory.retriever import load_relevant_learnings, _tokenize
+from agentboard.models import Goal, BoardState, LockedPlan
+from agentboard.orchestrator.interrupt import HintQueue, get_hint_queue, reset_hint_queue
+from agentboard.replay.replay import branch_run, find_state_at_iteration, list_runs
+from agentboard.orchestrator.checkpointer import Checkpointer
+from agentboard.storage.file_store import FileStore
+from agentboard.tools.fs import make_fs_tools, _check_scope
+from agentboard.tools.base import ToolRegistry
 
 
 # ── Red-team ──────────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ def test_find_state_at_iteration(tmp_path: Path):
 def test_branch_run_not_found(tmp_path: Path):
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     plan = build_locked_plan("g_001", {
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
@@ -232,7 +232,7 @@ def test_branch_run_success(tmp_path: Path):
         "history": [{"n": 1}],
     })
 
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     plan = build_locked_plan("g_001", {
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
@@ -270,24 +270,24 @@ def test_list_runs(tmp_path: Path):
 
 # ── Graph integration: red-team + hints ──────────────────────────────────────
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.run_redteam")
-@patch("devboard.orchestrator.graph.run_reflect")
-@patch("devboard.orchestrator.graph.run_systematic_debug")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.run_redteam")
+@patch("agentboard.orchestrator.graph.run_reflect")
+@patch("agentboard.orchestrator.graph.run_systematic_debug")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_graph_redteam_broken_becomes_retry(
     mock_commit, mock_diff, mock_verify, mock_sysdebug, mock_reflect, mock_redteam, mock_reviewer, mock_executor, mock_planner,
     tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.llm.client import CompletionResult
-    from devboard.models import BoardState, Goal
-    from devboard.orchestrator.runner import run_loop
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.llm.client import CompletionResult
+    from agentboard.models import BoardState, Goal
+    from agentboard.orchestrator.runner import run_loop
 
     def _r(text):
         r = CompletionResult(text=text, thinking="", input_tokens=10, output_tokens=5, model="sonnet", cached_tokens=0)
@@ -312,13 +312,13 @@ def test_graph_redteam_broken_becomes_retry(
     ]
     mock_reflect.return_value = (reflect_json, AgentResult("reflect", [], _r("reflect")))
     mock_sysdebug.return_value = (reflect_json, AgentResult("reflect", [], _r("reflect")))
-    from devboard.orchestrator.verify import VerificationReport
+    from agentboard.orchestrator.verify import VerificationReport
     mock_verify.return_value = VerificationReport(full_suite_passed=True, full_suite_exit=0)
 
     goal = Goal(title="Test", description="test")
     store.save_goal(goal)
 
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     plan = build_locked_plan(goal.id, {
         "problem": "p", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "a", "known_failure_modes": [],
@@ -337,22 +337,22 @@ def test_graph_redteam_broken_becomes_retry(
     assert result.iteration == 2
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_graph_hint_injected_into_plan(
     mock_commit, mock_diff, mock_verify, mock_reviewer, mock_executor, mock_planner,
     tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.llm.client import CompletionResult
-    from devboard.models import Goal
-    from devboard.orchestrator.interrupt import reset_hint_queue
-    from devboard.orchestrator.runner import run_loop
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.llm.client import CompletionResult
+    from agentboard.models import Goal
+    from agentboard.orchestrator.interrupt import reset_hint_queue
+    from agentboard.orchestrator.runner import run_loop
 
     def _r(text):
         r = CompletionResult(text=text, thinking="", input_tokens=10, output_tokens=5, model="sonnet", cached_tokens=0)
@@ -374,13 +374,13 @@ def test_graph_hint_injected_into_plan(
     mock_planner.side_effect = capture_planner
     mock_executor.return_value = AgentResult("exec", [], _r("exec"))
     mock_reviewer.return_value = (ReviewVerdict.pass_, AgentResult("Verdict: PASS", [], _r("PASS")))
-    from devboard.orchestrator.verify import VerificationReport
+    from agentboard.orchestrator.verify import VerificationReport
     mock_verify.return_value = VerificationReport(full_suite_passed=True, full_suite_exit=0)
 
     goal = Goal(title="Test", description="test")
     store.save_goal(goal)
 
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     plan = build_locked_plan(goal.id, {
         "problem": "p", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "a", "known_failure_modes": [],

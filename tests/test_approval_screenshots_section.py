@@ -20,7 +20,7 @@ def _text() -> str:
 def test_approval_mentions_tui_render_smoke() -> None:
     """# guards: edge-case-red-rule
     edge: integration wiring — approval must call the MCP tool."""
-    assert "devboard_tui_render_smoke" in _text()
+    assert "agentboard_tui_render_smoke" in _text()
 
 
 def test_approval_mentions_plan_section_screenshots() -> None:

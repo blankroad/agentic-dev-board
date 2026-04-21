@@ -4,11 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devboard.agents.base import AgentResult, run_agent, _extract_tool_uses, _build_assistant_content
-from devboard.agents.reviewer import parse_verdict
-from devboard.llm.client import CompletionResult
-from devboard.models import ReviewVerdict
-from devboard.tools.base import ToolRegistry
+from agentboard.agents.base import AgentResult, run_agent, _extract_tool_uses, _build_assistant_content
+from agentboard.agents.reviewer import parse_verdict
+from agentboard.llm.client import CompletionResult
+from agentboard.models import ReviewVerdict
+from agentboard.tools.base import ToolRegistry
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ def test_run_agent_with_tool_use():
     def my_tool(arg: str) -> str:
         return f"result:{arg}"
 
-    from devboard.tools.base import ToolDef
+    from agentboard.tools.base import ToolDef
     registry.register(
         ToolDef("my_tool", "test tool", {
             "type": "object",

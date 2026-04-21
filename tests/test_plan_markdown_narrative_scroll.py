@@ -80,7 +80,7 @@ async def test_plan_markdown_receives_five_section_narrative_as_markdown_source(
     Markdown source (via FileStore read -> SessionContext resolve ->
     PlanMarkdown._load -> rich.Markdown construction). It does NOT
     prove that rich.Markdown produced visible rendered text — that
-    proof is devboard_tui_render_smoke's job, triggered at approval
+    proof is agentboard_tui_render_smoke's job, triggered at approval
     time by ui_surface=true (see redteam finding #2, iter=3 parallel_review).
 
     # guards: unit-tests-on-primitives-dont-prove-integration
@@ -88,7 +88,7 @@ async def test_plan_markdown_receives_five_section_narrative_as_markdown_source(
     """
     from rich.markdown import Markdown
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     # SessionContext.active_goal_id resolves by walking goals/*/plan.md
     # mtime — it ignores BoardState.active_goal_id. Creating just the

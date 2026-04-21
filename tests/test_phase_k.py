@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-from devboard.mcp_server import call_tool
-from devboard.orchestrator.verify import detect_test_runner
-from devboard.storage.file_store import atomic_write, file_lock
+from agentboard.mcp_server import call_tool
+from agentboard.orchestrator.verify import detect_test_runner
+from agentboard.storage.file_store import atomic_write, file_lock
 
 
 def _mcp(tool_name: str, **args):
@@ -165,11 +165,11 @@ def test_detect_runner_package_json_priority(tmp_path: Path):
 def _lock_a_plan(tmp_path: Path) -> str:
     """Helper — init + add goal + approve + lock plan, return goal_id."""
     root = str(tmp_path)
-    _mcp("devboard_init", project_root=root)
-    r = _mcp("devboard_add_goal", project_root=root, title="Calc", description="calc")
+    _mcp("agentboard_init", project_root=root)
+    r = _mcp("agentboard_add_goal", project_root=root, title="Calc", description="calc")
     goal_id = r["goal_id"]
-    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
-    _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
+    _mcp("agentboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
+    _mcp("agentboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
         "problem": "calc", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
         "goal_checklist": ["add works"], "out_of_scope_guard": [],
@@ -181,7 +181,7 @@ def _lock_a_plan(tmp_path: Path) -> str:
 
 def test_plan_integrity_ok_after_lock(tmp_path: Path):
     goal_id = _lock_a_plan(tmp_path)
-    r = _mcp("devboard_verify_plan_integrity",
+    r = _mcp("agentboard_verify_plan_integrity",
              project_root=str(tmp_path), goal_id=goal_id)
     assert r["integrity_ok"] is True
     assert r["stored_hash"] == r["computed_hash"]
@@ -190,9 +190,9 @@ def test_plan_integrity_ok_after_lock(tmp_path: Path):
 def test_plan_integrity_missing_plan(tmp_path: Path):
     """Goal without a locked plan should return error."""
     root = str(tmp_path)
-    _mcp("devboard_init", project_root=root)
-    r = _mcp("devboard_add_goal", project_root=root, title="X", description="x")
-    result = _mcp("devboard_verify_plan_integrity",
+    _mcp("agentboard_init", project_root=root)
+    r = _mcp("agentboard_add_goal", project_root=root, title="X", description="x")
+    result = _mcp("agentboard_verify_plan_integrity",
                   project_root=root, goal_id=r["goal_id"])
     assert "error" in result
 
@@ -204,26 +204,26 @@ def test_plan_integrity_missing_plan(tmp_path: Path):
 def test_resume_run_mid_flight(tmp_path: Path):
     """Simulate crash after tdd_red_complete; resume should say GREEN next."""
     root = str(tmp_path)
-    _mcp("devboard_init", project_root=root)
-    r = _mcp("devboard_add_goal", project_root=root, title="x", description="x")
+    _mcp("agentboard_init", project_root=root)
+    r = _mcp("agentboard_add_goal", project_root=root, title="x", description="x")
     goal_id = r["goal_id"]
-    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
-    _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
+    _mcp("agentboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
+    _mcp("agentboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
         "goal_checklist": ["x"], "out_of_scope_guard": [],
         "atomic_steps": [], "token_ceiling": 100_000, "max_iterations": 3,
     })
-    r = _mcp("devboard_start_task", project_root=root, goal_id=goal_id)
+    r = _mcp("agentboard_start_task", project_root=root, goal_id=goal_id)
     run_id = r["run_id"]
 
     # Simulate progress up to RED
-    _mcp("devboard_checkpoint", project_root=root, run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=root, run_id=run_id,
          event="tdd_red_complete",
          state={"iteration": 1, "current_step_id": "s_001"})
 
     # Resume — should say we can continue, and that GREEN is next
-    result = _mcp("devboard_resume_run", project_root=root, run_id=run_id)
+    result = _mcp("agentboard_resume_run", project_root=root, run_id=run_id)
     assert result["can_resume"] is True
     assert result["last_event"] == "tdd_red_complete"
     assert "GREEN" in result["resume_hint"]
@@ -231,31 +231,31 @@ def test_resume_run_mid_flight(tmp_path: Path):
 
 def test_resume_run_after_converged(tmp_path: Path):
     root = str(tmp_path)
-    _mcp("devboard_init", project_root=root)
-    r = _mcp("devboard_add_goal", project_root=root, title="x", description="x")
+    _mcp("agentboard_init", project_root=root)
+    r = _mcp("agentboard_add_goal", project_root=root, title="x", description="x")
     goal_id = r["goal_id"]
-    _mcp("devboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
-    _mcp("devboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
+    _mcp("agentboard_approve_plan", project_root=root, goal_id=goal_id, approved=True)
+    _mcp("agentboard_lock_plan", project_root=root, goal_id=goal_id, decide_json={
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "x", "known_failure_modes": [],
         "goal_checklist": ["x"], "out_of_scope_guard": [],
         "atomic_steps": [], "token_ceiling": 100_000, "max_iterations": 3,
     })
-    r = _mcp("devboard_start_task", project_root=root, goal_id=goal_id)
+    r = _mcp("agentboard_start_task", project_root=root, goal_id=goal_id)
     run_id = r["run_id"]
 
-    _mcp("devboard_checkpoint", project_root=root, run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=root, run_id=run_id,
          event="converged", state={"iterations": 3})
 
-    result = _mcp("devboard_resume_run", project_root=root, run_id=run_id)
+    result = _mcp("agentboard_resume_run", project_root=root, run_id=run_id)
     assert result["can_resume"] is False
     assert result["last_event"] == "converged"
 
 
 def test_resume_nonexistent_run(tmp_path: Path):
     root = str(tmp_path)
-    _mcp("devboard_init", project_root=root)
-    result = _mcp("devboard_resume_run", project_root=root, run_id="run_bogus")
+    _mcp("agentboard_init", project_root=root)
+    result = _mcp("agentboard_resume_run", project_root=root, run_id="run_bogus")
     assert "error" in result
 
 
@@ -265,11 +265,11 @@ def test_resume_nonexistent_run(tmp_path: Path):
 
 def test_mcp_tools_after_phase_k():
     import asyncio
-    from devboard.mcp_server import list_tools
+    from agentboard.mcp_server import list_tools
     tools = asyncio.run(list_tools())
     names = {t.name for t in tools}
     # New Phase I + K tools
-    assert "devboard_start_task" in names
-    assert "devboard_checkpoint" in names
-    assert "devboard_resume_run" in names
-    assert "devboard_verify_plan_integrity" in names
+    assert "agentboard_start_task" in names
+    assert "agentboard_checkpoint" in names
+    assert "agentboard_resume_run" in names
+    assert "agentboard_verify_plan_integrity" in names

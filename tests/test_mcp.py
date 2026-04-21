@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from devboard.install import (
+from agentboard.install import (
     emit_mcp_config,
     emit_settings_hooks,
     install_hooks,
@@ -23,21 +23,21 @@ from devboard.install import (
 def test_mcp_server_lists_tools():
     """Smoke: the server's list_tools returns all expected tools."""
     import asyncio
-    from devboard.mcp_server import list_tools
+    from agentboard.mcp_server import list_tools
 
     tools = asyncio.run(list_tools())
     names = {t.name for t in tools}
 
     expected_minimum = {
-        "devboard_init", "devboard_add_goal", "devboard_list_goals",
-        "devboard_lock_plan", "devboard_load_plan",
-        "devboard_log_decision", "devboard_load_decisions", "devboard_save_iter_diff",
-        "devboard_verify", "devboard_check_iron_law", "devboard_check_command_safety",
-        "devboard_get_diff_stats", "devboard_build_pr_body",
-        "devboard_apply_squash_policy", "devboard_push_pr",
-        "devboard_save_learning", "devboard_search_learnings", "devboard_relevant_learnings",
-        "devboard_generate_retro", "devboard_list_runs", "devboard_replay",
-        "devboard_save_brainstorm", "devboard_approve_plan",
+        "agentboard_init", "agentboard_add_goal", "agentboard_list_goals",
+        "agentboard_lock_plan", "agentboard_load_plan",
+        "agentboard_log_decision", "agentboard_load_decisions", "agentboard_save_iter_diff",
+        "agentboard_verify", "agentboard_check_iron_law", "agentboard_check_command_safety",
+        "agentboard_get_diff_stats", "agentboard_build_pr_body",
+        "agentboard_apply_squash_policy", "agentboard_push_pr",
+        "agentboard_save_learning", "agentboard_search_learnings", "agentboard_relevant_learnings",
+        "agentboard_generate_retro", "agentboard_list_runs", "agentboard_replay",
+        "agentboard_save_brainstorm", "agentboard_approve_plan",
     }
     missing = expected_minimum - names
     assert not missing, f"MCP tools missing: {missing}"
@@ -45,7 +45,7 @@ def test_mcp_server_lists_tools():
 
 def test_mcp_all_tools_have_schema():
     import asyncio
-    from devboard.mcp_server import list_tools
+    from agentboard.mcp_server import list_tools
 
     tools = asyncio.run(list_tools())
     for t in tools:
@@ -59,7 +59,7 @@ def test_mcp_all_tools_have_schema():
 
 def _dispatch_sync(tool_name: str, args: dict):
     import asyncio
-    from devboard.mcp_server import call_tool
+    from agentboard.mcp_server import call_tool
     return asyncio.run(call_tool(tool_name, args))
 
 
@@ -72,8 +72,8 @@ def _json_payload(result):
         return text
 
 
-def test_mcp_init_creates_devboard_dir(tmp_path: Path):
-    result = _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+def test_mcp_init_creates_agentboard_dir(tmp_path: Path):
+    result = _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
     payload = _json_payload(result)
     assert payload["status"] == "initialized"
     assert (tmp_path / ".devboard").exists()
@@ -82,15 +82,15 @@ def test_mcp_init_creates_devboard_dir(tmp_path: Path):
 
 
 def test_mcp_init_is_idempotent(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    result = _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    result = _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
     payload = _json_payload(result)
     assert payload["status"] == "already_initialized"
 
 
 def test_mcp_add_goal_and_list(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    result = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    result = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "Test goal", "description": "Build a calculator",
     })
@@ -98,25 +98,25 @@ def test_mcp_add_goal_and_list(tmp_path: Path):
     assert payload["active"] is True
     goal_id = payload["goal_id"]
 
-    result2 = _dispatch_sync("devboard_list_goals", {"project_root": str(tmp_path)})
+    result2 = _dispatch_sync("agentboard_list_goals", {"project_root": str(tmp_path)})
     payload2 = _json_payload(result2)
     assert len(payload2["goals"]) == 1
     assert payload2["goals"][0]["id"] == goal_id
 
 
 def test_mcp_lock_plan_computes_hash(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "calc", "description": "Build a calculator",
     })
     goal_id = _json_payload(add)["goal_id"]
 
-    _dispatch_sync("devboard_approve_plan", {
+    _dispatch_sync("agentboard_approve_plan", {
         "project_root": str(tmp_path), "goal_id": goal_id, "approved": True,
     })
 
-    result = _dispatch_sync("devboard_lock_plan", {
+    result = _dispatch_sync("agentboard_lock_plan", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "decide_json": {
@@ -144,15 +144,15 @@ def test_mcp_lock_plan_computes_hash(tmp_path: Path):
 
 
 def test_mcp_log_and_load_decisions(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path), "title": "x", "description": "y",
     })
     goal_id = _json_payload(add)["goal_id"]
 
     # Manually create a task for this goal so append_decision can find it
-    from devboard.models import Task
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import Task
+    from agentboard.storage.file_store import FileStore
     store = FileStore(tmp_path)
     board = store.load_board()
     task = Task(goal_id=goal_id, title="t")
@@ -160,20 +160,20 @@ def test_mcp_log_and_load_decisions(tmp_path: Path):
     store.save_task(task)
     store.save_board(board)
 
-    _dispatch_sync("devboard_log_decision", {
+    _dispatch_sync("agentboard_log_decision", {
         "project_root": str(tmp_path),
         "task_id": task.id, "iter": 1, "phase": "tdd_red",
         "reasoning": "wrote failing test for add",
         "verdict_source": "RED_CONFIRMED",
     })
-    _dispatch_sync("devboard_log_decision", {
+    _dispatch_sync("agentboard_log_decision", {
         "project_root": str(tmp_path),
         "task_id": task.id, "iter": 1, "phase": "tdd_green",
         "reasoning": "minimal impl passes",
         "verdict_source": "GREEN_CONFIRMED",
     })
 
-    result = _dispatch_sync("devboard_load_decisions", {
+    result = _dispatch_sync("agentboard_load_decisions", {
         "project_root": str(tmp_path), "task_id": task.id,
     })
     payload = _json_payload(result)
@@ -183,7 +183,7 @@ def test_mcp_log_and_load_decisions(tmp_path: Path):
 
 
 def test_mcp_check_iron_law_detects_violation():
-    result = _dispatch_sync("devboard_check_iron_law", {
+    result = _dispatch_sync("agentboard_check_iron_law", {
         "tool_calls": [
             {"tool_name": "fs_write", "tool_input": {"path": "calc.py", "content": "x"}},
         ],
@@ -193,7 +193,7 @@ def test_mcp_check_iron_law_detects_violation():
 
 
 def test_mcp_check_iron_law_accepts_tests_first():
-    result = _dispatch_sync("devboard_check_iron_law", {
+    result = _dispatch_sync("agentboard_check_iron_law", {
         "tool_calls": [
             {"tool_name": "fs_write", "tool_input": {"path": "tests/test_calc.py", "content": "t"}},
             {"tool_name": "fs_write", "tool_input": {"path": "calc.py", "content": "x"}},
@@ -204,33 +204,33 @@ def test_mcp_check_iron_law_accepts_tests_first():
 
 
 def test_mcp_check_command_safety_blocks_hard():
-    result = _dispatch_sync("devboard_check_command_safety", {"command": "rm -rf /"})
+    result = _dispatch_sync("agentboard_check_command_safety", {"command": "rm -rf /"})
     payload = _json_payload(result)
     assert payload["level"] == "block"
 
 
 def test_mcp_check_command_safety_warns():
-    result = _dispatch_sync("devboard_check_command_safety", {"command": "git push --force"})
+    result = _dispatch_sync("agentboard_check_command_safety", {"command": "git push --force"})
     payload = _json_payload(result)
     assert payload["level"] == "warn"
 
 
 def test_mcp_check_command_safety_safe():
-    result = _dispatch_sync("devboard_check_command_safety", {"command": "ls -la"})
+    result = _dispatch_sync("agentboard_check_command_safety", {"command": "ls -la"})
     payload = _json_payload(result)
     assert payload["level"] == "safe"
 
 
 def test_mcp_save_and_search_learnings(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    _dispatch_sync("devboard_save_learning", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_save_learning", {
         "project_root": str(tmp_path),
         "name": "div_tip", "content": "Always handle ZeroDivisionError explicitly.",
         "tags": ["python", "arithmetic"],
         "category": "pattern", "confidence": 0.9,
     })
 
-    result = _dispatch_sync("devboard_search_learnings", {
+    result = _dispatch_sync("agentboard_search_learnings", {
         "project_root": str(tmp_path), "tag": "python",
     })
     payload = _json_payload(result)
@@ -240,29 +240,29 @@ def test_mcp_save_and_search_learnings(tmp_path: Path):
 
 
 def test_mcp_generate_retro_empty(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    result = _dispatch_sync("devboard_generate_retro", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    result = _dispatch_sync("agentboard_generate_retro", {"project_root": str(tmp_path)})
     payload = _json_payload(result)
     assert "markdown" in payload
     assert "Retrospective" in payload["markdown"]
 
 
 def test_mcp_list_runs_empty(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    result = _dispatch_sync("devboard_list_runs", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    result = _dispatch_sync("agentboard_list_runs", {"project_root": str(tmp_path)})
     payload = _json_payload(result)
     assert payload == []
 
 
 def test_mcp_unknown_tool_returns_error():
-    result = _dispatch_sync("devboard_nonexistent", {})
+    result = _dispatch_sync("agentboard_nonexistent", {})
     payload = _json_payload(result)
     assert "error" in payload
 
 
 def test_mcp_error_in_handler_returns_error():
     # Missing required project_root
-    result = _dispatch_sync("devboard_list_goals", {})
+    result = _dispatch_sync("agentboard_list_goals", {})
     payload = _json_payload(result)
     assert "error" in payload
 
@@ -313,7 +313,7 @@ def test_emit_mcp_config_creates_file(tmp_path: Path):
     data = json.loads(path.read_text())
     assert "mcpServers" in data
     assert "agentboard" in data["mcpServers"]
-    assert data["mcpServers"]["agentboard"]["args"] == ["-m", "devboard.mcp_server"]
+    assert data["mcpServers"]["agentboard"]["args"] == ["-m", "agentboard.mcp_server"]
 
 
 def test_emit_mcp_config_defaults_to_sys_executable(tmp_path: Path):
@@ -340,13 +340,13 @@ def test_emit_mcp_config_preserves_existing_servers(tmp_path: Path):
     assert "agentboard" in data["mcpServers"]
 
 
-def test_emit_mcp_config_migrates_legacy_devboard_key(tmp_path: Path):
+def test_emit_mcp_config_migrates_legacy_agentboard_key(tmp_path: Path):
     """Legacy 'devboard' server entry is removed when it points at the same
     Python module — avoids two copies of the same tools after upgrade."""
     path = tmp_path / ".mcp.json"
     path.write_text(json.dumps({
         "mcpServers": {
-            "devboard": {"command": "/old/py", "args": ["-m", "devboard.mcp_server"]},
+            "devboard": {"command": "/old/py", "args": ["-m", "agentboard.mcp_server"]},
         },
     }))
     emit_mcp_config(tmp_path)
@@ -356,14 +356,14 @@ def test_emit_mcp_config_migrates_legacy_devboard_key(tmp_path: Path):
 
 
 def test_emit_opencode_config_writes_agentboard_entry(tmp_path: Path):
-    from devboard.install import emit_opencode_config
+    from agentboard.install import emit_opencode_config
 
     path = emit_opencode_config(tmp_path, python_bin="/custom/python")
     data = json.loads(path.read_text())
     assert data["$schema"] == "https://opencode.ai/config.json"
     entry = data["mcp"]["agentboard"]
     assert entry["type"] == "local"
-    assert entry["command"] == ["/custom/python", "-m", "devboard.mcp_server"]
+    assert entry["command"] == ["/custom/python", "-m", "agentboard.mcp_server"]
     assert entry["enabled"] is True
     assert data["permission"]["mcp"] == "ask"
 
@@ -497,17 +497,17 @@ def test_all_skills_have_required_frontmatter():
         assert len(post.content) > 200, f"{sd.name} body too short"
 
 
-# ── devboard_save_brainstorm ──────────────────────────────────────────────────
+# ── agentboard_save_brainstorm ──────────────────────────────────────────────────
 
 def test_mcp_save_brainstorm_happy_path(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "Brainstorm goal",
     })
     goal_id = _json_payload(add)["goal_id"]
 
-    result = _dispatch_sync("devboard_save_brainstorm", {
+    result = _dispatch_sync("agentboard_save_brainstorm", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "premises": ["Users need fast search"],
@@ -524,8 +524,8 @@ def test_mcp_save_brainstorm_happy_path(tmp_path: Path):
 
 
 def test_mcp_save_brainstorm_goal_not_found(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    result = _dispatch_sync("devboard_save_brainstorm", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    result = _dispatch_sync("agentboard_save_brainstorm", {
         "project_root": str(tmp_path),
         "goal_id": "g_nonexistent",
         "premises": [],
@@ -537,17 +537,17 @@ def test_mcp_save_brainstorm_goal_not_found(tmp_path: Path):
     assert "error" in payload
 
 
-# ── devboard_approve_plan ─────────────────────────────────────────────────────
+# ── agentboard_approve_plan ─────────────────────────────────────────────────────
 
 def test_mcp_approve_plan_approved_true(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "Approval goal",
     })
     goal_id = _json_payload(add)["goal_id"]
 
-    result = _dispatch_sync("devboard_approve_plan", {
+    result = _dispatch_sync("agentboard_approve_plan", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "approved": True,
@@ -562,14 +562,14 @@ def test_mcp_approve_plan_approved_true(tmp_path: Path):
 
 
 def test_mcp_approve_plan_false_without_target_errors(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "Approval goal 2",
     })
     goal_id = _json_payload(add)["goal_id"]
 
-    result = _dispatch_sync("devboard_approve_plan", {
+    result = _dispatch_sync("agentboard_approve_plan", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "approved": False,
@@ -578,7 +578,7 @@ def test_mcp_approve_plan_false_without_target_errors(tmp_path: Path):
     assert "error" in payload
 
 
-# ── devboard_lock_plan approval gate ─────────────────────────────────────────
+# ── agentboard_lock_plan approval gate ─────────────────────────────────────────
 
 _DECIDE_JSON = {
     "problem": "Build a calculator",
@@ -599,14 +599,14 @@ _DECIDE_JSON = {
 
 
 def test_mcp_lock_plan_without_approval_errors(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "Gate test goal",
     })
     goal_id = _json_payload(add)["goal_id"]
 
-    result = _dispatch_sync("devboard_lock_plan", {
+    result = _dispatch_sync("agentboard_lock_plan", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "decide_json": _DECIDE_JSON,
@@ -617,20 +617,20 @@ def test_mcp_lock_plan_without_approval_errors(tmp_path: Path):
 
 
 def test_mcp_lock_plan_with_approval_succeeds(tmp_path: Path):
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path),
         "title": "Gate approved goal",
     })
     goal_id = _json_payload(add)["goal_id"]
 
-    _dispatch_sync("devboard_approve_plan", {
+    _dispatch_sync("agentboard_approve_plan", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "approved": True,
     })
 
-    result = _dispatch_sync("devboard_lock_plan", {
+    result = _dispatch_sync("agentboard_lock_plan", {
         "project_root": str(tmp_path),
         "goal_id": goal_id,
         "decide_json": _DECIDE_JSON,
@@ -642,19 +642,19 @@ def test_mcp_lock_plan_with_approval_succeeds(tmp_path: Path):
 # ── Task.metadata + update_task_status merge semantics ───────────────────────
 
 def test_task_metadata_defaults_to_empty_dict():
-    from devboard.models import Task
+    from agentboard.models import Task
     t = Task(goal_id="g", title="t")
     assert t.metadata == {}
 
 
 def _make_task_for_metadata_test(tmp_path: Path, initial_metadata: dict | None = None):
     """Helper — initialize a board with one goal + one persisted task."""
-    from devboard.models import Task
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import Task
+    from agentboard.storage.file_store import FileStore
 
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
     add = _dispatch_sync(
-        "devboard_add_goal",
+        "agentboard_add_goal",
         {"project_root": str(tmp_path), "title": "x"},
     )
     goal_id = _json_payload(add)["goal_id"]
@@ -671,7 +671,7 @@ def _make_task_for_metadata_test(tmp_path: Path, initial_metadata: dict | None =
 def test_update_task_status_absent_metadata_preserves_existing(tmp_path: Path):
     store, goal_id, task_id = _make_task_for_metadata_test(tmp_path, {"security_sensitive": True})
     _dispatch_sync(
-        "devboard_update_task_status",
+        "agentboard_update_task_status",
         {"project_root": str(tmp_path), "task_id": task_id, "status": "in_progress"},
     )
     reloaded = store.load_task(goal_id, task_id)
@@ -681,7 +681,7 @@ def test_update_task_status_absent_metadata_preserves_existing(tmp_path: Path):
 def test_update_task_status_sets_metadata(tmp_path: Path):
     store, goal_id, task_id = _make_task_for_metadata_test(tmp_path)
     _dispatch_sync(
-        "devboard_update_task_status",
+        "agentboard_update_task_status",
         {
             "project_root": str(tmp_path),
             "task_id": task_id,
@@ -696,7 +696,7 @@ def test_update_task_status_sets_metadata(tmp_path: Path):
 def test_metadata_merges_distinct_keys(tmp_path: Path):
     store, goal_id, task_id = _make_task_for_metadata_test(tmp_path, {"a": 1})
     _dispatch_sync(
-        "devboard_update_task_status",
+        "agentboard_update_task_status",
         {
             "project_root": str(tmp_path),
             "task_id": task_id,
@@ -711,7 +711,7 @@ def test_metadata_merges_distinct_keys(tmp_path: Path):
 def test_metadata_overwrites_same_key(tmp_path: Path):
     store, goal_id, task_id = _make_task_for_metadata_test(tmp_path, {"a": 1})
     _dispatch_sync(
-        "devboard_update_task_status",
+        "agentboard_update_task_status",
         {
             "project_root": str(tmp_path),
             "task_id": task_id,
@@ -724,11 +724,11 @@ def test_metadata_overwrites_same_key(tmp_path: Path):
 
 
 def test_task_metadata_roundtrips_through_file_store(tmp_path: Path):
-    from devboard.models import Task
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import Task
+    from agentboard.storage.file_store import FileStore
 
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    add = _dispatch_sync("devboard_add_goal", {"project_root": str(tmp_path), "title": "x"})
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {"project_root": str(tmp_path), "title": "x"})
     goal_id = _json_payload(add)["goal_id"]
 
     store = FileStore(tmp_path)
@@ -738,22 +738,22 @@ def test_task_metadata_roundtrips_through_file_store(tmp_path: Path):
     assert reloaded.metadata == {"production_destined": True, "note": "x"}
 
 
-# ── parent_id support on devboard_add_goal (goal g_20260420_054657_bae0a8) ────
+# ── parent_id support on agentboard_add_goal (goal g_20260420_054657_bae0a8) ────
 
 def test_add_goal_with_valid_parent_id(tmp_path: Path):
     """s_004: parent_id referencing an existing goal is persisted on the child."""
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    parent = _json_payload(_dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    parent = _json_payload(_dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path), "title": "parent",
     }))
     parent_id = parent["goal_id"]
 
-    child = _json_payload(_dispatch_sync("devboard_add_goal", {
+    child = _json_payload(_dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path), "title": "child", "parent_id": parent_id,
     }))
     assert "error" not in child, f"unexpected error: {child}"
 
-    from devboard.storage.file_store import FileStore
+    from agentboard.storage.file_store import FileStore
     board = FileStore(tmp_path).load_board()
     child_goal = next(g for g in board.goals if g.id == child["goal_id"])
     assert child_goal.parent_id == parent_id
@@ -765,17 +765,17 @@ def test_add_goal_with_invalid_parent_id_rejects(tmp_path: Path):
     Category: input validation. State must be atomic — either goal is
     created AND valid, or not created at all.
     """
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    _dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path), "title": "only",
     })
 
-    result = _json_payload(_dispatch_sync("devboard_add_goal", {
+    result = _json_payload(_dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path), "title": "bad", "parent_id": "g_does_not_exist",
     }))
     assert "error" in result, f"expected error, got {result}"
 
-    from devboard.storage.file_store import FileStore
+    from agentboard.storage.file_store import FileStore
     board = FileStore(tmp_path).load_board()
     assert len(board.goals) == 1, "invalid parent_id must not persist new goal"
 
@@ -783,12 +783,12 @@ def test_add_goal_with_invalid_parent_id_rejects(tmp_path: Path):
 def test_add_goal_default_parent_id_none(tmp_path: Path):
     """s_006: omitting parent_id creates a root goal (parent_id=None)."""
     # guards: mcp-required-field-check-must-reject-none — absent key is OK (root)
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
-    added = _json_payload(_dispatch_sync("devboard_add_goal", {
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    added = _json_payload(_dispatch_sync("agentboard_add_goal", {
         "project_root": str(tmp_path), "title": "solo",
     }))
 
-    from devboard.storage.file_store import FileStore
+    from agentboard.storage.file_store import FileStore
     board = FileStore(tmp_path).load_board()
     goal = next(g for g in board.goals if g.id == added["goal_id"])
     assert goal.parent_id is None

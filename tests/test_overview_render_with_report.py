@@ -13,8 +13,8 @@ from pathlib import Path
 
 def _bootstrap(tmp_path: Path, task_id: str | None = "t_r") -> str:
     """Minimal goal + plan fixture. Returns goal_id."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -38,7 +38,7 @@ def test_render_no_duplicate_purpose_header_when_report_contains_one() -> None:
     heading (common — LLM copies visible Korean section names), the
     renderer must NOT emit the legacy '## 목적 (Purpose)' a second time
     below. The output should contain '## 목적' at most from the AI report."""
-    from devboard.tui.overview_render import render_overview_body
+    from agentboard.tui.overview_render import render_overview_body
 
     report_md_with_purpose = (
         "## 목적\n\n이 goal의 목적 요약.\n\n"
@@ -66,7 +66,7 @@ def test_render_preserves_legacy_layout_when_report_empty() -> None:
     """s_004 — when payload.report_md is empty, the legacy plan_digest
     layout ('## 목적' → '## 계획 요약' → '## 활동' → '## 현재 상태') must
     appear with '## 목적' as the top-most section (backward compat)."""
-    from devboard.tui.overview_render import render_overview_body
+    from agentboard.tui.overview_render import render_overview_body
 
     payload = {
         "report_md": "",
@@ -93,7 +93,7 @@ def test_render_prepends_report_md_when_present() -> None:
     """s_003 — render_overview_body must emit payload.report_md at the
     very top when it is non-empty, so Overview tab leads with the human-
     readable summary instead of hash/plan_digest."""
-    from devboard.tui.overview_render import render_overview_body
+    from agentboard.tui.overview_render import render_overview_body
 
     sentinel = "SENTINEL_REPORT_HEADER_X7Q"
     payload = {
@@ -127,7 +127,7 @@ def test_render_prepends_report_md_when_present() -> None:
 def test_payload_report_md_reads_file_contents(tmp_path: Path) -> None:
     """s_002 — when .devboard/goals/<gid>/report.md exists, its content
     must land verbatim in payload.report_md."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     goal_id = _bootstrap(tmp_path)
     report_body = (
@@ -151,7 +151,7 @@ def test_payload_report_md_reads_file_contents(tmp_path: Path) -> None:
 def test_payload_includes_empty_report_md_when_file_absent(tmp_path: Path) -> None:
     """s_001 — payload must always carry a 'report_md' key; defaults to ''
     when .devboard/goals/<gid>/report.md does not exist."""
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     goal_id = _bootstrap(tmp_path)
     payload = build_overview_payload(tmp_path, goal_id, task_id="t_r")

@@ -7,8 +7,8 @@ import pytest
 
 
 def _bootstrap(tmp_path: Path, *goals: tuple[str, str], active: str | None = None) -> None:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -23,7 +23,7 @@ def _bootstrap(tmp_path: Path, *goals: tuple[str, str], active: str | None = Non
 
 @pytest.mark.asyncio
 async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None:
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "only-goal"), active="g_1")
     app = DevBoardApp(store_root=tmp_path)
@@ -44,7 +44,7 @@ async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None
 
 @pytest.mark.asyncio
 async def test_colon_then_type_works_on_v21_layout(tmp_path: Path) -> None:
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "goal-one"), active="g_1")
     app = DevBoardApp(store_root=tmp_path)
@@ -67,7 +67,7 @@ async def test_colon_then_type_works_on_v21_layout(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_help_modal_has_legend_section(tmp_path: Path) -> None:
-    from devboard.tui.help_modal import DEFAULT_ENTRIES
+    from agentboard.tui.help_modal import DEFAULT_ENTRIES
 
     names = [e.name for e in DEFAULT_ENTRIES]
     assert any("pushed" in n or "legend" in n.lower() for n in names), (
@@ -77,7 +77,7 @@ async def test_help_modal_has_legend_section(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_v20_commands_still_dispatch(tmp_path: Path) -> None:
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_xyz", "one"), active="g_xyz")
     app = DevBoardApp(store_root=tmp_path)
@@ -92,7 +92,7 @@ async def test_live_status_line_shows_latest_event_at_bottom(tmp_path: Path) -> 
     """A 1-line LiveStatusLine sits above the CommandLine and shows the
     most recent formatted event from runs/*.jsonl. Complements StatusBar
     (top = goal context, bottom = raw live feed)."""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
     runs_dir = tmp_path / ".devboard" / "runs"
@@ -133,7 +133,7 @@ async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
     widgets (#resources-runs, #context-viewer) that v2.1 removed. All
     4 raised NoMatches from their handlers. Each command must now either
     update v2.1 state or surface a friendly message — never propagate."""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
     task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
@@ -162,9 +162,9 @@ async def test_goto_refreshes_plan_markdown_to_new_goal(tmp_path: Path) -> None:
     import os
     import time
 
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
-    from devboard.tui.app import DevBoardApp
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
+    from agentboard.tui.app import DevBoardApp
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -200,7 +200,7 @@ async def test_decisions_cmd_refreshes_phase_flow(tmp_path: Path) -> None:
     PhaseFlowView Dev tab to the target task's decisions. Timeline was
     replaced by the Dev tab inside PhaseFlowView; the refresh contract
     (command re-reads per-task state) must survive the swap."""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
     goal_dir = tmp_path / ".devboard" / "goals" / "g_1"
@@ -254,7 +254,7 @@ async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Pa
     labels the user saw. After fix: goto ambiguous shows hint in command
     line, sidebar stays in sync with _goal_ids so click always navigates
     to the labeled goal."""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(
         tmp_path,
@@ -308,7 +308,7 @@ async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Pa
 async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None:
     """Clicking a goal in the sidebar should navigate to it — same as
     running ':goto <id>'. Otherwise the list is read-only decoration."""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_first", "first"), ("g_second", "second"), active="g_first")
     for gid in ("g_first", "g_second"):
@@ -353,7 +353,7 @@ async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None
 async def test_runs_list_not_in_layout(tmp_path: Path) -> None:
     from textual.css.query import NoMatches
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
     app = DevBoardApp(store_root=tmp_path)

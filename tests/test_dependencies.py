@@ -10,14 +10,14 @@ import pytest
 # ── Ecosystem detection + skipped reasons ────────────────────────────────────
 
 def test_no_lockfile_returns_skipped(tmp_path: Path):
-    from devboard.security.dependencies import check_dependencies
+    from agentboard.security.dependencies import check_dependencies
     result = check_dependencies(tmp_path)
     assert result["skipped_reason"] == "no supported lockfile"
     assert result["ecosystem"] is None
 
 
 def test_python_ecosystem_detected(tmp_path: Path, monkeypatch):
-    from devboard.security import dependencies
+    from agentboard.security import dependencies
     (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
     monkeypatch.setattr(dependencies.shutil, "which", lambda name: None)
     result = dependencies.check_dependencies(tmp_path)
@@ -25,7 +25,7 @@ def test_python_ecosystem_detected(tmp_path: Path, monkeypatch):
 
 
 def test_node_ecosystem_detected(tmp_path: Path, monkeypatch):
-    from devboard.security import dependencies
+    from agentboard.security import dependencies
     (tmp_path / "package.json").write_text("{}")
     monkeypatch.setattr(dependencies.shutil, "which", lambda name: None)
     result = dependencies.check_dependencies(tmp_path)
@@ -33,7 +33,7 @@ def test_node_ecosystem_detected(tmp_path: Path, monkeypatch):
 
 
 def test_missing_pip_audit_returns_skipped(tmp_path: Path, monkeypatch):
-    from devboard.security import dependencies
+    from agentboard.security import dependencies
     (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
     monkeypatch.setattr(dependencies.shutil, "which", lambda name: None)
     result = dependencies.check_dependencies(tmp_path)
@@ -73,7 +73,7 @@ class _FakeCompleted:
 
 
 def test_pip_audit_parse(tmp_path: Path, monkeypatch):
-    from devboard.security import dependencies
+    from agentboard.security import dependencies
     (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
     monkeypatch.setattr(dependencies.shutil, "which", lambda name: "/usr/bin/pip-audit")
     monkeypatch.setattr(dependencies.subprocess, "run",
@@ -87,7 +87,7 @@ def test_pip_audit_parse(tmp_path: Path, monkeypatch):
 
 
 def test_npm_audit_parse(tmp_path: Path, monkeypatch):
-    from devboard.security import dependencies
+    from agentboard.security import dependencies
     (tmp_path / "package.json").write_text("{}")
     monkeypatch.setattr(dependencies.shutil, "which", lambda name: "/usr/bin/npm")
     monkeypatch.setattr(dependencies.subprocess, "run",
@@ -104,18 +104,18 @@ def test_npm_audit_parse(tmp_path: Path, monkeypatch):
 # ── MCP registration + dispatch ─────────────────────────────────────────────
 
 def test_mcp_tool_registered():
-    from devboard.mcp_server import list_tools
+    from agentboard.mcp_server import list_tools
     tools = asyncio.run(list_tools())
-    assert "devboard_check_dependencies" in {t.name for t in tools}
+    assert "agentboard_check_dependencies" in {t.name for t in tools}
 
 
 def test_mcp_dispatch(tmp_path: Path, monkeypatch):
-    from devboard.mcp_server import call_tool
-    from devboard.security import dependencies
+    from agentboard.mcp_server import call_tool
+    from agentboard.security import dependencies
     (tmp_path / "pyproject.toml").write_text("[project]\nname='x'\n")
     monkeypatch.setattr(dependencies.shutil, "which", lambda name: None)
     result = asyncio.run(call_tool(
-        "devboard_check_dependencies",
+        "agentboard_check_dependencies",
         {"project_root": str(tmp_path)},
     ))
     payload = json.loads(result[0].text)

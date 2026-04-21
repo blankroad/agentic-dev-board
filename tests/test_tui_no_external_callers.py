@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def test_no_external_callers_of_tui_app_loop_callbacks() -> None:
-    """Nothing outside src/devboard/tui/ may call the orchestrator-loop
+    """Nothing outside src/agentboard/tui/ may call the orchestrator-loop
     callbacks on DevBoardApp (log_step, log_verdict, log_tool,
     notify_converged, set_gauntlet_step). These exist for a LEGACY
     orchestrator wire that we are removing; external references would break.

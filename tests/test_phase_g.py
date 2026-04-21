@@ -6,20 +6,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devboard.agents.iron_law import IronLawVerdict, _is_test_path, check_iron_law
-from devboard.agents.systematic_debug import _parse_rca
-from devboard.agents.tdd import parse_green_status, parse_red_status, parse_refactor_status
-from devboard.gauntlet.steps.brainstorm import needs_brainstorm, parse_questions
-from devboard.tools.base import ToolCall
-from devboard.config import DevBoardConfig, TDDConfig
-from devboard.gauntlet.lock import build_locked_plan
-from devboard.llm.client import CompletionResult
-from devboard.models import AtomicStep, BoardState, Goal, LockedPlan
-from devboard.orchestrator.verify import (
+from agentboard.agents.iron_law import IronLawVerdict, _is_test_path, check_iron_law
+from agentboard.agents.systematic_debug import _parse_rca
+from agentboard.agents.tdd import parse_green_status, parse_red_status, parse_refactor_status
+from agentboard.gauntlet.steps.brainstorm import needs_brainstorm, parse_questions
+from agentboard.tools.base import ToolCall
+from agentboard.config import DevBoardConfig, TDDConfig
+from agentboard.gauntlet.lock import build_locked_plan
+from agentboard.llm.client import CompletionResult
+from agentboard.models import AtomicStep, BoardState, Goal, LockedPlan
+from agentboard.orchestrator.verify import (
     EvidenceRecord, VerificationReport, _keywords_from_item,
     _tail, verify_checklist,
 )
-from devboard.storage.file_store import FileStore
+from agentboard.storage.file_store import FileStore
 
 
 # ── G1-a: AtomicStep + LockedPlan schema ──────────────────────────────────────
@@ -250,22 +250,22 @@ def _r(text):
     return r
 
 
-@patch("devboard.orchestrator.graph.run_tdd_red")
-@patch("devboard.orchestrator.graph.run_tdd_green")
-@patch("devboard.orchestrator.graph.run_tdd_refactor")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_tdd_red")
+@patch("agentboard.orchestrator.graph.run_tdd_green")
+@patch("agentboard.orchestrator.graph.run_tdd_refactor")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_tdd_path_executes_red_green_verify(
     mock_commit, mock_diff, mock_reviewer, mock_planner,
     mock_verify, mock_refactor, mock_green, mock_red,
     tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.orchestrator.runner import run_loop
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.orchestrator.runner import run_loop
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
@@ -305,20 +305,20 @@ def test_tdd_path_executes_red_green_verify(
     assert mock_verify.call_count >= 1
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.run_systematic_debug")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.run_systematic_debug")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_rca_escalates_after_3_consecutive_failures(
     mock_commit, mock_diff, mock_verify, mock_sysdebug, mock_reviewer, mock_executor, mock_planner,
     tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.orchestrator.runner import run_loop
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.orchestrator.runner import run_loop
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
@@ -460,21 +460,21 @@ def test_iron_law_ignores_non_writes():
     assert v.test_writes == []
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_iron_law_strict_blocks_loop(
     mock_commit, mock_diff, mock_verify, mock_reviewer, mock_executor, mock_planner,
     tmp_path: Path,
 ):
     """In strict mode, Iron Law violation in legacy executor path should block."""
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.config import DevBoardConfig, TDDConfig
-    from devboard.orchestrator.runner import run_loop
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.config import DevBoardConfig, TDDConfig
+    from agentboard.orchestrator.runner import run_loop
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()

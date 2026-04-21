@@ -196,9 +196,9 @@ After Decide produces the JSON:
 
 1. Resolve any `borderline_decisions` with the user (one question at a time, offer A/B + your recommendation)
 2. Present the plan to the user for review. Ask: "Plan ready. Approve to lock? (yes / no + which step to revise: problem|scope|arch|challenge)"
-3. If approved: call `devboard_approve_plan(project_root, goal_id, approved=True)`
-4. If revision needed: call `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)`, then re-run from that step
-5. Once approved, call `devboard_lock_plan(goal_id, decide_json, project_root)` which:
+3. If approved: call `agentboard_approve_plan(project_root, goal_id, approved=True)`
+4. If revision needed: call `agentboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)`, then re-run from that step
+5. Once approved, call `agentboard_lock_plan(goal_id, decide_json, project_root)` which:
    - Verifies `plan_review.json` status=approved (returns error if missing or revision_pending)
    - Computes SHA256 hash of the locked fields
    - Writes `.devboard/goals/<goal_id>/plan.md` (human-readable) and `plan.json` (machine-readable)
@@ -208,16 +208,16 @@ The plan is now **immutable**. Implementation must follow it. Any drift triggers
 
 ### Task metadata markers (run after start_task)
 
-Right after receiving `task_id` from `devboard_start_task`, set the markers below automatically — so CSO/redteam can decide entry deterministically:
+Right after receiving `task_id` from `agentboard_start_task`, set the markers below automatically — so CSO/redteam can decide entry deterministically:
 
 1. **production_destined**: default `true`. Only `false` if the user explicitly said "throwaway" or "prototype".
-2. **security_sensitive_plan**: concatenate the architecture/atomic_steps text from arch.md + decide.json into a single string, then call `devboard_check_security_sensitive(diff=<plan_text>)`. Use the returned `sensitive` value as-is.
-3. **ui_surface**: concatenate arch.md + decide.json into a single string, then scan case-insensitively for any of these keywords: `tui`, `textual`, `widget`, `pilot`, `browser`, `ui`, `frontend`. If any keyword is present → `True`, else `False`. This flag lets `agentboard-approval` decide whether to capture a real-TTY screenshot via `devboard_tui_render_smoke` and write the `## Screenshots / Diagrams` section of plan.md.
+2. **security_sensitive_plan**: concatenate the architecture/atomic_steps text from arch.md + decide.json into a single string, then call `agentboard_check_security_sensitive(diff=<plan_text>)`. Use the returned `sensitive` value as-is.
+3. **ui_surface**: concatenate arch.md + decide.json into a single string, then scan case-insensitively for any of these keywords: `tui`, `textual`, `widget`, `pilot`, `browser`, `ui`, `frontend`. If any keyword is present → `True`, else `False`. This flag lets `agentboard-approval` decide whether to capture a real-TTY screenshot via `agentboard_tui_render_smoke` and write the `## Screenshots / Diagrams` section of plan.md.
 
 Save all three values like this:
 
 ```
-devboard_update_task_status(
+agentboard_update_task_status(
   project_root, task_id, status="planning",
   metadata={
       "production_destined": <bool>,
@@ -235,12 +235,12 @@ You MUST call these in order. Missing a call leaves `.devboard/` incomplete and 
 
 | When | Tool | Purpose |
 |---|---|---|
-| After user reviews Decide output | `devboard_approve_plan(project_root, goal_id, approved, revision_target?)` | Record plan review decision |
-| After approval confirmed | `devboard_lock_plan(project_root, goal_id, decide_json)` | Computes SHA256, writes plan.md + plan.json |
-| Right after lock | `devboard_start_task(project_root, goal_id)` | Creates Task + starts run. Returns `{task_id, run_id}` — SAVE BOTH. |
-| After lock + start_task | `devboard_checkpoint(project_root, run_id, "gauntlet_complete", {...})` | Record Gauntlet completion with locked_hash + atomic_steps count |
+| After user reviews Decide output | `agentboard_approve_plan(project_root, goal_id, approved, revision_target?)` | Record plan review decision |
+| After approval confirmed | `agentboard_lock_plan(project_root, goal_id, decide_json)` | Computes SHA256, writes plan.md + plan.json |
+| Right after lock | `agentboard_start_task(project_root, goal_id)` | Creates Task + starts run. Returns `{task_id, run_id}` — SAVE BOTH. |
+| After lock + start_task | `agentboard_checkpoint(project_root, run_id, "gauntlet_complete", {...})` | Record Gauntlet completion with locked_hash + atomic_steps count |
 
-The `task_id` and `run_id` you receive from `devboard_start_task` MUST be threaded through to `agentboard-tdd` and all subsequent MCP calls in this session.
+The `task_id` and `run_id` you receive from `agentboard_start_task` MUST be threaded through to `agentboard-tdd` and all subsequent MCP calls in this session.
 
 ## Handoff
 

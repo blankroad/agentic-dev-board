@@ -21,8 +21,8 @@ test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 
 ### Goal context
 
-1. Call `devboard_list_goals(project_root)`:
-   - 0 goals → call `devboard_add_goal(project_root, title, description)` first
+1. Call `agentboard_list_goals(project_root)`:
+   - 0 goals → call `agentboard_add_goal(project_root, title, description)` first
    - 1 goal → use that goal_id
    - Multiple goals → use the most recent
 2. Run `Grep` / `Glob` on codebase for files/paths the user's prompt hints at. Prepare a 1-line summary per hit for Phase 3 context ("참고: {file:line — summary}"). If nothing found, note "no existing code found".
@@ -175,7 +175,7 @@ CLEAR-path note: when Phase 2 fast-pathed here, the 현실적 slot is allowed to
 
 ## Phase 5 — Self-review (before Phase 6 save)
 
-Before calling `devboard_save_brainstorm`, the skill (not the user) audits the draft:
+Before calling `agentboard_save_brainstorm`, the skill (not the user) audits the draft:
 
 ### Checks
 
@@ -192,10 +192,10 @@ Keep this phase silent unless a check fails — success is the default. On failu
 
 ### Mandatory decision log (audit trail)
 
-Phase 5 is easy to skip silently because it has no user-visible output on success. To make it auditable, BEFORE calling `devboard_save_brainstorm` in Phase 6 you MUST call:
+Phase 5 is easy to skip silently because it has no user-visible output on success. To make it auditable, BEFORE calling `agentboard_save_brainstorm` in Phase 6 you MUST call:
 
 ```
-devboard_log_decision(
+agentboard_log_decision(
   project_root, task_id, iter=<current_iter>,
   phase="self_review",
   reasoning="<one-line: checks that passed + any WARNING noted>",
@@ -209,7 +209,7 @@ retro / parallel-review can then grep `phase="self_review"` to verify this step 
 
 ## Phase 6 — Save + Handoff
 
-### MCP call: `devboard_save_brainstorm`
+### MCP call: `agentboard_save_brainstorm`
 
 | Parameter | Value |
 |---|---|
@@ -223,7 +223,7 @@ retro / parallel-review can then grep `phase="self_review"` to verify this step 
 If Phase 3 surfaced a constraint that applies to future goals ("MCP server은 LLM 호출 금지", "tests는 실 파일 시스템 — mock 금지"), call:
 
 ```
-devboard_save_learning(
+agentboard_save_learning(
   project_root, name="<short-kebab-name>", content=<markdown body>,
   tags=["brainstorm", "<topic>"], category="constraint", confidence=0.6,
 )
@@ -263,10 +263,10 @@ If the user refuses with "지금은 아니야" / "나중에" / equivalent: save 
 
 | When | Tool |
 |---|---|
-| Phase 0 — no goal exists | `devboard_add_goal(project_root, title, description)` |
-| Phase 0 — verify goal | `devboard_list_goals(project_root)` |
-| Phase 6 — save | `devboard_save_brainstorm(project_root, goal_id, premises, risks, alternatives, existing_code_notes)` |
-| Phase 6 — reusable constraint (optional) | `devboard_save_learning(...)` — category="constraint", confidence=0.6 |
+| Phase 0 — no goal exists | `agentboard_add_goal(project_root, title, description)` |
+| Phase 0 — verify goal | `agentboard_list_goals(project_root)` |
+| Phase 6 — save | `agentboard_save_brainstorm(project_root, goal_id, premises, risks, alternatives, existing_code_notes)` |
+| Phase 6 — reusable constraint (optional) | `agentboard_save_learning(...)` — category="constraint", confidence=0.6 |
 
 ---
 

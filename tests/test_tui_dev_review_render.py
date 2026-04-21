@@ -13,7 +13,7 @@ def _sample_iteration(
     reasoning: str = "overview TabPane wrapped via import + DEFAULT_CSS",
     test_file: str = "tests/test_tui_center_scroll.py",
     test_name: str = "test_overview_tab_wraps_static_in_vertical_scroll",
-    impl_file: str = "src/devboard/tui/phase_flow.py",
+    impl_file: str = "src/agentboard/tui/phase_flow.py",
 ) -> dict:
     return {
         "iter": iter_n,
@@ -35,7 +35,7 @@ def test_render_escapes_newlines_in_reasoning() -> None:
     """redteam FM#5 — reasoning with embedded '\\n' must NOT visually
     bleed into subsequent card fields. The renderer must flatten
     newlines (or indent them consistently) so the label contract holds."""
-    from devboard.tui.dev_timeline_render import render_dev_timeline
+    from agentboard.tui.dev_timeline_render import render_dev_timeline
 
     iteration = _sample_iteration(
         reasoning="first line\nSECOND_LINE_SENTINEL\nthird",
@@ -66,7 +66,7 @@ def test_render_cards_with_divider_and_rollup_coexist() -> None:
     """s_008 — two cards separated by a divider (5+ '─' chars), AND when
     code_delta is present the rollup ## Scope baseline section co-exists
     with ## Iterations card section."""
-    from devboard.tui.dev_timeline_render import render_dev_timeline
+    from agentboard.tui.dev_timeline_render import render_dev_timeline
 
     payload = {
         "iterations": [
@@ -76,7 +76,7 @@ def test_render_cards_with_divider_and_rollup_coexist() -> None:
         "code_delta": {
             "base_commit": "da7c4cf",
             "head_commit": "a4149f3",
-            "files": [{"path": "src/devboard/tui/phase_flow.py", "adds": 5, "dels": 2}],
+            "files": [{"path": "src/agentboard/tui/phase_flow.py", "adds": 5, "dels": 2}],
             "adds": 5,
             "dels": 2,
         },
@@ -95,15 +95,15 @@ def test_result_shipped_count_uses_step_shipping() -> None:
     """s_010 — result_timeline_render must source 'Shipped N/M' from
     payload.step_shipping, not a hardcoded or plan.json.completed value.
     With step_shipping showing 3 of 3 shipped, output must say 3/3."""
-    from devboard.tui.result_timeline_render import render_result_timeline
+    from agentboard.tui.result_timeline_render import render_result_timeline
 
     payload = {
         "step_shipping": [
-            {"id": "s_001", "behavior": "a", "impl_file": "src/devboard/tui/phase_flow.py",
+            {"id": "s_001", "behavior": "a", "impl_file": "src/agentboard/tui/phase_flow.py",
              "shipped": True, "ship_iter": 1, "ship_ts": "t1", "ship_verdict": "GREEN_CONFIRMED"},
-            {"id": "s_002", "behavior": "b", "impl_file": "src/devboard/tui/phase_flow.py",
+            {"id": "s_002", "behavior": "b", "impl_file": "src/agentboard/tui/phase_flow.py",
              "shipped": True, "ship_iter": 2, "ship_ts": "t2", "ship_verdict": "GREEN_CONFIRMED"},
-            {"id": "s_003", "behavior": "c", "impl_file": "src/devboard/tui/app.py",
+            {"id": "s_003", "behavior": "c", "impl_file": "src/agentboard/tui/app.py",
              "shipped": True, "ship_iter": 3, "ship_ts": "t3", "ship_verdict": "GREEN_CONFIRMED"},
         ],
         "plan_digest": {"atomic_steps_total": 3, "atomic_steps_done": 0},
@@ -118,7 +118,7 @@ def test_render_emits_card_labels() -> None:
     """s_007 — render_dev_timeline must emit all four card labels
     (behavior:, reasoning:, test:, impl:) when iterations carry the new
     fields populated by overview_payload."""
-    from devboard.tui.dev_timeline_render import render_dev_timeline
+    from agentboard.tui.dev_timeline_render import render_dev_timeline
 
     payload = {
         "iterations": [_sample_iteration()],

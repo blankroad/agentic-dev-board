@@ -1,6 +1,6 @@
 """Regression test for parent audit's deferred redteam finding #1.
 
-`src/devboard/tui/plan_markdown.py:_safe_read` called `path.read_text()`
+`src/agentboard/tui/plan_markdown.py:_safe_read` called `path.read_text()`
 without `encoding="utf-8"`. Under `LC_ALL=C` / `LANG=POSIX` (CI, Alpine,
 stripped Docker), `Path.read_text()` falls back to
 `locale.getpreferredencoding()` = `US-ASCII` and raises
@@ -9,7 +9,7 @@ Korean). The except wrapper then returns the `_unreadable_` fallback —
 the 5-section narrative silently disappears from the TUI.
 
 Fix: pass `encoding="utf-8"` on every `path.read_text(...)` call site
-under `src/devboard/tui/`.
+under `src/agentboard/tui/`.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def test_safe_read_survives_ascii_locale(
     the em-dash — NOT the fallback (which would indicate the helper
     silently swallowed a UnicodeDecodeError).
     """
-    from devboard.tui.plan_markdown import _safe_read
+    from agentboard.tui.plan_markdown import _safe_read
 
     real_text_encoding = io.text_encoding
 

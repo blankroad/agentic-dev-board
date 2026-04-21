@@ -1,6 +1,6 @@
 """Tests for render_dev_timeline (s_009)."""
 
-from devboard.tui.dev_timeline_render import render_dev_timeline
+from agentboard.tui.dev_timeline_render import render_dev_timeline
 
 
 def test_render_dev_timeline_iter_block_oldest_top() -> None:

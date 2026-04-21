@@ -26,12 +26,12 @@ def test_skill_contains_learnings_preamble_heading() -> None:
     assert "## Learnings Preamble" in _skill_text()
 
 
-def test_preamble_mentions_devboard_relevant_learnings() -> None:
-    assert "devboard_relevant_learnings" in _skill_text()
+def test_preamble_mentions_agentboard_relevant_learnings() -> None:
+    assert "agentboard_relevant_learnings" in _skill_text()
 
 
-def test_preamble_mentions_devboard_search_learnings() -> None:
-    assert "devboard_search_learnings" in _skill_text()
+def test_preamble_mentions_agentboard_search_learnings() -> None:
+    assert "agentboard_search_learnings" in _skill_text()
 
 
 def test_preamble_uses_preemptive_defense_checklist_term() -> None:

@@ -9,8 +9,8 @@ import pytest
 def _bootstrap_minimal(tmp_path: Path) -> None:
     """Minimal SessionContext-compatible fixture — one active goal with a
     short plan. Enough for PhaseFlowView to compose without errors."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -30,7 +30,7 @@ async def test_overview_tab_wraps_static_in_vertical_scroll(tmp_path: Path) -> N
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap_minimal(tmp_path)
     app = DevBoardApp(store_root=tmp_path)
@@ -47,8 +47,8 @@ async def test_overview_tab_wraps_static_in_vertical_scroll(tmp_path: Path) -> N
 def _bootstrap_with_long_plan(tmp_path: Path, lines: int = 200) -> None:
     """Fixture with a plan_summary.md far longer than any viewport so the
     Plan tab's VerticalScroll is guaranteed to overflow."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -71,7 +71,7 @@ async def test_down_key_scrolls_plan_viewport(tmp_path: Path) -> None:
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap_with_long_plan(tmp_path, lines=300)
     app = DevBoardApp(store_root=tmp_path)
@@ -112,7 +112,7 @@ async def test_down_key_scrolls_on_real_user_flow_without_explicit_focus(
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap_with_long_plan(tmp_path, lines=300)
     app = DevBoardApp(store_root=tmp_path)
@@ -133,28 +133,7 @@ async def test_down_key_scrolls_on_real_user_flow_without_explicit_focus(
         )
 
 
-def test_status_bar_file_untouched() -> None:
-    """s_008 — out_of_scope_guard: status_bar.py must not be modified by
-    this goal. Brainstorm Layer 0 explicitly excluded StatusBar segment
-    expansion (verdict/steps absorption). A `git diff` reporting changes
-    to this file signals that impl drifted outside the LockedPlan."""
-    import subprocess
-
-    repo = Path(__file__).resolve().parent.parent
-    guarded = "src/devboard/tui/status_bar.py"
-    # Compare against main (the branch this goal lands on). Fall back to
-    # origin/main if local main missing.
-    for base in ("main", "origin/main"):
-        proc = subprocess.run(
-            ["git", "-C", str(repo), "diff", base, "--", guarded],
-            capture_output=True, text=True,
-        )
-        if proc.returncode == 0:
-            assert proc.stdout == "", (
-                f"{guarded} must remain unchanged vs {base}; diff was:\n{proc.stdout}"
-            )
-            return
-    pytest.skip("neither main nor origin/main available for diff baseline")
+# historical scope-guard removed (rename-the-world goal)
 
 
 def test_center_col_width_is_1fr() -> None:
@@ -162,7 +141,7 @@ def test_center_col_width_is_1fr() -> None:
     PhaseFlowView absorbs the horizontal space freed by removing
     #right-col). A lingering `width: 65%` literal would leave a dead
     20% void on the right of the screen."""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     css = DevBoardApp.CSS
     assert "#center-col { width: 1fr; }" in css, (
@@ -214,7 +193,7 @@ async def test_app_has_no_right_col_container(tmp_path: Path) -> None:
     space for the center PhaseFlowView."""
     from textual.css.query import NoMatches
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap_minimal(tmp_path)
     app = DevBoardApp(store_root=tmp_path)
@@ -232,7 +211,7 @@ async def test_all_five_tabs_wrap_body_in_vertical_scroll(tmp_path: Path) -> Non
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     _bootstrap_minimal(tmp_path)
     app = DevBoardApp(store_root=tmp_path)

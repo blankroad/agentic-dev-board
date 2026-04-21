@@ -16,7 +16,7 @@ REPO = Path(__file__).resolve().parent.parent
 def test_verdict_palette_maps_all_known_sources() -> None:
     """s_001 — every verdict_source string the codebase emits must map to
     (letter, color) so the 3 new widgets share one visual language."""
-    from devboard.tui.verdict_palette import map_verdict
+    from agentboard.tui.verdict_palette import map_verdict
 
     cases = {
         "PASS": "P",
@@ -47,7 +47,7 @@ def test_verdict_timeline_builds_matrix_with_empty_input() -> None:
     return (iter, verdict) tuple lists, surviving empty input.
     guards: widgets-need-reactive-hook-not-compose-once (feeds refresh)
     edge: empty / None input"""
-    from devboard.analytics.verdict_timeline import build_matrix
+    from agentboard.analytics.verdict_timeline import build_matrix
 
     # empty
     assert build_matrix([]) == {}
@@ -74,7 +74,7 @@ def test_verdict_timeline_builds_matrix_with_empty_input() -> None:
 def test_plan_pipeline_renders_5_nodes_with_state_icons(tmp_path) -> None:
     """s_003 — plan_pipeline.render_pipeline(goal_dir) returns a string
     containing 5 step markers with ✓ (file exists) or · (missing)."""
-    from devboard.tui.plan_pipeline import render_pipeline
+    from agentboard.tui.plan_pipeline import render_pipeline
 
     gauntlet = tmp_path / "gauntlet"
     gauntlet.mkdir()
@@ -96,7 +96,7 @@ def test_plan_pipeline_renders_5_nodes_with_state_icons(tmp_path) -> None:
 def test_plan_pipeline_narrows_to_abbreviated_form(tmp_path) -> None:
     """s_004 — narrow=True collapses to `[icon]─[icon]─...` single line
     under width 80 so the pipeline fits on narrow terminals."""
-    from devboard.tui.plan_pipeline import render_pipeline
+    from agentboard.tui.plan_pipeline import render_pipeline
 
     gauntlet = tmp_path / "gauntlet"
     gauntlet.mkdir()
@@ -124,7 +124,7 @@ async def test_plan_pipeline_enter_opens_modal_real_user_flow(tmp_path) -> None:
     assert a ModalScreen is on the screen stack.
     guards: pilot-test-must-not-mask-default-focus-bug"""
     from textual.app import App, ComposeResult
-    from devboard.tui.plan_pipeline import PlanPipeline, PlanStepModal
+    from agentboard.tui.plan_pipeline import PlanPipeline, PlanStepModal
 
     gauntlet = tmp_path / "gauntlet"
     gauntlet.mkdir()
@@ -156,7 +156,7 @@ async def test_modal_dismisses_on_tab_switch_real_user_flow(tmp_path) -> None:
     guards: pilot-test-must-not-mask-default-focus-bug"""
     from textual.app import App, ComposeResult
     from textual.binding import Binding
-    from devboard.tui.plan_pipeline import PlanPipeline, PlanStepModal
+    from agentboard.tui.plan_pipeline import PlanPipeline, PlanStepModal
 
     gauntlet = tmp_path / "gauntlet"
     gauntlet.mkdir()
@@ -194,7 +194,7 @@ async def test_modal_dismisses_on_tab_switch_real_user_flow(tmp_path) -> None:
 def test_review_cards_renders_4_letters_in_order() -> None:
     """s_007 — review_cards.render_cards(matrix) returns a string showing
     4 reviewer letter cards in reviewer/cso/redteam/design_review order."""
-    from devboard.tui.review_cards import render_cards
+    from agentboard.tui.review_cards import render_cards
 
     matrix = {
         "review": [(1, "PASS")],
@@ -227,7 +227,7 @@ def test_review_timeline_renders_grid_with_empty_input() -> None:
     """s_008 — timeline renders even on empty matrix (empty-state) and
     produces one row per reviewer × one column per iteration on populated.
     edge: empty / None input"""
-    from devboard.tui.review_timeline import render_timeline
+    from agentboard.tui.review_timeline import render_timeline
 
     # empty matrix → empty-state string, no crash
     empty = render_timeline({})
@@ -254,7 +254,7 @@ def test_review_timeline_renders_grid_with_empty_input() -> None:
 def test_process_swimlane_renders_6_lanes() -> None:
     """s_009 — swimlane must label all 6 phases even when some are absent
     in decisions so the user sees a consistent lane structure."""
-    from devboard.tui.process_swimlane import render_swimlane
+    from agentboard.tui.process_swimlane import render_swimlane
 
     decisions = [
         {"phase": "tdd_green", "iter": 1, "ts": "2026-04-21T08:00Z"},
@@ -272,7 +272,7 @@ def test_process_sparkline_tolerates_empty_and_single_point() -> None:
     """s_010 — sparkline data builder survives empty / single-point input,
     returning lists that the Textual Sparkline widget can accept.
     edge: empty / None input"""
-    from devboard.tui.process_sparkline import build_series
+    from agentboard.tui.process_sparkline import build_series
 
     # empty → default zero buckets, no crash
     iter_series, ironlaw_series = build_series([])
@@ -295,7 +295,7 @@ async def test_phase_flow_mounts_new_widgets_real_user_flow() -> None:
     tab panes so the App actually wires the visuals — unit-tested widgets
     don't prove they're on-screen.
     guards: unit-tests-on-primitives-dont-prove-integration"""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     app = DevBoardApp(store_root=REPO)
     async with app.run_test() as pilot:
@@ -324,7 +324,7 @@ def test_phase_flow_has_refresh_hook_for_new_widgets() -> None:
     show up in the TUI without a manual tab toggle.
     guards: widgets-need-reactive-hook-not-compose-once"""
     from pathlib import Path as _P
-    source = _P("src/devboard/tui/phase_flow.py").read_text(encoding="utf-8")
+    source = _P("src/agentboard/tui/phase_flow.py").read_text(encoding="utf-8")
     # handle_tick must reference the new widgets by id or by refresh method
     for widget_id in ("process-sparkline", "process-swimlane", "review-cards"):
         assert widget_id in source, (
@@ -341,69 +341,19 @@ def test_phase_flow_has_refresh_hook_for_new_widgets() -> None:
 def test_real_tty_smoke_no_crash() -> None:
     """s_013 — the new widgets must not crash in a real pty. This is a
     hand-recorded assertion — live smoke is run via MCP
-    `devboard_tui_render_smoke` at approval time. Here we assert the
+    `agentboard_tui_render_smoke` at approval time. Here we assert the
     fixture artifact from the iter-12 run exists.
     guards: ui-requires-real-tty-smoke-not-just-pytest"""
     # The MCP tool returned crashed=False with mounted=True in this goal
     # (recorded 2026-04-21T08:30Z, captured_bytes=84410, duration_s=5.1).
     # An approval-time re-run happens automatically via
-    # `devboard_tui_render_smoke` regardless of this test, so we just pin
+    # `agentboard_tui_render_smoke` regardless of this test, so we just pin
     # the contract that the widgets can be boot-mounted.
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
     app = DevBoardApp(store_root=REPO)
     assert app is not None
 
 
 # ─── s_014 — out-of-scope guard ────────────────────────────────────────────
 
-def test_out_of_scope_unchanged() -> None:
-    """s_014 — guarded files outside this goal must have no diff vs main."""
-    import subprocess
-
-    guarded = [
-        "skills/agentboard-brainstorm/SKILL.md",
-        "skills/agentboard-gauntlet/SKILL.md",
-        "skills/agentboard-tdd/SKILL.md",
-        "skills/agentboard-cso/SKILL.md",
-        "skills/agentboard-redteam/SKILL.md",
-        "skills/agentboard-parallel-review/SKILL.md",
-        "skills/agentboard-approval/SKILL.md",
-        "skills/agentboard-rca/SKILL.md",
-        "skills/agentboard-retro/SKILL.md",
-        "skills/agentboard-replay/SKILL.md",
-        "skills/agentboard-synthesize-report/SKILL.md",
-        "skills/agentboard-ui-preview/SKILL.md",
-        "skills/agentboard-dep-audit/SKILL.md",
-        "skills/agentboard-design-review/SKILL.md",
-        "skills/agentboard-eng-review/SKILL.md",
-        "src/devboard/mcp_server.py",
-        "src/devboard/cli.py",
-        "src/devboard/storage/file_store.py",
-        "src/devboard/models.py",
-        "src/devboard/gauntlet",
-        "src/devboard/tui/overview_render.py",
-        "src/devboard/tui/dev_timeline_render.py",
-        "src/devboard/tui/review_sections_render.py",
-        "src/devboard/tui/result_timeline_render.py",
-        "src/devboard/tui/plan_markdown.py",
-        "pyproject.toml",
-        ".mcp.json",
-    ]
-    offenders: list[str] = []
-    for base in ("main", "origin/main"):
-        proc = subprocess.run(
-            ["git", "-C", str(REPO), "diff", base, "--", *guarded],
-            capture_output=True, text=True,
-        )
-        if proc.returncode == 0:
-            if proc.stdout:
-                for line in proc.stdout.splitlines():
-                    if line.startswith("diff --git a/"):
-                        offenders.append(line.split()[2].removeprefix("a/"))
-            break
-    else:
-        import pytest as _pytest
-        _pytest.skip("no main/origin/main baseline available")
-    assert not offenders, (
-        f"out-of-scope files changed (scope_guard violation): {offenders}"
-    )
+# historical scope-guard removed (rename-the-world goal)

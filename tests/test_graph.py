@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devboard.agents.reflect import _parse_reflect
-from devboard.llm.client import CompletionResult
-from devboard.models import Goal, BoardState, LockedPlan
-from devboard.orchestrator.checkpointer import Checkpointer
-from devboard.orchestrator.runner import run_loop
-from devboard.storage.file_store import FileStore
+from agentboard.agents.reflect import _parse_reflect
+from agentboard.llm.client import CompletionResult
+from agentboard.models import Goal, BoardState, LockedPlan
+from agentboard.orchestrator.checkpointer import Checkpointer
+from agentboard.orchestrator.runner import run_loop
+from agentboard.storage.file_store import FileStore
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ def _mock_result(text: str) -> CompletionResult:
 
 
 def _make_plan(goal_id: str = "g_001") -> LockedPlan:
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     return build_locked_plan(goal_id, {
         "problem": "Add hello.py",
         "non_goals": [],
@@ -125,17 +125,17 @@ REFLECT_TEXT = json.dumps({
 })
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph._get_diff", return_value="--- a\n+++ b\n+hello.py")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="--- a\n+++ b\n+hello.py")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_run_loop_converges_first_try(
     mock_commit, mock_diff, mock_reviewer, mock_executor, mock_planner,
     store: FileStore, tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
 
     mock_planner.return_value = AgentResult(PLAN_TEXT, [], _mock_result(PLAN_TEXT))
     mock_executor.return_value = AgentResult(EXEC_TEXT, [], _mock_result(EXEC_TEXT))
@@ -161,20 +161,20 @@ def test_run_loop_converges_first_try(
     mock_commit.assert_called_once()
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.run_reflect")
-@patch("devboard.orchestrator.graph.run_systematic_debug")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.run_reflect")
+@patch("agentboard.orchestrator.graph.run_systematic_debug")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_run_loop_retry_then_pass(
     mock_commit, mock_diff, mock_verify, mock_sysdebug, mock_reflect, mock_reviewer, mock_executor, mock_planner,
     store: FileStore, tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
 
     mock_planner.return_value = AgentResult(PLAN_TEXT, [], _mock_result(PLAN_TEXT))
     mock_executor.return_value = AgentResult(EXEC_TEXT, [], _mock_result(EXEC_TEXT))
@@ -186,7 +186,7 @@ def test_run_loop_retry_then_pass(
     mock_reflect.return_value = (reflect_json, AgentResult(REFLECT_TEXT, [], _mock_result(REFLECT_TEXT)))
     mock_sysdebug.return_value = (reflect_json, AgentResult(REFLECT_TEXT, [], _mock_result(REFLECT_TEXT)))
     # verify_node returns a report with full_suite_passed=True so it never blocks the loop
-    from devboard.orchestrator.verify import VerificationReport, EvidenceRecord
+    from agentboard.orchestrator.verify import VerificationReport, EvidenceRecord
     rep = VerificationReport(full_suite_passed=True, full_suite_cmd="pytest", full_suite_exit=0, full_suite_tail="")
     mock_verify.return_value = rep
 
@@ -211,20 +211,20 @@ def test_run_loop_retry_then_pass(
     assert mock_reflect.call_count + mock_sysdebug.call_count == 1
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.run_reflect")
-@patch("devboard.orchestrator.graph.run_systematic_debug")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.run_reflect")
+@patch("agentboard.orchestrator.graph.run_systematic_debug")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_run_loop_max_iterations_blocks(
     mock_commit, mock_diff, mock_verify, mock_sysdebug, mock_reflect, mock_reviewer, mock_executor, mock_planner,
     store: FileStore, tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
 
     mock_planner.return_value = AgentResult(PLAN_TEXT, [], _mock_result(PLAN_TEXT))
     mock_executor.return_value = AgentResult(EXEC_TEXT, [], _mock_result(EXEC_TEXT))
@@ -232,14 +232,14 @@ def test_run_loop_max_iterations_blocks(
     reflect_json = {"root_cause": "x", "next_strategy": "y", "learning": "", "risk": "HIGH", "risk_reason": "stuck", "escalate": False}
     mock_reflect.return_value = (reflect_json, AgentResult(REFLECT_TEXT, [], _mock_result(REFLECT_TEXT)))
     mock_sysdebug.return_value = (reflect_json, AgentResult(REFLECT_TEXT, [], _mock_result(REFLECT_TEXT)))
-    from devboard.orchestrator.verify import VerificationReport
+    from agentboard.orchestrator.verify import VerificationReport
     mock_verify.return_value = VerificationReport(full_suite_passed=True, full_suite_exit=0)
 
     goal = Goal(title="Hello", description="Add hello.py")
     store.save_goal(goal)
 
     # Plan allows only 2 iterations
-    from devboard.gauntlet.lock import build_locked_plan
+    from agentboard.gauntlet.lock import build_locked_plan
     plan = build_locked_plan(goal.id, {
         "problem": "p", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "a", "known_failure_modes": [],
@@ -262,17 +262,17 @@ def test_run_loop_max_iterations_blocks(
     assert "Max iterations" in result.block_reason
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph._get_diff", return_value="")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph._get_diff", return_value="")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_run_loop_replan_blocks(
     mock_commit, mock_diff, mock_reviewer, mock_executor, mock_planner,
     store: FileStore, tmp_path: Path,
 ):
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
 
     mock_planner.return_value = AgentResult(PLAN_TEXT, [], _mock_result(PLAN_TEXT))
     mock_executor.return_value = AgentResult(EXEC_TEXT, [], _mock_result(EXEC_TEXT))
@@ -300,14 +300,14 @@ def test_run_loop_replan_blocks(
 def test_checkpointer_persists_across_run(store: FileStore, tmp_path: Path):
     """Verify checkpoints are written to disk during the loop."""
     with (
-        patch("devboard.orchestrator.graph.run_planner") as mp,
-        patch("devboard.orchestrator.graph.run_executor") as me,
-        patch("devboard.orchestrator.graph.run_reviewer") as mr,
-        patch("devboard.orchestrator.graph._get_diff", return_value=""),
-        patch("devboard.orchestrator.graph._local_commit"),
+        patch("agentboard.orchestrator.graph.run_planner") as mp,
+        patch("agentboard.orchestrator.graph.run_executor") as me,
+        patch("agentboard.orchestrator.graph.run_reviewer") as mr,
+        patch("agentboard.orchestrator.graph._get_diff", return_value=""),
+        patch("agentboard.orchestrator.graph._local_commit"),
     ):
-        from devboard.agents.base import AgentResult
-        from devboard.agents.reviewer import ReviewVerdict
+        from agentboard.agents.base import AgentResult
+        from agentboard.agents.reviewer import ReviewVerdict
 
         mp.return_value = AgentResult(PLAN_TEXT, [], _mock_result(PLAN_TEXT))
         me.return_value = AgentResult(EXEC_TEXT, [], _mock_result(EXEC_TEXT))

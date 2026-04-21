@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from devboard.storage.file_store import _sanitize_id
+from agentboard.storage.file_store import _sanitize_id
 
-from devboard.models import BoardState, Goal, GoalStatus, LockedPlan, Task, TaskStatus, Iteration, ReviewVerdict
-from devboard.storage.file_store import FileStore
+from agentboard.models import BoardState, Goal, GoalStatus, LockedPlan, Task, TaskStatus, Iteration, ReviewVerdict
+from agentboard.storage.file_store import FileStore
 
 
 @pytest.fixture

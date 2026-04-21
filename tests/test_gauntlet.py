@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devboard.gauntlet.lock import build_locked_plan, parse_decide_output
-from devboard.gauntlet.pipeline import GauntletResult, run_gauntlet
-from devboard.llm.client import CompletionResult
-from devboard.models import Goal, BoardState
-from devboard.storage.file_store import FileStore
+from agentboard.gauntlet.lock import build_locked_plan, parse_decide_output
+from agentboard.gauntlet.pipeline import GauntletResult, run_gauntlet
+from agentboard.llm.client import CompletionResult
+from agentboard.models import Goal, BoardState
+from agentboard.storage.file_store import FileStore
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -158,13 +158,13 @@ def test_build_locked_plan():
 
 
 def test_locked_plan_integration_command_defaults_empty():
-    from devboard.models import LockedPlan
+    from agentboard.models import LockedPlan
     plan = LockedPlan(goal_id="g_x")
     assert plan.integration_test_command == ""
 
 
 def test_hash_excludes_integration_command():
-    from devboard.models import LockedPlan
+    from agentboard.models import LockedPlan
     plan_empty = LockedPlan(goal_id="g_x", problem="p", atomic_steps=[])
     plan_with = LockedPlan(
         goal_id="g_x", problem="p", atomic_steps=[],
@@ -200,7 +200,7 @@ def test_locked_plan_hash_changes_when_atomic_steps_change():
     if plan.atomic_steps:
         plan.atomic_steps[0].behavior = "MUTATED_BY_TEST"
     else:
-        from devboard.models import AtomicStep
+        from agentboard.models import AtomicStep
         plan.atomic_steps = [AtomicStep(id="s_mut", behavior="injected", test_file="tests/t.py", test_name="t")]
 
     new_hash = plan.compute_hash()
@@ -228,11 +228,11 @@ def store(tmp_path: Path) -> FileStore:
     return s
 
 
-@patch("devboard.gauntlet.pipeline.run_frame")
-@patch("devboard.gauntlet.pipeline.run_scope")
-@patch("devboard.gauntlet.pipeline.run_arch")
-@patch("devboard.gauntlet.pipeline.run_challenge")
-@patch("devboard.gauntlet.pipeline.run_decide")
+@patch("agentboard.gauntlet.pipeline.run_frame")
+@patch("agentboard.gauntlet.pipeline.run_scope")
+@patch("agentboard.gauntlet.pipeline.run_arch")
+@patch("agentboard.gauntlet.pipeline.run_challenge")
+@patch("agentboard.gauntlet.pipeline.run_decide")
 def test_run_gauntlet_full_pipeline(
     mock_decide, mock_challenge, mock_arch, mock_scope, mock_frame,
     store: FileStore,
@@ -286,11 +286,11 @@ def test_run_gauntlet_full_pipeline(
     assert loaded.locked_hash == result.locked_plan.locked_hash
 
 
-@patch("devboard.gauntlet.pipeline.run_frame")
-@patch("devboard.gauntlet.pipeline.run_scope")
-@patch("devboard.gauntlet.pipeline.run_arch")
-@patch("devboard.gauntlet.pipeline.run_challenge")
-@patch("devboard.gauntlet.pipeline.run_decide")
+@patch("agentboard.gauntlet.pipeline.run_frame")
+@patch("agentboard.gauntlet.pipeline.run_scope")
+@patch("agentboard.gauntlet.pipeline.run_arch")
+@patch("agentboard.gauntlet.pipeline.run_challenge")
+@patch("agentboard.gauntlet.pipeline.run_decide")
 def test_gauntlet_borderline_decisions_surfaced(
     mock_decide, mock_challenge, mock_arch, mock_scope, mock_frame,
     store: FileStore,
@@ -336,11 +336,11 @@ def test_gauntlet_borderline_decisions_surfaced(
     assert result.borderline_decisions == captured_decisions
 
 
-@patch("devboard.gauntlet.pipeline.run_frame")
-@patch("devboard.gauntlet.pipeline.run_scope")
-@patch("devboard.gauntlet.pipeline.run_arch")
-@patch("devboard.gauntlet.pipeline.run_challenge")
-@patch("devboard.gauntlet.pipeline.run_decide")
+@patch("agentboard.gauntlet.pipeline.run_frame")
+@patch("agentboard.gauntlet.pipeline.run_scope")
+@patch("agentboard.gauntlet.pipeline.run_arch")
+@patch("agentboard.gauntlet.pipeline.run_challenge")
+@patch("agentboard.gauntlet.pipeline.run_decide")
 def test_gauntlet_idempotent_hash(
     mock_decide, mock_challenge, mock_arch, mock_scope, mock_frame,
     store: FileStore,

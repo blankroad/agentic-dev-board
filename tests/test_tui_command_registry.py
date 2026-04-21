@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from devboard.tui.command_registry import (
+from agentboard.tui.command_registry import (
     CommandRegistry,
     MissingArgError,
     UnknownCommandError,

@@ -10,7 +10,7 @@ def test_process_section_is_summary_not_citation() -> None:
     `(source: decisions.jsonl iter=` citation template — that format
     produced citation-dump text. It MAY keep the aggregate citation
     line ending in `aggregate).`."""
-    from devboard.narrative.generator import assemble_process
+    from agentboard.narrative.generator import assemble_process
 
     grouped = {
         3: [
@@ -49,7 +49,7 @@ def test_review_section_is_summary_not_citation() -> None:
     """Review section must NOT emit the raw `(source: decisions.jsonl
     iter=X phase=Y)` citation per row — aggregate summary lines ending
     in `... aggregate).` are allowed."""
-    from devboard.narrative.generator import assemble_review
+    from agentboard.narrative.generator import assemble_review
 
     grouped = {
         7: [

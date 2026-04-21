@@ -6,7 +6,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from devboard.cli import app
+from agentboard.cli import app
 
 
 def test_cli_export_md_to_stdout(tmp_path: Path) -> None:

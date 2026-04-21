@@ -6,7 +6,7 @@ from __future__ import annotations
 
 
 def test_activity_includes_reasoning_fragment_and_accurate_completed_count() -> None:
-    from devboard.tui.overview_render import render_overview_body
+    from agentboard.tui.overview_render import render_overview_body
 
     payload = {
         "purpose": "fix the dev tab",

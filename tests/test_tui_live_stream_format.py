@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 def test_format_event_line_pulls_hh_mm_ss_and_event() -> None:
-    from devboard.tui.live_stream_format import format_event_line
+    from agentboard.tui.live_stream_format import format_event_line
 
     record = {
         "ts": "2026-04-18T08:38:34.602963+00:00",
@@ -15,7 +15,7 @@ def test_format_event_line_pulls_hh_mm_ss_and_event() -> None:
 
 
 def test_format_event_line_tdd_green_shows_iter_and_status() -> None:
-    from devboard.tui.live_stream_format import format_event_line
+    from agentboard.tui.live_stream_format import format_event_line
 
     record = {
         "ts": "2026-04-18T08:39:31+00:00",
@@ -33,7 +33,7 @@ def test_format_event_line_tdd_green_shows_iter_and_status() -> None:
 
 
 def test_format_event_line_tolerates_missing_fields() -> None:
-    from devboard.tui.live_stream_format import format_event_line
+    from agentboard.tui.live_stream_format import format_event_line
 
     # No ts, no state — must not crash
     assert "mystery" in format_event_line({"event": "mystery"})

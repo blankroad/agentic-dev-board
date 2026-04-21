@@ -24,10 +24,10 @@ You are the **Chief Security Officer**. Reviewer already said PASS. You are the 
 
 On entry, decide whether to auto-run in this order:
 
-1. `devboard_list_goals(project_root)` → identify current goal/task
+1. `agentboard_list_goals(project_root)` → identify current goal/task
 2. Load task.metadata and branch:
    - `security_sensitive_plan=true` → auto-enter, run review
-   - `security_sensitive_plan=false` AND `devboard_check_security_sensitive` on the current diff returns `sensitive=false` → output "보안 민감 변경 없음. CSO 생략 가능." then produce a SECURE report + handoff
+   - `security_sensitive_plan=false` AND `agentboard_check_security_sensitive` on the current diff returns `sensitive=false` → output "보안 민감 변경 없음. CSO 생략 가능." then produce a SECURE report + handoff
    - `security_sensitive_plan=false` but diff classification returns `sensitive=true` → run review (runtime-detected case)
 3. Legacy task without metadata → decide via keyword heuristics on the existing description
 
@@ -93,14 +93,14 @@ Do NOT give "defensive programming" suggestions unless they fix a real vulnerabi
 
 | When | Tool |
 |---|---|
-| Before review | `devboard_get_diff_stats(project_root)` — to see what you're reviewing |
-| After verdict | `devboard_checkpoint(project_root, run_id, "cso_complete", {secure: bool, findings_count, critical_count, high_count})` |
-| After verdict | `devboard_log_decision(project_root, task_id, iter=N, phase="cso", reasoning=<summary>, verdict_source="SECURE"\|"VULNERABLE")` |
-| If findings worth remembering | `devboard_save_learning(project_root, name, content, tags=["security", ...], category="pattern", confidence=0.8)` |
+| Before review | `agentboard_get_diff_stats(project_root)` — to see what you're reviewing |
+| After verdict | `agentboard_checkpoint(project_root, run_id, "cso_complete", {secure: bool, findings_count, critical_count, high_count})` |
+| After verdict | `agentboard_log_decision(project_root, task_id, iter=N, phase="cso", reasoning=<summary>, verdict_source="SECURE"\|"VULNERABLE")` |
+| If findings worth remembering | `agentboard_save_learning(project_root, name, content, tags=["security", ...], category="pattern", confidence=0.8)` |
 
 ## On VULNERABLE
 
-1. Call MCP tool `devboard_log_decision(iter, phase='cso', reasoning=<summary>, verdict_source='VULNERABLE', ...)`
+1. Call MCP tool `agentboard_log_decision(iter, phase='cso', reasoning=<summary>, verdict_source='VULNERABLE', ...)`
 2. Hand back to `agentboard-tdd` with the finding — the implementation must be fixed and re-verified.
 3. Do NOT approve PRs with CSO findings outstanding.
 

@@ -1,6 +1,6 @@
 ---
 name: agentboard-dep-audit
-description: Use when approval Step 0 needs a dependency CVE check, or when the user says "dep audit", "check vulns", "audit deps", "security audit deps". Runs devboard_check_dependencies and verdicts CLEAN / VULNERABLE based on CRITICAL/HIGH findings.
+description: Use when approval Step 0 needs a dependency CVE check, or when the user says "dep audit", "check vulns", "audit deps", "security audit deps". Runs agentboard_check_dependencies and verdicts CLEAN / VULNERABLE based on CRITICAL/HIGH findings.
 ---
 
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
@@ -22,7 +22,7 @@ You are the **Dependency Auditor**. Reviewer and CSO have finished. Your only jo
 ## Step 1 — Run audit
 
 ```
-devboard_check_dependencies(project_root)
+agentboard_check_dependencies(project_root)
 ```
 
 Response shape: `{ecosystem, auditor, severity_counts, findings, skipped_reason}`.
@@ -64,7 +64,7 @@ Severity: CRITICAL={n} HIGH={n} MEDIUM={n} LOW={n}
 
 ## On VULNERABLE
 
-1. Log decision with verdict_source='VULNERABLE' via `devboard_log_decision`
+1. Log decision with verdict_source='VULNERABLE' via `agentboard_log_decision`
 2. Checkpoint `dep_audit_complete` with `{verdict: VULNERABLE, critical, high}`
 3. Refuse to hand off to approval — respond to user with the list of CVEs and suggested fix versions
 4. User fixes deps → re-run skill
@@ -79,6 +79,6 @@ Severity: CRITICAL={n} HIGH={n} MEDIUM={n} LOW={n}
 
 | When | Tool |
 |---|---|
-| Step 1 | `devboard_check_dependencies(project_root)` |
-| After verdict | `devboard_checkpoint(project_root, run_id, "dep_audit_complete", {verdict, severity_counts, skipped_reason})` |
-| After verdict | `devboard_log_decision(project_root, task_id, iter=N, phase="dep_audit", reasoning=<summary>, verdict_source="CLEAN"|"VULNERABLE")` |
+| Step 1 | `agentboard_check_dependencies(project_root)` |
+| After verdict | `agentboard_checkpoint(project_root, run_id, "dep_audit_complete", {verdict, severity_counts, skipped_reason})` |
+| After verdict | `agentboard_log_decision(project_root, task_id, iter=N, phase="dep_audit", reasoning=<summary>, verdict_source="CLEAN"|"VULNERABLE")` |

@@ -6,22 +6,22 @@ SKILLS_DIR = Path(__file__).parent.parent / "skills"
 
 
 def test_brainstorm_skill_calls_save_brainstorm():
-    """Brainstorm SKILL.md must instruct Claude to call devboard_save_brainstorm."""
+    """Brainstorm SKILL.md must instruct Claude to call agentboard_save_brainstorm."""
     skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     assert skill_md.exists()
     content = skill_md.read_text()
-    assert "devboard_save_brainstorm" in content, (
-        "brainstorm SKILL.md must include devboard_save_brainstorm MCP call"
+    assert "agentboard_save_brainstorm" in content, (
+        "brainstorm SKILL.md must include agentboard_save_brainstorm MCP call"
     )
 
 
 def test_gauntlet_skill_requires_approve_before_lock():
-    """Gauntlet SKILL.md must instruct Claude to call devboard_approve_plan before lock_plan."""
+    """Gauntlet SKILL.md must instruct Claude to call agentboard_approve_plan before lock_plan."""
     skill_md = SKILLS_DIR / "agentboard-gauntlet" / "SKILL.md"
     assert skill_md.exists()
     content = skill_md.read_text()
-    assert "devboard_approve_plan" in content, (
-        "gauntlet SKILL.md must document the approval step before devboard_lock_plan"
+    assert "agentboard_approve_plan" in content, (
+        "gauntlet SKILL.md must document the approval step before agentboard_lock_plan"
     )
 
 
@@ -39,14 +39,14 @@ def test_brainstorm_frontmatter_references_3_phase():
     )
 
 
-# ── s_002: preamble with devboard_list_goals + Grep ───────────────────────────
+# ── s_002: preamble with agentboard_list_goals + Grep ───────────────────────────
 
 def test_brainstorm_preamble_has_list_goals_and_grep():
-    """s_002: SKILL.md must instruct Claude to call devboard_list_goals and run Grep in preamble."""
+    """s_002: SKILL.md must instruct Claude to call agentboard_list_goals and run Grep in preamble."""
     skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
-    assert "devboard_list_goals" in content, (
-        "SKILL.md preamble must include devboard_list_goals() call"
+    assert "agentboard_list_goals" in content, (
+        "SKILL.md preamble must include agentboard_list_goals() call"
     )
     assert "Grep" in content or "grep" in content.lower(), (
         "SKILL.md preamble must instruct Grep for existing code discovery"
@@ -130,7 +130,7 @@ def test_brainstorm_stop_marker_after_phase2():
 # ── s_007: Phase 3 MCP call correct mapping ───────────────────────────────────
 
 def test_brainstorm_phase3_mcp_mapping_correct():
-    """s_007: Phase 3 devboard_save_brainstorm call must include all required parameters."""
+    """s_007: Phase 3 agentboard_save_brainstorm call must include all required parameters."""
     skill_md = SKILLS_DIR / "agentboard-brainstorm" / "SKILL.md"
     content = skill_md.read_text()
     assert "## Phase 3" in content, "## Phase 3 section header missing"
@@ -330,10 +330,10 @@ def test_gauntlet_finalize_sets_task_metadata():
     finalize_idx = content.find("## Finalize")
     handoff_idx = content.find("## Handoff")
     body = content[finalize_idx:handoff_idx]
-    assert "devboard_update_task_status" in body, "Finalize must call update_task_status"
+    assert "agentboard_update_task_status" in body, "Finalize must call update_task_status"
     assert "production_destined" in body, "Finalize must set production_destined marker"
     assert "security_sensitive_plan" in body, "Finalize must set security_sensitive_plan marker"
-    assert "devboard_check_security_sensitive" in body, (
+    assert "agentboard_check_security_sensitive" in body, (
         "Finalize must call check_security_sensitive on plan text"
     )
 
@@ -386,15 +386,15 @@ def test_dep_audit_skill_exists_with_frontmatter():
     assert skill_md.exists(), "agentboard-dep-audit skill must exist"
     content = skill_md.read_text()
     assert "name: agentboard-dep-audit" in content
-    assert "devboard_check_dependencies" in content, (
-        "Skill must call devboard_check_dependencies"
+    assert "agentboard_check_dependencies" in content, (
+        "Skill must call agentboard_check_dependencies"
     )
 
 
 def test_approval_documents_dep_audit_gate():
     skill_md = SKILLS_DIR / "agentboard-approval" / "SKILL.md"
     content = skill_md.read_text()
-    assert "devboard_check_dependencies" in content, (
+    assert "agentboard_check_dependencies" in content, (
         "Approval must invoke dep audit tool"
     )
 
@@ -407,6 +407,6 @@ def test_retro_skill_documents_learning_proposals():
     assert "learning_proposals" in content, (
         "Retro skill must document the learning_proposals field"
     )
-    assert "devboard_save_learning" in content, (
+    assert "agentboard_save_learning" in content, (
         "Retro skill must describe save_learning invocation for proposals"
     )

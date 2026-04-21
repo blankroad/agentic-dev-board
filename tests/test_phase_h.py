@@ -5,16 +5,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from devboard.agents.cso import _parse_cso_verdict, diff_is_security_sensitive
-from devboard.analytics.retro import GoalStats, RetroReport, generate_retro
-from devboard.llm.client import CompletionResult
-from devboard.memory.learnings import Learning, load_all_learnings, save_learning, search_learnings
-from devboard.memory.retriever import _tokenize, load_relevant_learnings
-from devboard.models import BoardState, Goal, GoalStatus
-from devboard.storage.file_store import FileStore
-from devboard.tools.base import ToolRegistry
-from devboard.tools.careful import DangerVerdict, check_command
-from devboard.tools.shell import make_shell_tool
+from agentboard.agents.cso import _parse_cso_verdict, diff_is_security_sensitive
+from agentboard.analytics.retro import GoalStats, RetroReport, generate_retro
+from agentboard.llm.client import CompletionResult
+from agentboard.memory.learnings import Learning, load_all_learnings, save_learning, search_learnings
+from agentboard.memory.retriever import _tokenize, load_relevant_learnings
+from agentboard.models import BoardState, Goal, GoalStatus
+from agentboard.storage.file_store import FileStore
+from agentboard.tools.base import ToolRegistry
+from agentboard.tools.careful import DangerVerdict, check_command
+from agentboard.tools.shell import make_shell_tool
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -192,7 +192,7 @@ def test_retro_empty_board(tmp_path: Path):
 
 def test_retro_proposes_learnings_for_recurring_failure_modes(tmp_path: Path):
     """A failure mode appearing in ≥3 decisions becomes a learning proposal."""
-    from devboard.models import DecisionEntry, Goal, GoalStatus, Task
+    from agentboard.models import DecisionEntry, Goal, GoalStatus, Task
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
     board = BoardState()
@@ -241,7 +241,7 @@ def test_retro_counts_goals_and_tasks(tmp_path: Path):
     store.save_goal(goal)
 
     # Add a task + decisions
-    from devboard.models import Task, DecisionEntry
+    from agentboard.models import Task, DecisionEntry
     task = Task(goal_id=goal.id, title="t")
     goal.task_ids.append(task.id)
     store.save_task(task)
@@ -324,25 +324,25 @@ def _r(text: str) -> CompletionResult:
     return r
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.run_cso")
-@patch("devboard.orchestrator.graph.run_systematic_debug")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.run_cso")
+@patch("agentboard.orchestrator.graph.run_systematic_debug")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_cso_runs_on_security_diff_and_can_block(
     mock_commit, mock_diff, mock_verify, mock_sysdebug, mock_cso,
     mock_reviewer, mock_executor, mock_planner,
     tmp_path: Path,
 ):
     """CSO activates on security-sensitive diff; VULNERABLE verdict flips PASS→RETRY."""
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.gauntlet.lock import build_locked_plan
-    from devboard.orchestrator.runner import run_loop
-    from devboard.orchestrator.verify import VerificationReport
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.gauntlet.lock import build_locked_plan
+    from agentboard.orchestrator.runner import run_loop
+    from agentboard.orchestrator.verify import VerificationReport
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()
@@ -386,24 +386,24 @@ def test_cso_runs_on_security_diff_and_can_block(
     assert mock_cso.call_count == 2
 
 
-@patch("devboard.orchestrator.graph.run_planner")
-@patch("devboard.orchestrator.graph.run_executor")
-@patch("devboard.orchestrator.graph.run_reviewer")
-@patch("devboard.orchestrator.graph.run_cso")
-@patch("devboard.orchestrator.graph.verify_checklist")
-@patch("devboard.orchestrator.graph._get_diff")
-@patch("devboard.orchestrator.graph._local_commit")
+@patch("agentboard.orchestrator.graph.run_planner")
+@patch("agentboard.orchestrator.graph.run_executor")
+@patch("agentboard.orchestrator.graph.run_reviewer")
+@patch("agentboard.orchestrator.graph.run_cso")
+@patch("agentboard.orchestrator.graph.verify_checklist")
+@patch("agentboard.orchestrator.graph._get_diff")
+@patch("agentboard.orchestrator.graph._local_commit")
 def test_cso_skipped_on_non_security_diff(
     mock_commit, mock_diff, mock_verify, mock_cso,
     mock_reviewer, mock_executor, mock_planner,
     tmp_path: Path,
 ):
     """Non-security diff should skip CSO entirely."""
-    from devboard.agents.base import AgentResult
-    from devboard.agents.reviewer import ReviewVerdict
-    from devboard.gauntlet.lock import build_locked_plan
-    from devboard.orchestrator.runner import run_loop
-    from devboard.orchestrator.verify import VerificationReport
+    from agentboard.agents.base import AgentResult
+    from agentboard.agents.reviewer import ReviewVerdict
+    from agentboard.gauntlet.lock import build_locked_plan
+    from agentboard.orchestrator.runner import run_loop
+    from agentboard.orchestrator.verify import VerificationReport
 
     store = FileStore(tmp_path)
     (tmp_path / ".devboard").mkdir()

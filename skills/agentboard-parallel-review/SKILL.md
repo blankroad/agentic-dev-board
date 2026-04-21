@@ -26,7 +26,7 @@ Before dispatching, decide what actually needs to run:
 1. Load the current task's metadata. Let:
    - `security_sensitive_plan` = `task.metadata.security_sensitive_plan`
    - `production_destined` = `task.metadata.production_destined`
-2. Run `devboard_check_security_sensitive(diff=<current git diff>)` for a runtime check. Let `runtime_sensitive = result.sensitive`.
+2. Run `agentboard_check_security_sensitive(diff=<current git diff>)` for a runtime check. Let `runtime_sensitive = result.sensitive`.
 3. Decide per-side:
    - **CSO run?** → `cso_should_run = security_sensitive_plan OR runtime_sensitive`
    - **redteam run?** → `redteam_should_run = production_destined`
@@ -96,7 +96,7 @@ verdict = aggregate_verdict(cso=cso_verdict, redteam=redteam_verdict)
 Call the MCP tool exactly once:
 
 ```
-devboard_log_parallel_review(
+agentboard_log_parallel_review(
   project_root=<path>,
   task_id=<task_id>,
   iter=<current_iter>,
@@ -114,7 +114,7 @@ devboard_log_parallel_review(
 Then a single checkpoint:
 
 ```
-devboard_checkpoint(project_root, run_id, "parallel_review_complete", {
+agentboard_checkpoint(project_root, run_id, "parallel_review_complete", {
   overall: verdict.status,
   cso_verdict, redteam_verdict, overlap_count,
   parallel_duration_s, cso_duration_s, redteam_duration_s,

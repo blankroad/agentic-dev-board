@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 def _write_goal(root: Path, gid: str, title: str = "", plan_text: str | None = None) -> Path:
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     devboard = root / ".devboard"
     devboard.mkdir(exist_ok=True)
@@ -27,7 +27,7 @@ def _write_goal(root: Path, gid: str, title: str = "", plan_text: str | None = N
 
 
 def test_active_goal_picks_latest_plan_mtime(tmp_path: Path) -> None:
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.session_derive import SessionContext
 
     g1 = _write_goal(tmp_path, "g_old", plan_text="# old plan")
     g2 = _write_goal(tmp_path, "g_new", plan_text="# new plan")
@@ -41,7 +41,7 @@ def test_active_goal_picks_latest_plan_mtime(tmp_path: Path) -> None:
 
 
 def test_no_goals_returns_none_active(tmp_path: Path) -> None:
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.session_derive import SessionContext
 
     (tmp_path / ".devboard").mkdir()
     ctx = SessionContext(tmp_path)
@@ -49,7 +49,7 @@ def test_no_goals_returns_none_active(tmp_path: Path) -> None:
 
 
 def test_decisions_sorted_newest_first(tmp_path: Path) -> None:
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.session_derive import SessionContext
 
     g = _write_goal(tmp_path, "g_x", plan_text="# p")
     task_dir = g / "tasks" / "t_x"
@@ -74,13 +74,13 @@ def test_decisions_sorted_newest_first(tmp_path: Path) -> None:
 def test_diff_parser_strips_crlf_trailing_r(tmp_path: Path) -> None:
     """Red-team: CRLF-terminated iter_N.diff must not leak \\r into
     returned file paths (regex \\r-aware)."""
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.session_derive import SessionContext
 
     (tmp_path / ".devboard").mkdir()
     goal_dir = tmp_path / ".devboard" / "goals" / "g_crlf"
     (goal_dir / "tasks" / "t_c" / "changes").mkdir(parents=True)
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     store = FileStore(tmp_path)
     board = BoardState()
@@ -102,7 +102,7 @@ def test_diff_parser_strips_crlf_trailing_r(tmp_path: Path) -> None:
 
 
 def test_diff_parser_extracts_touched_files(tmp_path: Path) -> None:
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.session_derive import SessionContext
 
     g = _write_goal(tmp_path, "g_d", plan_text="# p")
     task_dir = g / "tasks" / "t_d"

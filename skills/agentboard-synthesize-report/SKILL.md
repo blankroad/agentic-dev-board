@@ -1,7 +1,7 @@
 ---
 name: agentboard-synthesize-report
 description: LLM-based goal report synthesis. Reads plan.md + challenge.md + brainstorm.md + decisions.jsonl + git numstat for the target goal, dispatches the Claude Code Agent tool with a structured prompt, and writes the resulting As-Is→To-Be Markdown to `.devboard/goals/<gid>/report.md`. Non-blocking — if the Agent call fails or output fails sanity check, the skill logs a NARRATIVE_SKIPPED decision and returns without raising. Consumed by TUI Overview tab (report_md prepend) and `devboard export <gid> --source report`.
-when_to_use: Automatically invoked by `agentboard-approval` right after `devboard_generate_narrative` at Step 4.5a. May also be invoked manually by the user to regenerate a stale report. Do NOT invoke from inside TDD cycles — reports are meant for already-shipped (or about-to-ship) goals.
+when_to_use: Automatically invoked by `agentboard-approval` right after `agentboard_generate_narrative` at Step 4.5a. May also be invoked manually by the user to regenerate a stale report. Do NOT invoke from inside TDD cycles — reports are meant for already-shipped (or about-to-ship) goals.
 ---
 
 > **Language**: Respond to the user in Korean. Code, file paths, variable names, and commit messages remain English.
@@ -134,7 +134,7 @@ Target: `.devboard/goals/<goal_id>/report.md` (UTF-8, overwrite). Use `FileStore
 ## Step 5 — Log decision
 
 ```
-devboard_log_decision(
+agentboard_log_decision(
   project_root, task_id, iter=<latest_iter>,
   phase="synthesize_report",
   reasoning="report.md generated ({len} chars, {sec}s)"  # on success

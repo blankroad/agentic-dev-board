@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from devboard.mcp_server import call_tool
-from devboard.analytics.metrics import collect_metrics, diagnose_activations
-from devboard.models import BoardState, DecisionEntry, Goal, GoalStatus, Task
-from devboard.storage.file_store import FileStore
+from agentboard.mcp_server import call_tool
+from agentboard.analytics.metrics import collect_metrics, diagnose_activations
+from agentboard.models import BoardState, DecisionEntry, Goal, GoalStatus, Task
+from agentboard.storage.file_store import FileStore
 
 
 def _mcp(tool_name: str, **args):
@@ -26,17 +26,17 @@ def _mcp(tool_name: str, **args):
 
 def _seed_project(tmp_path: Path) -> tuple[FileStore, str, str]:
     """Seed a project with 1 goal, 1 task, and some decisions + a run."""
-    _mcp("devboard_init", project_root=str(tmp_path))
-    r = _mcp("devboard_add_goal", project_root=str(tmp_path),
+    _mcp("agentboard_init", project_root=str(tmp_path))
+    r = _mcp("agentboard_add_goal", project_root=str(tmp_path),
              title="Test", description="test")
     goal_id = r["goal_id"]
-    _mcp("devboard_lock_plan", project_root=str(tmp_path), goal_id=goal_id, decide_json={
+    _mcp("agentboard_lock_plan", project_root=str(tmp_path), goal_id=goal_id, decide_json={
         "problem": "x", "non_goals": [], "scope_decision": "HOLD",
         "architecture": "a", "known_failure_modes": [],
         "goal_checklist": ["x"], "out_of_scope_guard": [],
         "atomic_steps": [], "token_ceiling": 100_000, "max_iterations": 3,
     })
-    r = _mcp("devboard_start_task", project_root=str(tmp_path), goal_id=goal_id)
+    r = _mcp("agentboard_start_task", project_root=str(tmp_path), goal_id=goal_id)
     task_id, run_id = r["task_id"], r["run_id"]
     store = FileStore(tmp_path)
     return store, task_id, run_id
@@ -55,13 +55,13 @@ def test_metrics_empty_project(tmp_path: Path):
 def test_metrics_counts_events(tmp_path: Path):
     store, task_id, run_id = _seed_project(tmp_path)
     # Produce events
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="gauntlet_complete", state={})
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="tdd_red_complete", state={"iteration": 1})
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="tdd_green_complete", state={"iteration": 1})
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="converged", state={})
 
     m = collect_metrics(store)
@@ -76,9 +76,9 @@ def test_metrics_counts_events(tmp_path: Path):
 def test_metrics_retry_tracking(tmp_path: Path):
     store, task_id, _ = _seed_project(tmp_path)
     for i in [1, 2]:
-        _mcp("devboard_log_decision", project_root=str(tmp_path), task_id=task_id,
+        _mcp("agentboard_log_decision", project_root=str(tmp_path), task_id=task_id,
              iter=i, phase="review", reasoning="x", verdict_source="RETRY")
-    _mcp("devboard_log_decision", project_root=str(tmp_path), task_id=task_id,
+    _mcp("agentboard_log_decision", project_root=str(tmp_path), task_id=task_id,
          iter=3, phase="review", reasoning="x", verdict_source="PASS")
 
     m = collect_metrics(store)
@@ -89,9 +89,9 @@ def test_metrics_retry_tracking(tmp_path: Path):
 
 def test_metrics_iron_law_hits(tmp_path: Path):
     store, task_id, _ = _seed_project(tmp_path)
-    _mcp("devboard_log_decision", project_root=str(tmp_path), task_id=task_id,
+    _mcp("agentboard_log_decision", project_root=str(tmp_path), task_id=task_id,
          iter=1, phase="iron_law", reasoning="impl before test", verdict_source="iron_law")
-    _mcp("devboard_log_decision", project_root=str(tmp_path), task_id=task_id,
+    _mcp("agentboard_log_decision", project_root=str(tmp_path), task_id=task_id,
          iter=2, phase="iron_law", reasoning="again", verdict_source="iron_law")
 
     m = collect_metrics(store)
@@ -131,9 +131,9 @@ def test_diagnose_empty_project_suggests_action(tmp_path: Path):
 
 def test_diagnose_partial_activation(tmp_path: Path):
     store, _, run_id = _seed_project(tmp_path)
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="gauntlet_complete", state={})
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="tdd_red_complete", state={"iteration": 1})
 
     r = diagnose_activations(store)
@@ -148,7 +148,7 @@ def test_diagnose_all_events_good(tmp_path: Path):
         "tdd_refactor_complete", "review_complete", "tdd_complete",
         "redteam_complete", "converged",
     ]:
-        _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+        _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
              event=event, state={})
 
     r = diagnose_activations(store)
@@ -158,9 +158,9 @@ def test_diagnose_all_events_good(tmp_path: Path):
 
 def test_diagnose_suggests_rca_concerns(tmp_path: Path):
     store, task_id, run_id = _seed_project(tmp_path)
-    _mcp("devboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
+    _mcp("agentboard_checkpoint", project_root=str(tmp_path), run_id=run_id,
          event="gauntlet_complete", state={})
-    _mcp("devboard_log_decision", project_root=str(tmp_path), task_id=task_id,
+    _mcp("agentboard_log_decision", project_root=str(tmp_path), task_id=task_id,
          iter=1, phase="reflect", reasoning="x", verdict_source="RCA_ESCALATED")
 
     r = diagnose_activations(store)
@@ -173,7 +173,7 @@ def test_diagnose_suggests_rca_concerns(tmp_path: Path):
 
 def test_mcp_metrics_tool(tmp_path: Path):
     _seed_project(tmp_path)
-    r = _mcp("devboard_metrics", project_root=str(tmp_path))
+    r = _mcp("agentboard_metrics", project_root=str(tmp_path))
     assert "dict" in r
     assert "markdown" in r
     assert r["dict"]["total_goals"] == 1
@@ -181,7 +181,7 @@ def test_mcp_metrics_tool(tmp_path: Path):
 
 def test_mcp_diagnose_tool(tmp_path: Path):
     _seed_project(tmp_path)
-    r = _mcp("devboard_diagnose", project_root=str(tmp_path))
+    r = _mcp("agentboard_diagnose", project_root=str(tmp_path))
     assert "skill_activation_score" in r
     assert "suggestions" in r
     assert "markdown" in r

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from devboard.tui.anomaly import AnomalyClassifier
+from agentboard.tui.anomaly import AnomalyClassifier
 
 
 def test_classifier_handles_real_run_event_shape() -> None:

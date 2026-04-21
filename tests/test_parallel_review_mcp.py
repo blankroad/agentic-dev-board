@@ -1,4 +1,4 @@
-"""Tests for the devboard_log_parallel_review MCP tool."""
+"""Tests for the agentboard_log_parallel_review MCP tool."""
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def _dispatch_sync(tool_name: str, args: dict):
-    from devboard.mcp_server import call_tool
+    from agentboard.mcp_server import call_tool
 
     return asyncio.run(call_tool(tool_name, args))
 
@@ -28,14 +28,14 @@ REQUIRED_METADATA_FIELDS = {
 
 
 def _setup_goal(tmp_path: Path) -> tuple[str, str]:
-    _dispatch_sync("devboard_init", {"project_root": str(tmp_path)})
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
     add = _dispatch_sync(
-        "devboard_add_goal",
+        "agentboard_add_goal",
         {"project_root": str(tmp_path), "title": "parallel-review test goal"},
     )
     goal_id = _payload(add)["goal_id"]
     start = _dispatch_sync(
-        "devboard_start_task", {"project_root": str(tmp_path), "goal_id": goal_id}
+        "agentboard_start_task", {"project_root": str(tmp_path), "goal_id": goal_id}
     )
     task_id = _payload(start)["task_id"]
     return goal_id, task_id
@@ -57,14 +57,14 @@ def test_log_parallel_review_writes_entry_with_metadata(tmp_path: Path) -> None:
         "overlap_count": 0,
         "reasoning": "한글 요약 — 양쪽 verdict 모두 CLEAN",
     }
-    result = _dispatch_sync("devboard_log_parallel_review", args)
+    result = _dispatch_sync("agentboard_log_parallel_review", args)
     payload = _payload(result)
     assert payload["status"] == "logged"
     assert payload["phase"] == "parallel_review"
 
     # Verify the entry actually lands in decisions.jsonl with all required metadata.
     load = _dispatch_sync(
-        "devboard_load_decisions", {"project_root": str(tmp_path), "task_id": task_id}
+        "agentboard_load_decisions", {"project_root": str(tmp_path), "task_id": task_id}
     )
     entries = json.loads(load[0].text)
     parallel_entries = [e for e in entries if e.get("phase") == "parallel_review"]
@@ -99,7 +99,7 @@ def test_log_parallel_review_rejects_none_value(tmp_path: Path) -> None:
     _, task_id = _setup_goal(tmp_path)
     args = _valid_args(tmp_path, task_id)
     args["parallel_duration_s"] = None
-    result = _dispatch_sync("devboard_log_parallel_review", args)
+    result = _dispatch_sync("agentboard_log_parallel_review", args)
     payload = _payload(result)
     assert payload.get("status") == "error"
     assert "parallel_duration_s" in (payload.get("message") or "")
@@ -111,7 +111,7 @@ def test_log_parallel_review_rejects_string_for_numeric(tmp_path: Path) -> None:
     _, task_id = _setup_goal(tmp_path)
     args = _valid_args(tmp_path, task_id)
     args["parallel_duration_s"] = "fast"
-    result = _dispatch_sync("devboard_log_parallel_review", args)
+    result = _dispatch_sync("agentboard_log_parallel_review", args)
     payload = _payload(result)
     assert payload.get("status") == "error"
     assert "parallel_duration_s" in (payload.get("message") or "")
@@ -123,7 +123,7 @@ def test_log_parallel_review_rejects_bool_for_numeric(tmp_path: Path) -> None:
     _, task_id = _setup_goal(tmp_path)
     args = _valid_args(tmp_path, task_id)
     args["parallel_duration_s"] = True  # bool leaks through naive isinstance(x, (int, float))
-    result = _dispatch_sync("devboard_log_parallel_review", args)
+    result = _dispatch_sync("agentboard_log_parallel_review", args)
     payload = _payload(result)
     assert payload.get("status") == "error"
     assert "parallel_duration_s" in (payload.get("message") or "")
@@ -144,7 +144,7 @@ def test_log_parallel_review_rejects_missing_required_field(tmp_path: Path) -> N
         "redteam_duration_s": 3.2,
         "overlap_count": 0,
     }
-    result = _dispatch_sync("devboard_log_parallel_review", args)
+    result = _dispatch_sync("agentboard_log_parallel_review", args)
     payload = _payload(result)
     assert payload.get("status") == "error"
     assert "parallel_duration_s" in (payload.get("message") or payload.get("reason") or "")

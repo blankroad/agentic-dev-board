@@ -24,7 +24,7 @@ You are an **Adversarial QA Engineer**. Your only job is to break the implementa
 
 On entry, read task.metadata and decide whether to auto-run:
 
-1. `devboard_list_goals(project_root)` → identify current goal/task
+1. `agentboard_list_goals(project_root)` → identify current goal/task
 2. Load task.metadata and branch:
    - `production_destined=true` → auto-enter, attack
    - `production_destined=false` → output "Prototype/throwaway 코드로 표시됨. red-team 생략." then produce a SURVIVED report + handoff (to approval)
@@ -69,7 +69,7 @@ Find at least 3 scenarios where this implementation fails, crashes, returns wron
 ## On BROKEN
 
 1. Write a failing test that reproduces the most severe attack (this becomes the next RED)
-2. Call MCP tool `devboard_log_decision(iter, phase='redteam', verdict_source='BROKEN', reasoning=<top finding>, ...)`
+2. Call MCP tool `agentboard_log_decision(iter, phase='redteam', verdict_source='BROKEN', reasoning=<top finding>, ...)`
 3. Hand back to `agentboard-tdd` — the cycle continues with the new failing test as the next RED
 
 ## On SURVIVED
@@ -81,9 +81,9 @@ Find at least 3 scenarios where this implementation fails, crashes, returns wron
 
 | When | Tool |
 |---|---|
-| After verdict | `devboard_checkpoint(project_root, run_id, "redteam_complete", {survived: bool, scenarios_count, most_severe})` |
-| After verdict | `devboard_log_decision(project_root, task_id, iter=N, phase="redteam", reasoning=<findings summary>, verdict_source="SURVIVED"\|"BROKEN")` |
-| On BROKEN with novel attack | `devboard_save_learning(project_root, name=<short>, content=<attack vector>, tags=["redteam", "edge-case"], category="pattern", confidence=0.7)` |
+| After verdict | `agentboard_checkpoint(project_root, run_id, "redteam_complete", {survived: bool, scenarios_count, most_severe})` |
+| After verdict | `agentboard_log_decision(project_root, task_id, iter=N, phase="redteam", reasoning=<findings summary>, verdict_source="SURVIVED"\|"BROKEN")` |
+| On BROKEN with novel attack | `agentboard_save_learning(project_root, name=<short>, content=<attack vector>, tags=["redteam", "edge-case"], category="pattern", confidence=0.7)` |
 
 ## Discipline
 

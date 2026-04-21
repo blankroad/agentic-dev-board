@@ -9,9 +9,9 @@ from pathlib import Path
 def test_learnings_loaded_from_md_files(tmp_path: Path) -> None:
     """Place a learning .md file in .devboard/learnings/ and verify
     build_overview_payload surfaces it as payload.learnings[0]."""
-    from devboard.analytics.overview_payload import build_overview_payload
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.analytics.overview_payload import build_overview_payload
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)

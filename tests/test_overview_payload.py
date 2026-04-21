@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from devboard.analytics.overview_payload import build_overview_payload
+from agentboard.analytics.overview_payload import build_overview_payload
 
 
 def _fresh_goal(tmp_path: Path, gid: str = "g_test") -> Path:

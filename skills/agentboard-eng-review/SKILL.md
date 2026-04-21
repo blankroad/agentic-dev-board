@@ -21,9 +21,9 @@ You are the **Engineering Reviewer** — a pre-TDD gate for complex new systems.
 
 ## Preamble (MANDATORY before Step 1)
 
-1. `devboard_list_goals(project_root)` → identify the active goal. If no active goal, error out: "No active goal. agentboard-brainstorm 또는 agentboard-gauntlet을 먼저 실행하세요."
-2. `devboard_load_plan(project_root, goal_id)` → if plan is missing, error out: "Plan not locked yet. agentboard-gauntlet을 먼저 완료하세요."
-3. Receive `task_id`, `run_id` passed from gauntlet Finalize and save to scope. If not passed, use `devboard_list_runs(project_root)` and take task_id/run_id from the most recent active run.
+1. `agentboard_list_goals(project_root)` → identify the active goal. If no active goal, error out: "No active goal. agentboard-brainstorm 또는 agentboard-gauntlet을 먼저 실행하세요."
+2. `agentboard_load_plan(project_root, goal_id)` → if plan is missing, error out: "Plan not locked yet. agentboard-gauntlet을 먼저 완료하세요."
+3. Receive `task_id`, `run_id` passed from gauntlet Finalize and save to scope. If not passed, use `agentboard_list_runs(project_root)` and take task_id/run_id from the most recent active run.
 
 Output: `Plan: {goal title} ({goal_id}) — {N} atomic steps, {M} critical files, task={task_id}`
 
@@ -156,8 +156,8 @@ Within the Branching step below, the strict sequence is:
 
 1. **upsert** the `## Engineering Review` section into arch.md (this
    subsection's algorithm).
-2. **checkpoint** `eng_review_complete` via `devboard_checkpoint`.
-3. **log_decision** via `devboard_log_decision` with phase=`eng_review`.
+2. **checkpoint** `eng_review_complete` via `agentboard_checkpoint`.
+3. **log_decision** via `agentboard_log_decision` with phase=`eng_review`.
 4. **handoff** — invoke `agentboard-tdd` (PASS / proceed) or
    `agentboard-gauntlet` (revise).
 
@@ -176,8 +176,8 @@ Engineering review에서 {N}개 항목이 수정을 권장합니다.
 [진행] — 이슈를 known_risk로 기록하고 TDD 시작
 ```
 
-- User picks revise → call `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` then invoke `agentboard-gauntlet` via Skill tool. Do NOT call tdd.
-- User picks proceed → log every FAIL item to `devboard_log_decision` as `known_risk`, then invoke `agentboard-tdd` via Skill tool.
+- User picks revise → call `agentboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` then invoke `agentboard-gauntlet` via Skill tool. Do NOT call tdd.
+- User picks proceed → log every FAIL item to `agentboard_log_decision` as `known_risk`, then invoke `agentboard-tdd` via Skill tool.
 
 ---
 
@@ -185,14 +185,14 @@ Engineering review에서 {N}개 항목이 수정을 권장합니다.
 
 | When | Tool |
 |---|---|
-| Preamble | `devboard_list_goals(project_root)` |
-| Preamble | `devboard_load_plan(project_root, goal_id)` |
-| Preamble (when task_id missing) | `devboard_list_runs(project_root)` |
-| Right after Overall = PASS | `devboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "PASS", checks: {1: "PASS", 2: "PASS", 3: "PASS", 4: "PASS"}})` |
-| Right after Overall = NEEDS REVISION | `devboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "NEEDS_REVISION", failed_checks: [...]})` |
-| For each FAIL item when user picks proceed | `devboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="known_risk: {issue}", verdict_source="ENG_REVIEW")` |
-| When user picks revise | `devboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` |
-| Final (PASS or proceed) | `devboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="{overall_verdict}", verdict_source="ENG_REVIEW")` |
+| Preamble | `agentboard_list_goals(project_root)` |
+| Preamble | `agentboard_load_plan(project_root, goal_id)` |
+| Preamble (when task_id missing) | `agentboard_list_runs(project_root)` |
+| Right after Overall = PASS | `agentboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "PASS", checks: {1: "PASS", 2: "PASS", 3: "PASS", 4: "PASS"}})` |
+| Right after Overall = NEEDS REVISION | `agentboard_checkpoint(project_root, run_id, "eng_review_complete", {verdict: "NEEDS_REVISION", failed_checks: [...]})` |
+| For each FAIL item when user picks proceed | `agentboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="known_risk: {issue}", verdict_source="ENG_REVIEW")` |
+| When user picks revise | `agentboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)` |
+| Final (PASS or proceed) | `agentboard_log_decision(project_root, task_id, iter=0, phase="eng_review", reasoning="{overall_verdict}", verdict_source="ENG_REVIEW")` |
 
 ## Handoff
 

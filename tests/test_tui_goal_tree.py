@@ -14,7 +14,7 @@ build_goal_tree is a PURE function:
 """
 from __future__ import annotations
 
-from devboard.tui.goal_tree import build_goal_tree
+from agentboard.tui.goal_tree import build_goal_tree
 
 
 def _g(id: str, *, title: str = "", status: str = "active",

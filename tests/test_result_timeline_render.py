@@ -1,6 +1,6 @@
 """Tests for render_result_timeline (s_010)."""
 
-from devboard.tui.result_timeline_render import render_result_timeline
+from agentboard.tui.result_timeline_render import render_result_timeline
 
 
 def test_render_result_timeline_checklist_with_ts() -> None:

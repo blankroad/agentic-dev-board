@@ -25,7 +25,7 @@ def test_six_phase_structure_present() -> None:
         "CLEAR Fast-Path",
         "Adaptive Clarification",
         "Self-review",
-        "devboard_save_brainstorm",
+        "agentboard_save_brainstorm",
         "agentboard-gauntlet",
     ]
     missing = [k for k in required if k not in text]

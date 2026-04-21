@@ -1,6 +1,6 @@
 """Tests for render_review_sections (s_011)."""
 
-from devboard.tui.review_sections_render import render_review_sections
+from agentboard.tui.review_sections_render import render_review_sections
 
 
 def test_render_review_sections_four_text_headers() -> None:

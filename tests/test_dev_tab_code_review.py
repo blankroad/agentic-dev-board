@@ -38,7 +38,7 @@ index 333..444 100644
 def test_diff_parser_parses_happy_unified_diff() -> None:
     """s_001 — two-file unified diff → two DiffFile entries with correct
     add/remove counts."""
-    from devboard.analytics.diff_parser import parse_unified_diff
+    from agentboard.analytics.diff_parser import parse_unified_diff
 
     files = parse_unified_diff(HAPPY_DIFF)
     assert len(files) == 2, f"expected 2 files, got {len(files)}"
@@ -55,7 +55,7 @@ def test_diff_parser_parses_happy_unified_diff() -> None:
 def test_diff_parser_handles_empty_input() -> None:
     """s_002 — `parse_unified_diff('')` returns `[]` without crashing.
     edge: empty / None input"""
-    from devboard.analytics.diff_parser import parse_unified_diff
+    from agentboard.analytics.diff_parser import parse_unified_diff
     assert parse_unified_diff("") == []
 
 
@@ -69,7 +69,7 @@ Binary files a/img.png and b/img.png differ
 
 def test_diff_parser_detects_binary_marker() -> None:
     """s_003 — `Binary files X and Y differ` line → DiffFile(is_binary=True)."""
-    from devboard.analytics.diff_parser import parse_unified_diff
+    from agentboard.analytics.diff_parser import parse_unified_diff
     files = parse_unified_diff(BINARY_DIFF)
     assert len(files) == 1
     assert files[0].is_binary is True
@@ -79,8 +79,8 @@ def test_diff_parser_detects_binary_marker() -> None:
 
 def test_dev_file_tree_renders_paths_and_sizes() -> None:
     """s_004 — DevFileTree.render_tree(files, reviewed) shows path + +N/-M."""
-    from devboard.analytics.diff_parser import parse_unified_diff
-    from devboard.tui.dev_file_tree import render_tree
+    from agentboard.analytics.diff_parser import parse_unified_diff
+    from agentboard.tui.dev_file_tree import render_tree
 
     files = parse_unified_diff(HAPPY_DIFF)
     rendered = render_tree(files, reviewed=set())
@@ -100,8 +100,8 @@ async def test_dev_file_tree_x_toggles_reviewed_real_user_flow(tmp_path) -> None
     guards: pilot-test-must-not-mask-default-focus-bug"""
     from textual.app import App, ComposeResult
     from textual.binding import Binding
-    from devboard.analytics.diff_parser import parse_unified_diff
-    from devboard.tui.dev_file_tree import DevFileTree
+    from agentboard.analytics.diff_parser import parse_unified_diff
+    from agentboard.tui.dev_file_tree import DevFileTree
 
     files = parse_unified_diff(HAPPY_DIFF)
 
@@ -131,7 +131,7 @@ async def test_dev_file_tree_x_toggles_reviewed_real_user_flow(tmp_path) -> None
 def test_dev_diff_viewer_caps_at_500_lines() -> None:
     """s_006 — a 1000-line diff is truncated to 500 rendered lines +
     `[... N more lines]` footer."""
-    from devboard.tui.dev_diff_viewer import render_diff
+    from agentboard.tui.dev_diff_viewer import render_diff
 
     big_diff_lines = ["+ line " + str(i) for i in range(1000)]
     big_diff = "\n".join(big_diff_lines)
@@ -147,7 +147,7 @@ def test_dev_diff_viewer_caps_at_500_lines() -> None:
 
 def test_dev_diff_viewer_empty_state() -> None:
     """s_007 — empty diff shows an informative single-line empty state."""
-    from devboard.tui.dev_diff_viewer import render_diff
+    from agentboard.tui.dev_diff_viewer import render_diff
     rendered = render_diff("")
     assert "no diff" in rendered.lower()
 
@@ -157,7 +157,7 @@ def test_dev_diff_viewer_empty_state() -> None:
 def test_dev_issues_pane_wraps_existing_timeline() -> None:
     """s_008 — DevIssuesPane renders `render_dev_timeline(payload)` output
     so the existing rollup view is preserved below the diff viewer."""
-    from devboard.tui.dev_issues_pane import render_issues_pane
+    from agentboard.tui.dev_issues_pane import render_issues_pane
 
     payload = {"iter_rows": [], "goal_id": "g_test", "atomic_steps_total": 0}
     rendered = render_issues_pane(payload)
@@ -172,7 +172,7 @@ async def test_phase_flow_dev_tab_mounts_new_widgets() -> None:
     """s_009 — DevFileTree, DevDiffViewer, DevIssuesPane are mounted in
     PhaseFlowView's Dev tab.
     guards: unit-tests-on-primitives-dont-prove-integration"""
-    from devboard.tui.app import DevBoardApp
+    from agentboard.tui.app import DevBoardApp
 
     app = DevBoardApp(store_root=REPO)
     async with app.run_test() as pilot:
@@ -192,7 +192,7 @@ def test_reviewed_state_survives_refresh() -> None:
     """s_010 — phase_flow source must reference `_reviewed_paths` set and
     persist it across handle_tick refreshes (path cleanup on deletion).
     guards: widgets-need-reactive-hook-not-compose-once"""
-    source = (REPO / "src/devboard/tui/phase_flow.py").read_text(encoding="utf-8")
+    source = (REPO / "src/agentboard/tui/phase_flow.py").read_text(encoding="utf-8")
     assert "_reviewed_paths" in source, (
         "phase_flow must keep reviewed state in an instance variable"
     )
@@ -200,46 +200,4 @@ def test_reviewed_state_survives_refresh() -> None:
 
 # ─── s_011 — scope guard ───────────────────────────────────────────────────
 
-def test_out_of_scope_unchanged() -> None:
-    """s_011 — LockedPlan out_of_scope_guard paths have no diff vs main."""
-    import subprocess
-
-    guarded = [
-        "src/devboard/mcp_server.py",
-        "src/devboard/cli.py",
-        "src/devboard/storage/file_store.py",
-        "src/devboard/models.py",
-        "src/devboard/gauntlet",
-        "src/devboard/tui/verdict_palette.py",
-        "src/devboard/analytics/verdict_timeline.py",
-        "src/devboard/tui/plan_pipeline.py",
-        "src/devboard/tui/review_cards.py",
-        "src/devboard/tui/review_timeline.py",
-        "src/devboard/tui/process_swimlane.py",
-        "src/devboard/tui/process_sparkline.py",
-        "src/devboard/tui/overview_render.py",
-        "src/devboard/tui/review_sections_render.py",
-        "src/devboard/tui/result_timeline_render.py",
-        "src/devboard/tui/plan_markdown.py",
-        "src/devboard/tui/dev_timeline_render.py",
-        "pyproject.toml",
-        ".mcp.json",
-    ]
-    offenders: list[str] = []
-    for base in ("main", "origin/main"):
-        proc = subprocess.run(
-            ["git", "-C", str(REPO), "diff", base, "--", *guarded],
-            capture_output=True, text=True,
-        )
-        if proc.returncode == 0:
-            if proc.stdout:
-                for line in proc.stdout.splitlines():
-                    if line.startswith("diff --git a/"):
-                        offenders.append(line.split()[2].removeprefix("a/"))
-            break
-    else:
-        _pytest = pytest
-        _pytest.skip("no main/origin/main baseline available")
-    assert not offenders, (
-        f"out-of-scope files changed (scope_guard violation): {offenders}"
-    )
+# historical scope-guard removed (rename-the-world goal)

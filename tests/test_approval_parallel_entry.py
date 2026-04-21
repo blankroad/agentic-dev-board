@@ -46,6 +46,6 @@ def test_parallel_review_skill_contains_agent_dispatch() -> None:
     assert "parallel" in lowered or "dispatch" in lowered, (
         "parallel-review SKILL.md must describe parallel dispatch"
     )
-    assert "devboard_log_parallel_review" in text, (
-        "parallel-review SKILL.md must reference the devboard_log_parallel_review MCP tool"
+    assert "agentboard_log_parallel_review" in text, (
+        "parallel-review SKILL.md must reference the agentboard_log_parallel_review MCP tool"
     )

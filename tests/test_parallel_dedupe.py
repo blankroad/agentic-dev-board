@@ -1,10 +1,10 @@
-"""Tests for src/devboard/parallel/dedupe.py."""
+"""Tests for src/agentboard/parallel/dedupe.py."""
 from __future__ import annotations
 
 
 def _mk(file: str | None = "src/x.py", line: int | None = 1, category: str = "C",
         category_namespace: str = "OWASP", severity: str = "HIGH", body: str = "b"):
-    from devboard.parallel.models import Finding
+    from agentboard.parallel.models import Finding
     return Finding(
         file=file, line=line, category=category, category_namespace=category_namespace,
         severity=severity, body=body,
@@ -13,7 +13,7 @@ def _mk(file: str | None = "src/x.py", line: int | None = 1, category: str = "C"
 
 def test_dedupe_empty_input_returns_empty() -> None:
     """dedupe_findings([], []) returns empty DedupedReport."""
-    from devboard.parallel.dedupe import dedupe_findings
+    from agentboard.parallel.dedupe import dedupe_findings
 
     report = dedupe_findings([], [])
     assert report.findings == []
@@ -21,7 +21,7 @@ def test_dedupe_empty_input_returns_empty() -> None:
 
 def test_dedupe_single_finding_unchanged() -> None:
     """When only one side has a finding, it is preserved as-is."""
-    from devboard.parallel.dedupe import dedupe_findings
+    from agentboard.parallel.dedupe import dedupe_findings
 
     only_cso = [_mk(file="src/a.py", line=10, category="SQLi", category_namespace="OWASP")]
     report = dedupe_findings(only_cso, [])
@@ -31,7 +31,7 @@ def test_dedupe_single_finding_unchanged() -> None:
 
 def test_dedupe_different_namespace_keeps_both() -> None:
     """Same (file, line) but different category_namespace = distinct attack vectors — preserve both."""
-    from devboard.parallel.dedupe import dedupe_findings
+    from agentboard.parallel.dedupe import dedupe_findings
 
     cso = [_mk(file="src/a.py", line=10, category="SQLi", category_namespace="OWASP", severity="HIGH")]
     rt = [_mk(file="src/a.py", line=10, category="IntegerOverflow", category_namespace="redteam", severity="HIGH")]
@@ -44,7 +44,7 @@ def test_dedupe_different_namespace_keeps_both() -> None:
 def test_dedupe_within_cso_duplicates_not_counted_as_overlap() -> None:
     # guards: overlap-count-must-track-origin-not-keyspace-collisions
     """Within-CSO duplicates must dedup silently — overlap_count measures CSO vs redteam only."""
-    from devboard.parallel.dedupe import dedupe_findings
+    from agentboard.parallel.dedupe import dedupe_findings
 
     f = _mk(file="a.py", line=1, category="C1", category_namespace="OWASP", severity="HIGH")
     report = dedupe_findings([f, f], [])  # within-CSO dup, no redteam finding
@@ -54,7 +54,7 @@ def test_dedupe_within_cso_duplicates_not_counted_as_overlap() -> None:
 
 def test_dedupe_reports_overlap_count() -> None:
     """DedupedReport.overlap_count equals number of matched-and-collapsed pairs."""
-    from devboard.parallel.dedupe import dedupe_findings
+    from agentboard.parallel.dedupe import dedupe_findings
 
     cso = [
         _mk(file="a.py", line=1, category="C1", category_namespace="OWASP", severity="HIGH"),
@@ -72,7 +72,7 @@ def test_dedupe_reports_overlap_count() -> None:
 
 def test_dedupe_same_category_keeps_higher_severity() -> None:
     """Same (file, line, namespace, category) on both sides — keep higher severity, single entry."""
-    from devboard.parallel.dedupe import dedupe_findings
+    from agentboard.parallel.dedupe import dedupe_findings
 
     cso = [_mk(file="src/a.py", line=10, category="SQLi", category_namespace="OWASP", severity="HIGH")]
     # e.g. redteam independently hit the same spot but rated it CRITICAL

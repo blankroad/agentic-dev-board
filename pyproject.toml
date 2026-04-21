@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "blankroad"}]
 requires-python = ">=3.11"
-keywords = ["claude-code", "mcp", "tdd", "agents", "devboard", "gauntlet"]
+keywords = ["claude-code", "mcp", "tdd", "agents", "agentboard", "gauntlet"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
@@ -45,15 +45,15 @@ legacy = [
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.4"]
 
 [project.scripts]
-agentboard = "devboard.cli:app"
-agentboard-mcp = "devboard.mcp_server:main"
+agentboard = "agentboard.cli:app"
+agentboard-mcp = "agentboard.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/devboard"]
+packages = ["src/agentboard"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"skills" = "share/devboard/skills"
-"hooks" = "share/devboard/hooks"
+"skills" = "share/agentboard/skills"
+"hooks" = "share/agentboard/hooks"
 
 [tool.hatch.build.targets.sdist]
 include = ["src", "skills", "hooks", "tests", "README.md", "QUICKSTART.md", "pyproject.toml"]

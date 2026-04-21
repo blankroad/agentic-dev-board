@@ -1,4 +1,4 @@
-"""devboard_tui_capture_snapshot MCP + tui_capture module tests.
+"""agentboard_tui_capture_snapshot MCP + tui_capture module tests.
 
 Covers: Pilot-based frame capture (text + SVG), key-sequence execution,
 save_to serialization, MCP dispatch wiring, skill chain integration grep,
@@ -21,8 +21,8 @@ import pytest
 
 def _bootstrap_goal(tmp_path: Path, gid: str = "g1") -> None:
     """Minimum .devboard/ state so DevBoardApp can mount against tmp_path."""
-    from devboard.models import BoardState, Goal, GoalStatus
-    from devboard.storage.file_store import FileStore
+    from agentboard.models import BoardState, Goal, GoalStatus
+    from agentboard.storage.file_store import FileStore
 
     (tmp_path / ".devboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
@@ -44,7 +44,7 @@ def test_tui_capture_module_exposes_run() -> None:
     """s_001: devboard.mcp_tools.tui_capture module is importable and
     exposes a `run` callable.
     """
-    from devboard.mcp_tools import tui_capture
+    from agentboard.mcp_tools import tui_capture
 
     assert callable(getattr(tui_capture, "run", None)), (
         "tui_capture module must expose a callable `run`"
@@ -57,7 +57,7 @@ def test_run_returns_text_for_bootstrapped_app(tmp_path: Path) -> None:
 
     # guards: integration-wiring
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(project_root=tmp_path, scene_id="default")
@@ -75,7 +75,7 @@ def test_run_presses_keys_in_order(tmp_path: Path) -> None:
     """s_003: run(keys=['2']) switches PhaseFlowView tabs via the App-
     level binding installed in the prior wedge, proving pilot.press fires.
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     before = run(project_root=tmp_path, scene_id="before", keys=[])
@@ -94,7 +94,7 @@ def test_run_save_to_writes_file(tmp_path: Path) -> None:
     """s_004: run(save_to='snapshots/a.txt') writes the captured text to
     that path rooted at project_root.
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(
@@ -114,7 +114,7 @@ def test_run_include_svg_populates_svg_field(tmp_path: Path) -> None:
     via textual's native App.export_screenshot. Also writes a sibling
     .svg file when save_to is provided.
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(
@@ -134,26 +134,26 @@ def test_run_include_svg_populates_svg_field(tmp_path: Path) -> None:
 
 
 def test_mcp_list_tools_includes_capture_snapshot() -> None:
-    """s_006: list_tools() returns an entry named devboard_tui_capture_snapshot."""
-    from devboard import mcp_server
+    """s_006: list_tools() returns an entry named agentboard_tui_capture_snapshot."""
+    from agentboard import mcp_server
 
     tools = asyncio.run(mcp_server.list_tools())
     names = [t.name for t in tools]
-    assert "devboard_tui_capture_snapshot" in names, (
-        f"MCP list_tools missing devboard_tui_capture_snapshot; got {names}"
+    assert "agentboard_tui_capture_snapshot" in names, (
+        f"MCP list_tools missing agentboard_tui_capture_snapshot; got {names}"
     )
 
 
 def test_mcp_call_tool_dispatches_capture_snapshot(tmp_path: Path) -> None:
-    """s_007: call_tool('devboard_tui_capture_snapshot', ...) routes to
+    """s_007: call_tool('agentboard_tui_capture_snapshot', ...) routes to
     tui_capture.run and returns its JSON-serializable dict.
     """
-    from devboard import mcp_server
+    from agentboard import mcp_server
 
     _bootstrap_goal(tmp_path)
     result = asyncio.run(
         mcp_server.call_tool(
-            "devboard_tui_capture_snapshot",
+            "agentboard_tui_capture_snapshot",
             {"project_root": str(tmp_path), "scene_id": "via_mcp"},
         )
     )
@@ -291,7 +291,7 @@ def test_fixture_goal_id_unknown_crashes_not_silently_blank(tmp_path: Path) -> N
 
     # guards: fixture-goal-validation
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path, gid="g_real")
     result = run(
@@ -315,7 +315,7 @@ def test_text_from_svg_handles_tspan_children_and_entities() -> None:
 
     # guards: svg-text-fragility
     """
-    from devboard.mcp_tools.tui_capture import _text_from_svg
+    from agentboard.mcp_tools.tui_capture import _text_from_svg
 
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg">'
@@ -342,7 +342,7 @@ def test_save_to_rejects_reserved_case_variants(tmp_path: Path, reserved: str) -
 
     # guards: reserved-path-denylist, case-insensitive-fs
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     state_json = tmp_path / ".devboard" / "state.json"
@@ -366,7 +366,7 @@ def test_save_to_rejects_venv_subtree(tmp_path: Path) -> None:
     """s_026 HIGH: .venv must be in the reserved-prefix denylist —
     overwriting pyvenv.cfg or site-packages bricks the dev environment.
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(
@@ -383,7 +383,7 @@ def test_fixture_goal_id_dict_type_returns_structured_crash(tmp_path: Path) -> N
     """s_027 MEDIUM: fixture_goal_id as dict (also possible via MCP JSON)
     must produce the same structured crash as list — not a raw TypeError.
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(
@@ -403,7 +403,7 @@ def test_save_to_rejects_reserved_in_root_paths(tmp_path: Path) -> None:
 
     # guards: reserved-path-denylist
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     state_json = tmp_path / ".devboard" / "state.json"
@@ -431,7 +431,7 @@ def test_save_to_empty_returns_crashed_not_raises(tmp_path: Path) -> None:
 
     # guards: structured-crash-contract
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     # Should not raise — should return a crashed dict.
@@ -449,7 +449,7 @@ def test_save_to_violation_skips_pilot_capture(tmp_path: Path) -> None:
 
     # guards: fail-fast-ordering
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(
@@ -470,7 +470,7 @@ def test_fixture_goal_id_non_string_returns_structured_crash(tmp_path: Path) -> 
 
     # guards: fixture-type-guard
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     result = run(
@@ -491,7 +491,7 @@ def test_save_to_rejects_absolute_path_outside_project_root(tmp_path: Path) -> N
 
     # guards: path-traversal-containment
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     outside = tmp_path.parent / "REDTEAM_should_not_write.txt"
@@ -514,7 +514,7 @@ def test_save_to_rejects_relative_traversal_outside_project_root(tmp_path: Path)
 
     # guards: path-traversal-containment
     """
-    from devboard.mcp_tools.tui_capture import run
+    from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
     # After bootstrap, tmp_path itself is the project root. Traversing
@@ -534,17 +534,17 @@ def test_save_to_rejects_relative_traversal_outside_project_root(tmp_path: Path)
 
 
 def test_e2e_capture_snapshot_reveals_plan_tab(tmp_path: Path) -> None:
-    """s_015: end-to-end — devboard_tui_capture_snapshot against a real
+    """s_015: end-to-end — agentboard_tui_capture_snapshot against a real
     DevBoardApp with a bootstrapped goal returns text containing the
     'Plan' tab label from PhaseFlowView (proves the full chain from MCP
     → dispatch → tui_capture.run → Pilot → SVG→text extraction works).
     """
-    from devboard import mcp_server
+    from agentboard import mcp_server
 
     _bootstrap_goal(tmp_path)
     result = asyncio.run(
         mcp_server.call_tool(
-            "devboard_tui_capture_snapshot",
+            "agentboard_tui_capture_snapshot",
             {
                 "project_root": str(tmp_path),
                 "scene_id": "e2e",

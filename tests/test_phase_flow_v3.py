@@ -15,8 +15,8 @@ def _mk_goal(tmp_path: Path, gid: str = "g1", plan_md: str = "# P\n") -> None:
 
 def _mount(tmp_path: Path):
     from textual.app import App, ComposeResult
-    from devboard.tui.phase_flow import PhaseFlowView
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.session_derive import SessionContext
 
     class _Host(App[None]):
         def compose(self) -> ComposeResult:
@@ -84,8 +84,8 @@ async def test_dev_body_uses_render_dev_timeline(tmp_path: Path) -> None:
     )
 
     from textual.app import App, ComposeResult
-    from devboard.tui.phase_flow import PhaseFlowView
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.session_derive import SessionContext
 
     class _Host(App[None]):
         def compose(self) -> ComposeResult:
@@ -115,8 +115,8 @@ async def test_review_body_uses_render_review_sections(tmp_path: Path) -> None:
     """HIGH-Missing: _load_review_body must call render_review_sections."""
     _mk_goal(tmp_path)
     from textual.app import App, ComposeResult
-    from devboard.tui.phase_flow import PhaseFlowView
-    from devboard.tui.session_derive import SessionContext
+    from agentboard.tui.phase_flow import PhaseFlowView
+    from agentboard.tui.session_derive import SessionContext
 
     class _Host(App[None]):
         def compose(self) -> ComposeResult:
@@ -136,7 +136,7 @@ def test_plan_digest_rejects_truthy_string_completed(tmp_path: Path) -> None:
 
     # guards: truthy-string boolean coercion
     """
-    from devboard.analytics.overview_payload import build_overview_payload
+    from agentboard.analytics.overview_payload import build_overview_payload
 
     gdir = tmp_path / ".devboard" / "goals" / "g1"
     gdir.mkdir(parents=True)
