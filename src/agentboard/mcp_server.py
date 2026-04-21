@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -643,6 +644,44 @@ async def list_tools() -> list[Tool]:
                 "required": ["project_root", "goal_id"],
             },
         ),
+        # ── M1a-data: Canonical pile read tools (Agent's Diary v3) ───────
+        Tool(
+            name="agentboard_get_session",
+            description=(
+                "Return session.md (≤500 tok) for a run's canonical pile. "
+                "Index/TOC + per-chapter 1-line teasers + status line. "
+                "Returns {status:'error', code:'PILE_ABSENT'|'RID_NOT_FOUND', "
+                "hint:...} when pile or rid missing."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "rid": {"type": "string"},
+                },
+                "required": ["project_root", "rid"],
+            },
+        ),
+        Tool(
+            name="agentboard_get_chapter",
+            description=(
+                "Return chapter markdown (≤3k tok) from a run's canonical pile. "
+                "chapter must be one of contract|labor|verdict|delta. "
+                "Returns {status:'error', code:'CHAPTER_NOT_FOUND'|'PILE_ABSENT'|'RID_NOT_FOUND'} on failure."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "rid": {"type": "string"},
+                    "chapter": {
+                        "type": "string",
+                        "enum": ["contract", "labor", "verdict", "delta"],
+                    },
+                },
+                "required": ["project_root", "rid", "chapter"],
+            },
+        ),
     ]
 
 
@@ -965,6 +1004,37 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             user_hint=args.get("user_hint", ""),
         )
         store.append_decision(args["task_id"], entry)
+
+        # M1a-data (FM7): opt-in iter.json sibling write when rid passed.
+        # Preserves existing behavior for legacy callers while powering
+        # the canonical pile for new consumers.
+        rid = args.get("rid")
+        gid = args.get("gid")
+        if rid:
+            iter_data = {
+                "phase": args["phase"],
+                "iter_n": args["iter"],
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "duration_ms": args.get("duration_ms", 0),
+                "reasoning": args["reasoning"],
+                "verdict_source": args.get("verdict_source", ""),
+                "next_strategy": args.get("next_strategy", ""),
+            }
+            try:
+                store.write_iter_artifact(
+                    rid, args["iter"], iter_data,
+                    gid=gid, tid=args["task_id"],
+                )
+            except (ValueError, OSError) as exc:
+                # Surfacing the error without blocking the legacy log path
+                # keeps pile writes best-effort during migration.
+                return _text({
+                    "status": "logged_partial",
+                    "phase": args["phase"],
+                    "iter": args["iter"],
+                    "pile_error": str(exc),
+                })
+
         return _text({"status": "logged", "phase": args["phase"], "iter": args["iter"]})
 
     if name == "devboard_log_parallel_review":
@@ -1301,6 +1371,89 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         from agentboard.mcp_tools.generate_narrative import run_generate_narrative
 
         return _text(run_generate_narrative(args))
+
+    # ── M1a-data: pile read tools ───────────────────────────────────────
+    if name == "devboard_get_session":
+        store = _store(args["project_root"])
+        rid = args["rid"]
+        try:
+            run_info = store.load_run(rid)
+        except ValueError as exc:
+            return _text({"status": "error", "code": "BAD_RID", "hint": str(exc)})
+        if run_info is None:
+            # Distinguish RID_NOT_FOUND vs PILE_ABSENT by checking index
+            idx_path = store._rid_index_path()  # type: ignore[attr-defined]
+            if idx_path.exists():
+                try:
+                    idx = json.loads(idx_path.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    idx = {}
+                if rid in idx:
+                    return _text({
+                        "status": "error",
+                        "code": "PILE_ABSENT",
+                        "rid": rid,
+                        "gid": idx[rid].get("gid"),
+                        "hint": f"Run is orphan — run `agentboard rebuild-pile {idx[rid].get('gid')}` (M1a-plumbing CLI)",
+                    })
+            return _text({
+                "status": "error",
+                "code": "RID_NOT_FOUND",
+                "rid": rid,
+                "hint": "rid not in .rid_index.json",
+            })
+        session_path = run_info["run_dir"] / "session.md"
+        if not session_path.exists():
+            return _text({
+                "status": "error",
+                "code": "PILE_ABSENT",
+                "rid": rid,
+                "hint": "session.md missing — run `agentboard rebuild-pile` (M1a-plumbing CLI)",
+            })
+        return _text({
+            "status": "ok",
+            "rid": rid,
+            "content": session_path.read_text(encoding="utf-8"),
+        })
+
+    if name == "devboard_get_chapter":
+        store = _store(args["project_root"])
+        rid = args["rid"]
+        chapter = args.get("chapter", "").strip().lower()
+        valid_chapters = ["contract", "labor", "verdict", "delta"]
+        if chapter not in valid_chapters:
+            return _text({
+                "status": "error",
+                "code": "CHAPTER_NOT_FOUND",
+                "hint": f"chapter must be one of {valid_chapters}, got {chapter!r}",
+                "valid_chapters": valid_chapters,
+            })
+        try:
+            run_info = store.load_run(rid)
+        except ValueError as exc:
+            return _text({"status": "error", "code": "BAD_RID", "hint": str(exc)})
+        if run_info is None:
+            return _text({
+                "status": "error",
+                "code": "RID_NOT_FOUND",
+                "rid": rid,
+                "hint": "rid not in .rid_index.json or run_dir missing",
+            })
+        chapter_path = run_info["run_dir"] / "chapters" / f"{chapter}.md"
+        if not chapter_path.exists():
+            return _text({
+                "status": "error",
+                "code": "CHAPTER_NOT_FOUND",
+                "rid": rid,
+                "chapter": chapter,
+                "hint": f"chapters/{chapter}.md does not exist (may not be implemented in M1a-data)",
+            })
+        return _text({
+            "status": "ok",
+            "rid": rid,
+            "chapter": chapter,
+            "content": chapter_path.read_text(encoding="utf-8"),
+        })
 
     return _text({"error": f"unknown tool: {name}"})
 

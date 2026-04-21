@@ -91,6 +91,107 @@ class FileStore(Repository):
     def _learnings_dir(self) -> Path:
         return self._devboard / "learnings"
 
+    def _run_pile_dir(self, rid: str) -> Path:
+        """Directory for a run's canonical artifact pile (M1a-data)."""
+        return self._runs_dir() / _sanitize_id(rid)
+
+    def _rid_index_path(self) -> Path:
+        """Global rid → run_path reverse index file."""
+        return self._devboard / ".rid_index.json"
+
+    # ── Pile writers (M1a-data) ──────────────────────────────────────────
+
+    def write_iter_artifact(
+        self,
+        rid: str,
+        iter_n: int,
+        data: dict,
+        *,
+        gid: str | None = None,
+        tid: str | None = None,
+    ) -> Path:
+        """Write a single iter artifact atomically.
+
+        Creates runs/<rid>/iters/iter-NNN.json and returns the path.
+        Uses the existing atomic_write primitive (fdatasync + rename)
+        for crash safety. Callers should pass dict payloads that round-
+        trip through json.dumps/loads cleanly.
+
+        If gid/tid are provided, also updates the global .rid_index.json
+        with dir-first ordering: the run dir is created before the index
+        entry is written, so an orphan index entry (dir gone) is the
+        survivable failure mode rather than an invisible run (dir exists
+        but no index entry).
+        """
+        pile_dir = self._run_pile_dir(rid)
+        iters_dir = pile_dir / "iters"
+        # Step 1 (dir-first): create directory structure
+        iters_dir.mkdir(parents=True, exist_ok=True)
+        # Step 2: write iter artifact atomically
+        path = iters_dir / f"iter-{iter_n:03d}.json"
+        atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
+        # Step 3 (index-second): update rid index if gid/tid given
+        if gid is not None and tid is not None:
+            self._rid_index_upsert(rid, gid=gid, tid=tid)
+        return path
+
+    def _rid_index_upsert(self, rid: str, *, gid: str, tid: str) -> None:
+        """Add/update an rid → {gid, tid} mapping in .rid_index.json."""
+        idx_path = self._rid_index_path()
+        self._devboard.mkdir(parents=True, exist_ok=True)
+        with file_lock(idx_path):
+            if idx_path.exists():
+                try:
+                    idx = json.loads(idx_path.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    idx = {}
+            else:
+                idx = {}
+            idx[_sanitize_id(rid)] = {
+                "gid": _sanitize_id(gid),
+                "tid": _sanitize_id(tid),
+            }
+            atomic_write(idx_path, json.dumps(idx, ensure_ascii=False, indent=2))
+
+    def load_run(self, rid: str) -> dict | None:
+        """Resolve rid → {rid, gid, tid, run_dir} or None if orphaned.
+
+        Returns None when the index knows rid but the run dir is missing
+        (caller should trigger self-heal). Also returns None if the index
+        itself has no entry for rid, OR the file is absent.
+        """
+        rid = _sanitize_id(rid)
+        idx_path = self._rid_index_path()
+        if not idx_path.exists():
+            return None
+        try:
+            idx = json.loads(idx_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        entry = idx.get(rid)
+        if entry is None:
+            return None
+        pile_dir = self._run_pile_dir(rid)
+        if not pile_dir.exists():
+            # Orphan index: dir missing. Signal self-heal.
+            return None
+        # Defense-in-depth: symlink / tampered-index attacks may make a
+        # path resolve outside .devboard even after _sanitize_id passes.
+        # Reject any resolved path that escapes the devboard root.
+        try:
+            resolved = pile_dir.resolve()
+            devboard_resolved = self._devboard.resolve()
+            if not resolved.is_relative_to(devboard_resolved):
+                return None
+        except (OSError, ValueError):
+            return None
+        return {
+            "rid": rid,
+            "gid": entry.get("gid"),
+            "tid": entry.get("tid"),
+            "run_dir": pile_dir,
+        }
+
     # ── Board ──────────────────────────────────────────────────────────────
 
     def load_board(self) -> BoardState:
