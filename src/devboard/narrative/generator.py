@@ -58,50 +58,61 @@ def assemble_plan(sections: PlanSections) -> str:
 
 
 def assemble_process(grouped: dict[int, list[dict[str, Any]]]) -> str:
-    """Render the ## Process section as a round-by-round redteam listing
-    plus a summary of TDD iteration counts drawn from decisions.jsonl."""
+    """Render the ## Process section as a deterministic synthesis:
+    phase-frequency summary + last-verdict-per-phase + redteam arc
+    (rounds count, final outcome). No per-iter citations — those belong
+    in the Dev tab, not the Plan synthesis.
+    """
     lines: list[str] = []
-    # Count phases for a quick preamble
     phase_counts: dict[str, int] = {}
-    for rows in grouped.values():
-        for r in rows:
+    last_verdict_by_phase: dict[str, str] = {}
+    redteam_verdicts: list[str] = []
+
+    for iter_n in sorted(grouped.keys()):
+        for r in grouped[iter_n]:
             phase = str(r.get("phase", ""))
+            if not phase:
+                continue
             phase_counts[phase] = phase_counts.get(phase, 0) + 1
+            verdict = str(r.get("verdict_source") or "")
+            if verdict:
+                # Later iters overwrite — we keep the final verdict per phase.
+                last_verdict_by_phase[phase] = verdict
+            if phase == "redteam" and verdict:
+                redteam_verdicts.append(verdict)
 
     if phase_counts:
+        total_iters = len(grouped)
         summary = ", ".join(
             f"{phase}={count}"
             for phase, count in sorted(phase_counts.items())
         )
         lines.append(
+            f"Loop ran for {total_iters} iteration(s). "
             f"Decision-log phase totals: {summary} "
             f"(source: decisions.jsonl aggregate)."
         )
 
-    # Eng_review, review, redteam rows — each gets a per-iter citation
-    # so the golden sample's shorthand citations like '(source: iter=7
-    # review)' have a token-subset match in the generated output.
-    narrated_phases = ("eng_review", "review", "redteam")
-    round_index = 0
-    for iter_n in sorted(grouped.keys()):
-        for r in grouped[iter_n]:
-            phase = str(r.get("phase", ""))
-            if phase not in narrated_phases:
-                continue
-            verdict = r.get("verdict_source") or "?"
-            reasoning = _trim(str(r.get("reasoning", "")), 200)
-            if phase == "redteam":
-                round_index += 1
-                lines.append(
-                    f"Round {round_index} (iter={iter_n}) returned {verdict}. "
-                    f"{reasoning} "
-                    f"(source: decisions.jsonl iter={iter_n} phase=redteam)."
-                )
-            else:
-                lines.append(
-                    f"iter={iter_n} {phase}: {verdict}. {reasoning} "
-                    f"(source: decisions.jsonl iter={iter_n} phase={phase})."
-                )
+    # Final verdict per narrated phase — summary, not per-iter dump.
+    narrated_phases = ("eng_review", "review", "approval", "redteam", "parallel_review", "cso")
+    final_parts: list[str] = []
+    for phase in narrated_phases:
+        if phase in last_verdict_by_phase:
+            final_parts.append(f"{phase} final={last_verdict_by_phase[phase]}")
+    if final_parts:
+        lines.append(
+            "Final verdicts: " + "; ".join(final_parts) + "."
+        )
+
+    # Redteam round arc (count + outcome progression, no per-iter citations).
+    if redteam_verdicts:
+        broken = sum(1 for v in redteam_verdicts if v == "BROKEN")
+        survived = sum(1 for v in redteam_verdicts if v == "SURVIVED")
+        final = redteam_verdicts[-1]
+        lines.append(
+            f"Redteam arc: {len(redteam_verdicts)} round(s) "
+            f"({broken} BROKEN / {survived} SURVIVED), final={final}."
+        )
 
     if not lines:
         lines.append("_No iteration data yet — generator ran before TDD started._")
@@ -147,8 +158,10 @@ def assemble_result(grouped: dict[int, list[dict[str, Any]]]) -> str:
 
 
 def assemble_review(grouped: dict[int, list[dict[str, Any]]]) -> str:
-    """Render the ## Review section as a meta-reflection on redteam/cso
-    rounds and any known-risk / deferred notes mined from review text."""
+    """Render the ## Review section as a meta-reflection summary — round
+    counts, final verdicts per reviewer track, and deferred-risk tallies.
+    Aggregate-only; per-iter citations belong in the Dev tab.
+    """
     redteam_rows: list[dict[str, Any]] = []
     cso_rows: list[dict[str, Any]] = []
     parallel_rows: list[dict[str, Any]] = []
@@ -170,46 +183,52 @@ def assemble_review(grouped: dict[int, list[dict[str, Any]]]) -> str:
     if redteam_rows:
         broken = sum(1 for r in redteam_rows if r.get("verdict_source") == "BROKEN")
         survived = sum(1 for r in redteam_rows if r.get("verdict_source") == "SURVIVED")
+        final = redteam_rows[-1].get("verdict_source") or "?"
         lines.append(
             f"Adversarial review arc: {len(redteam_rows)} redteam round(s) — "
-            f"{broken} BROKEN, {survived} SURVIVED "
+            f"{broken} BROKEN, {survived} SURVIVED, final={final} "
             f"(source: decisions.jsonl phase=redteam aggregate)."
         )
 
     if cso_rows:
-        last = cso_rows[-1]
-        iter_n = last.get("iter", "?")
-        verdict = last.get("verdict_source") or "?"
+        final = cso_rows[-1].get("verdict_source") or "?"
         lines.append(
-            f"Security review (CSO) final verdict: {verdict} "
-            f"(source: decisions.jsonl iter={iter_n} phase=cso)."
+            f"Security review (CSO) final verdict: {final} "
+            f"across {len(cso_rows)} round(s) "
+            f"(source: decisions.jsonl phase=cso aggregate)."
         )
 
     if parallel_rows:
-        last = parallel_rows[-1]
-        iter_n = last.get("iter", "?")
-        verdict = last.get("verdict_source") or "?"
+        final = parallel_rows[-1].get("verdict_source") or "?"
+        # Count parallel-review findings by looking at metadata.overlap_count
+        # if present; otherwise just emit the round-count + final verdict.
+        total_findings = 0
+        for r in parallel_rows:
+            md = r.get("metadata")
+            if isinstance(md, dict):
+                oc = md.get("overlap_count")
+                if isinstance(oc, int):
+                    total_findings += oc
+        finding_bit = (
+            f", {total_findings} overlapping finding(s)" if total_findings else ""
+        )
         lines.append(
-            f"Parallel review final verdict: {verdict} "
-            f"(source: decisions.jsonl iter={iter_n} phase=parallel_review)."
+            f"Parallel review final verdict: {final} "
+            f"across {len(parallel_rows)} round(s){finding_bit} "
+            f"(source: decisions.jsonl phase=parallel_review aggregate)."
         )
 
-    # Deferred / known-risk scan across review + redteam reasoning
-    risk_hits: list[str] = []
+    # Deferred / known-risk tally — count only, no per-iter citations.
+    deferred_count = 0
     for r in redteam_rows + review_rows:
         reasoning = str(r.get("reasoning", "")).lower()
-        iter_n = r.get("iter", "?")
-        phase = r.get("phase", "?")
-        for marker in ("deferred", "known-risk", "known_risk"):
-            if marker in reasoning:
-                risk_hits.append(
-                    f"{marker.replace('_', '-')} noted at iter={iter_n} phase={phase} "
-                    f"(source: decisions.jsonl iter={iter_n} phase={phase})"
-                )
-                break
-    if risk_hits:
+        if any(m in reasoning for m in ("deferred", "known-risk", "known_risk")):
+            deferred_count += 1
+    if deferred_count:
         lines.append(
-            "Deferred / known-risk signals: " + "; ".join(risk_hits) + "."
+            f"Deferred / known-risk signals: {deferred_count} row(s) flagged "
+            f"across review + redteam decisions "
+            f"(source: decisions.jsonl aggregate)."
         )
 
     if not lines:

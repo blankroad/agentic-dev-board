@@ -442,34 +442,25 @@ def _risk_delta(
     planned = [str(r) for r in (plan_data.get("known_failure_modes") or [])]
     followups = [str(x) for x in (plan_data.get("non_goals") or []) if x]
 
-    # Rule 1 — look for the LATEST parallel_review and let CLEAN cover all.
-    last_parallel: dict | None = None
-    for d in decisions:
-        if str(d.get("phase", "")) == "parallel_review":
-            last_parallel = d
-    parallel_clean = (
-        last_parallel is not None
-        and str(last_parallel.get("verdict_source", "")).upper() == "CLEAN"
-    )
+    # Keyword match — per-risk evidence from tdd_green + review + approval
+    # reasoning. parallel_review=CLEAN is a global signal (shown separately
+    # in the Review tab) and does NOT blanket-promote risks without
+    # per-risk evidence — redteam FM#6 (avoid false-resolved risks where
+    # CLEAN was granted on unrelated checks).
+    evidence_corpus = " ".join(
+        str(d.get("reasoning", ""))
+        for d in decisions
+        if str(d.get("phase", "")).startswith("tdd_green")
+        or str(d.get("phase", "")) in ("review", "approval")
+    ).lower()
 
-    if parallel_clean:
-        resolved = list(planned)
-        remaining: list[str] = []
-    else:
-        # Rule 2 — keyword match against tdd_green reasoning corpus only.
-        green_corpus = " ".join(
-            str(d.get("reasoning", ""))
-            for d in decisions
-            if str(d.get("phase", "")).startswith("tdd_green")
-        ).lower()
+    def _referenced(risk: str) -> bool:
+        after_colon = risk.split(":", 1)[-1]
+        key = after_colon.strip().split(" ")[0].lower()
+        return bool(key) and key in evidence_corpus
 
-        def _referenced(risk: str) -> bool:
-            after_colon = risk.split(":", 1)[-1]
-            key = after_colon.strip().split(" ")[0].lower()
-            return bool(key) and key in green_corpus
-
-        resolved = [r for r in planned if _referenced(r)]
-        remaining = [r for r in planned if r not in resolved]
+    resolved = [r for r in planned if _referenced(r)]
+    remaining = [r for r in planned if r not in resolved]
 
     # New risks surfaced during execution (not in plan).
     new_risks = [

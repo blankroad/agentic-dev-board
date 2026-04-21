@@ -98,7 +98,14 @@ async def test_dev_body_uses_render_dev_timeline(tmp_path: Path) -> None:
         # render_dev_timeline outputs either "## Scope baseline" (As-Is→To-Be,
         # when git-based code_delta populates) or "iter N · phase" (fallback).
         # Both are exclusive to the new renderer — not the legacy inline loop.
-        assert ("## Scope baseline" in body) or ("iter 1 · tdd_green" in body), (
+        # v2.3 card format: header is `iter N · step_id · phase · verdict`
+        # (step_id sits between iter and phase). Accept either rollup header
+        # or the card-format header.
+        assert (
+            "## Scope baseline" in body
+            or "## Iterations" in body
+            or "iter 1 · " in body and "tdd_green" in body
+        ), (
             f"Dev tab must use render_dev_timeline; got: {body[:400]!r}"
         )
 

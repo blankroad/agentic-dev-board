@@ -102,13 +102,63 @@ def test_step_shipping_from_decisions_jsonl_tdd_green(tmp_path: Path) -> None:
     )
 
 
-def test_risk_delta_cross_ref_uses_completed_steps_and_parallel_review(
-    tmp_path: Path,
-) -> None:
-    """s_006 — payload.risk_delta classification must cross-ref with actual
-    completed steps + parallel_review CLEAN verdict, not just loose keyword
-    match. When parallel_review=CLEAN exists, all planned risks should be
-    classified as resolved (not remaining)."""
+def test_risk_delta_does_not_blanket_resolve_on_clean(tmp_path: Path) -> None:
+    """redteam FM#6 — parallel_review=CLEAN must NOT blanket-promote
+    every planned risk to resolved. Only risks with corpus-keyword
+    evidence (tdd_green/review/approval reasoning) belong in resolved;
+    the rest stay in remaining even if CLEAN."""
+    import json as _json
+
+    from devboard.analytics.overview_payload import build_overview_payload
+    from devboard.models import BoardState, Goal, GoalStatus
+    from devboard.storage.file_store import FileStore
+
+    (tmp_path / ".devboard").mkdir()
+    store = FileStore(tmp_path)
+    board = BoardState(active_goal_id="g_fp")
+    board.goals.append(Goal(id="g_fp", title="fp", status=GoalStatus.active))
+    store.save_board(board)
+    goal_dir = tmp_path / ".devboard" / "goals" / "g_fp"
+    goal_dir.mkdir(parents=True)
+    (goal_dir / "plan.md").write_text("# plan\n")
+
+    plan_payload = {
+        "atomic_steps": [{"id": "s_001", "behavior": "x"}],
+        "known_failure_modes": [
+            "CRITICAL: alpha_marker_corpus_has_this",
+            "HIGH: beta_marker_corpus_lacks_this_entirely",
+        ],
+    }
+    (goal_dir / "plan.json").write_text(_json.dumps(plan_payload))
+    task_dir = goal_dir / "tasks" / "t_fp"
+    task_dir.mkdir(parents=True)
+    (task_dir / "task.json").write_text(_json.dumps({"id": "t_fp", "status": "pushed"}))
+    (task_dir / "decisions.jsonl").write_text(
+        _json.dumps({"iter": 1, "phase": "tdd_green", "verdict_source": "GREEN_CONFIRMED",
+                     "reasoning": "alpha_marker_corpus_has_this resolved during impl"}) + "\n"
+        + _json.dumps({"iter": 1, "phase": "parallel_review", "verdict_source": "CLEAN",
+                       "reasoning": "no issues"}) + "\n"
+    )
+
+    payload = build_overview_payload(tmp_path, "g_fp", task_id="t_fp")
+    rd = payload["risk_delta"]
+    resolved_texts = " ".join(str(r) for r in rd["resolved"])
+    remaining_texts = " ".join(str(r) for r in rd["remaining"])
+    assert "alpha_marker" in resolved_texts, (
+        f"risk with corpus evidence must be resolved:\n  resolved={rd['resolved']}\n  remaining={rd['remaining']}"
+    )
+    assert "beta_marker" in remaining_texts, (
+        f"risk without corpus evidence must stay remaining EVEN with "
+        f"parallel_review=CLEAN:\n  resolved={rd['resolved']}\n  remaining={rd['remaining']}"
+    )
+
+
+def test_risk_delta_cross_ref_uses_evidence_corpus(tmp_path: Path) -> None:
+    """s_006 (redteam FM#6 revised) — payload.risk_delta classifies risks
+    by per-risk keyword evidence in (tdd_green | review | approval)
+    reasoning corpus. parallel_review=CLEAN is informational (shown in
+    Review tab) but does NOT blanket-promote risks without evidence —
+    avoids false-resolved risks."""
     import json as _json
 
     from devboard.analytics.overview_payload import build_overview_payload
@@ -127,35 +177,34 @@ def test_risk_delta_cross_ref_uses_completed_steps_and_parallel_review(
     plan_payload = {
         "atomic_steps": [
             {"id": "s_001", "behavior": "first"},
-            {"id": "s_002", "behavior": "second"},
         ],
         "known_failure_modes": [
-            "CRITICAL: obscure_risk_without_any_corpus_keyword",
-            "HIGH: another_equally_obscure_risk",
+            "CRITICAL: keyword_alpha_mentioned_in_corpus",
+            "HIGH: keyword_zeta_never_mentioned",
         ],
     }
     (goal_dir / "plan.json").write_text(_json.dumps(plan_payload))
     task_dir = goal_dir / "tasks" / "t_r"
     task_dir.mkdir(parents=True)
     (task_dir / "task.json").write_text(_json.dumps({"id": "t_r", "status": "pushed"}))
+    # tdd_green reasoning references keyword_alpha; parallel_review=CLEAN
+    # should NOT promote keyword_zeta (never mentioned anywhere).
     (task_dir / "decisions.jsonl").write_text(
         _json.dumps({"iter": 1, "phase": "tdd_green", "verdict_source": "GREEN_CONFIRMED",
-                     "reasoning": "impl done", "ts": "2026-04-20T10:00:00+00:00"}) + "\n"
-        + _json.dumps({"iter": 2, "phase": "tdd_green", "verdict_source": "GREEN_CONFIRMED",
-                       "reasoning": "second step done", "ts": "2026-04-20T10:01:00+00:00"}) + "\n"
-        + _json.dumps({"iter": 2, "phase": "parallel_review", "verdict_source": "CLEAN",
-                       "reasoning": "all clear", "ts": "2026-04-20T10:02:00+00:00"}) + "\n"
+                     "reasoning": "fixed keyword_alpha_mentioned_in_corpus path"}) + "\n"
+        + _json.dumps({"iter": 1, "phase": "parallel_review", "verdict_source": "CLEAN",
+                       "reasoning": "no issues"}) + "\n"
     )
 
     payload = build_overview_payload(tmp_path, "g_r", task_id="t_r")
     rd = payload["risk_delta"]
-    # parallel_review=CLEAN exists → all planned risks should be resolved
-    assert len(rd["resolved"]) == 2, (
-        f"parallel_review CLEAN must promote both planned risks to resolved; "
-        f"got resolved={rd['resolved']} remaining={rd['remaining']}"
+    resolved_txt = " ".join(str(r) for r in rd["resolved"])
+    remaining_txt = " ".join(str(r) for r in rd["remaining"])
+    assert "keyword_alpha" in resolved_txt, (
+        f"alpha (with corpus evidence) must be resolved: {rd}"
     )
-    assert len(rd["remaining"]) == 0, (
-        f"with parallel_review CLEAN, remaining must be empty; got {rd['remaining']}"
+    assert "keyword_zeta" in remaining_txt, (
+        f"zeta (no evidence) must stay remaining despite CLEAN: {rd}"
     )
 
 

@@ -157,6 +157,10 @@ def _write_decisions(
 async def test_dev_tab_lists_rows_with_dev_phases(tmp_path: Path) -> None:
     """s_005: Dev tab body contains rows whose phase ∈
     {dev, tdd, eng_review, iron_law, rca}.
+
+    v2.3 (g_20260420_231710_1acaa6, borderline B): card format must also
+    produce label markers (behavior:/reasoning:/test:/impl:) and a card
+    divider so the structural contract is explicit, not inferred.
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
     _write_decisions(
@@ -164,8 +168,10 @@ async def test_dev_tab_lists_rows_with_dev_phases(tmp_path: Path) -> None:
         "g1",
         "t1",
         [
-            {"iter": 7, "phase": "tdd_green", "verdict_source": "GREEN_MARKER_7"},
-            {"iter": 6, "phase": "eng_review", "verdict_source": "ENG_MARKER_6"},
+            {"iter": 7, "phase": "tdd_green", "verdict_source": "GREEN_MARKER_7",
+             "reasoning": "s_007 impl done"},
+            {"iter": 6, "phase": "eng_review", "verdict_source": "ENG_MARKER_6",
+             "reasoning": "eng review notes"},
             {"iter": 5, "phase": "reviewer", "verdict_source": "SHOULD_NOT_APPEAR"},
         ],
     )
@@ -179,6 +185,13 @@ async def test_dev_tab_lists_rows_with_dev_phases(tmp_path: Path) -> None:
         )
         assert "ENG_MARKER_6" in body, (
             f"Dev tab should include eng_review row; got: {body[:300]!r}"
+        )
+        # Structure assertions — card format guard.
+        assert "reasoning:" in body, (
+            f"Dev tab must emit `reasoning:` label in card format; got: {body[:400]!r}"
+        )
+        assert "─────" in body, (
+            f"Dev tab must emit card divider (5+ ─) between iter cards; got: {body[:400]!r}"
         )
 
 

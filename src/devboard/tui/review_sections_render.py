@@ -24,7 +24,9 @@ def _fmt_learning(l: dict[str, Any]) -> str:
         conf_f = float(conf)
     except (TypeError, ValueError):
         conf_f = 0.0
-    snippet = str(l.get("content", ""))[:120]
+    # Accept either `summary` (new _load_learnings_from_files) or `content`
+    # (legacy _extract_learnings path). Whichever is populated wins.
+    snippet = str(l.get("summary") or l.get("content") or "")[:120]
     return f"  • {l.get('name', '?')} (conf {conf_f:.1f}) — {snippet}"
 
 

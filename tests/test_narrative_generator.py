@@ -24,10 +24,12 @@ def test_assemble_purpose_emits_source_cited_section() -> None:
     )
 
 
-def test_assemble_process_lists_redteam_rounds_with_verdicts() -> None:
-    """assemble_process scans decisions grouped by iter for redteam
-    rows and emits a round-by-round listing with (source: decisions.jsonl
-    iter=N phase=redteam) citations."""
+def test_assemble_process_summarizes_redteam_arc_without_per_iter_citations() -> None:
+    """v2.3 (g_20260420_231710_1acaa6): assemble_process emits an arc
+    summary (round count, BROKEN/SURVIVED tally, final verdict) instead
+    of the legacy per-iter citation dump. Raw `(source: decisions.jsonl
+    iter=N phase=X)` citations are no longer emitted in the Process
+    section — they belong in the Dev tab per-iter cards."""
     from devboard.narrative.generator import assemble_process
 
     grouped = {
@@ -39,14 +41,16 @@ def test_assemble_process_lists_redteam_rounds_with_verdicts() -> None:
 
     out = assemble_process(grouped)
 
-    assert "Round 1 (iter=8) returned BROKEN" in out, (
-        f"missing BROKEN round listing: {out!r}"
+    # New arc summary format
+    assert "2 round(s)" in out, f"missing round count: {out!r}"
+    assert "1 BROKEN" in out and "1 SURVIVED" in out, (
+        f"missing BROKEN/SURVIVED tally: {out!r}"
     )
-    assert "Round 2 (iter=11) returned SURVIVED" in out, (
-        f"missing SURVIVED round listing: {out!r}"
+    assert "final=SURVIVED" in out, f"missing final verdict: {out!r}"
+    # Legacy per-iter citation template must be gone.
+    assert "(source: decisions.jsonl iter=" not in out, (
+        f"per-iter citation template leaked into Process: {out!r}"
     )
-    assert "(source: decisions.jsonl iter=8" in out
-    assert "(source: decisions.jsonl iter=11" in out
 
 
 def test_generate_narrative_writes_five_section_plan_summary(tmp_path: Path) -> None:
