@@ -94,6 +94,9 @@ class SessionWriter:
         )
 
         content = "\n".join([
+            "---",
+            "schema_version: 1",
+            "---",
             f"# {title}",
             "",
             "## Chapters",

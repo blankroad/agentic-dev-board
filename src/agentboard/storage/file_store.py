@@ -129,7 +129,11 @@ class FileStore(Repository):
         iters_dir.mkdir(parents=True, exist_ok=True)
         # Step 2: write iter artifact atomically
         path = iters_dir / f"iter-{iter_n:03d}.json"
-        atomic_write(path, json.dumps(data, ensure_ascii=False, indent=2))
+        # Schema versioning (M1a-plumbing p_001): add schema_version=1 to
+        # outgoing payload so future M2 changes don't silently break M1
+        # consumers. Use a shallow copy to avoid mutating caller's dict.
+        payload = {"schema_version": 1, **data}
+        atomic_write(path, json.dumps(payload, ensure_ascii=False, indent=2))
         # Step 3 (index-second): update rid index if gid/tid given
         if gid is not None and tid is not None:
             self._rid_index_upsert(rid, gid=gid, tid=tid)

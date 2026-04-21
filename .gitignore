@@ -17,6 +17,7 @@ venv/
 .devboard/learnings/
 .devboard/activity.jsonl
 .devboard/.iron-law-history.jsonl
+.devboard/mcp_calls.jsonl
 
 # devboard TUI snapshots (Layer 1/2/3 capture artifacts — regenerated per run)
 tui_snapshots/

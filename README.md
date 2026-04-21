@@ -495,6 +495,32 @@ Legacy modules (`orchestrator/graph.py`, `agents/router.py`, etc.) are preserved
 
 ---
 
+## For agent authors
+
+Writing a different agent framework (gstack, OpenHands, custom) and want
+to read agentic-dev-board pile data via MCP, or extend the phase-typed
+renderer system?
+
+- [`docs/phases.md`](docs/phases.md) — `PhaseRenderer` ABC contract +
+  worked example. Register a new phase renderer in 5 steps.
+- [`docs/mcp_tools.md`](docs/mcp_tools.md) — `agentboard_get_session` /
+  `agentboard_get_chapter` schemas, error response format, example
+  agent workflow with token budgets.
+- [`docs/security.md`](docs/security.md) — prompt-injection threat
+  model for pile content + recommended caller behavior.
+
+Existing goals (created before M1a-data shipped) need a one-time
+migration to populate the canonical pile:
+
+```bash
+agentboard rebuild-pile <gid>      # single goal
+agentboard rebuild-pile --all      # every goal under .devboard/goals/
+```
+
+The rebuilt pile is readable by the new MCP tools immediately.
+
+---
+
 ## License
 
 MIT.

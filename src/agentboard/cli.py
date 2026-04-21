@@ -1491,5 +1491,61 @@ def config(
     console.print(f"[green]✓[/green] {key} = {target[last]}")
 
 
+@app.command(name="rebuild-pile")
+def rebuild_pile(
+    gid: Optional[str] = typer.Argument(
+        None,
+        help="Goal ID to rebuild. Omit with --all to rebuild every goal.",
+    ),
+    all_goals: bool = typer.Option(
+        False, "--all", help="Rebuild every goal under .devboard/goals/"
+    ),
+    root: Optional[Path] = typer.Option(
+        None, help="Project root (default: auto-detect via find_devboard_root)"
+    ),
+) -> None:
+    """Reconstruct canonical pile (runs/<rid>/...) from legacy decisions.jsonl.
+
+    Use after upgrading to M1a-data to migrate existing goals forward.
+    The rebuilt pile is readable by agentboard_get_session + agentboard_get_chapter MCP tools.
+    """
+    from agentboard.storage.pile_rebuild import rebuild_pile_all, rebuild_pile_for_goal
+
+    store = _get_store(root)
+    if all_goals:
+        summary = rebuild_pile_all(store)
+        failed = 0
+        for g, s in summary["per_goal"].items():
+            status = s.get("status", "?")
+            n = s.get("tasks_rebuilt", 0)
+            console.print(f"  [{status}] {g} — {n} task(s) rebuilt")
+            if s.get("errors"):
+                failed += len(s["errors"])
+                for err in s["errors"]:
+                    console.print(f"    [red]error:[/red] {err}")
+        console.print(
+            f"[bold]rebuild-pile --all:[/bold] {summary['goals_rebuilt']} goals, {failed} errors"
+        )
+        if failed:
+            raise typer.Exit(code=1)
+    else:
+        if not gid:
+            console.print("[red]error:[/red] gid required (or use --all)")
+            raise typer.Exit(code=2)
+        summary = rebuild_pile_for_goal(store, gid)
+        if summary["status"] == "error":
+            console.print(f"[red]error:[/red] {summary.get('reason', 'unknown')}")
+            raise typer.Exit(code=1)
+        console.print(
+            f"[green]✓[/green] rebuilt {summary['tasks_rebuilt']} task(s) for {gid}"
+        )
+        for rid in summary.get("rids", []):
+            console.print(f"  rid: {rid}")
+        if summary.get("errors"):
+            for err in summary["errors"]:
+                console.print(f"  [red]error:[/red] {err}")
+            raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
     app()

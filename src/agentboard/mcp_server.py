@@ -689,17 +689,60 @@ async def list_tools() -> list[Tool]:
 # Tool handlers
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _append_mcp_call_log(project_root: str, entry: dict) -> None:
+    """Telemetry for MCP tool calls (M1a-plumbing p_009).
+
+    Writes to .devboard/mcp_calls.jsonl. All errors swallowed — telemetry
+    MUST NOT break the primary dispatch path (p_010).
+    """
+    try:
+        log_path = Path(project_root).resolve() / ".devboard" / "mcp_calls.jsonl"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        # Deliberately silent — telemetry failure is never a user-visible error.
+        pass
+
+
 @server.call_tool()
 async def call_tool(name: str, args: dict) -> list[TextContent]:
     # Accept both `agentboard_*` (canonical) and `devboard_*` (legacy alias)
     # so skills can migrate incrementally and MCP-server restarts don't
     # break in-flight Claude sessions that already cached old tool names.
+    original_name = name
     if name.startswith("agentboard_"):
         name = "devboard_" + name[len("agentboard_"):]
+
+    import time as _time
+    start = _time.monotonic()
+    project_root = args.get("project_root", ".")
     try:
-        return await _dispatch(name, args)
+        result = await _dispatch(name, args)
     except Exception as e:
+        duration_ms = int((_time.monotonic() - start) * 1000)
+        _append_mcp_call_log(project_root, {
+            "tool": original_name,
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "duration_ms": duration_ms,
+            "bytes_returned": 0,
+            "error": f"{type(e).__name__}",
+        })
         return _text({"error": f"{type(e).__name__}: {e}"})
+
+    duration_ms = int((_time.monotonic() - start) * 1000)
+    bytes_returned = sum(len(tc.text) for tc in result) if result else 0
+    rid = args.get("rid")
+    entry = {
+        "tool": original_name,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "duration_ms": duration_ms,
+        "bytes_returned": bytes_returned,
+    }
+    if rid:
+        entry["rid"] = rid
+    _append_mcp_call_log(project_root, entry)
+    return result
 
 
 async def _dispatch(name: str, args: dict) -> list[TextContent]:

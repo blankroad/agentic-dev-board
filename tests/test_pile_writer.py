@@ -31,7 +31,11 @@ def test_write_iter_artifact_atomic(tmp_path) -> None:
     path = tmp_path / ".devboard" / "runs" / rid / "iters" / "iter-001.json"
     assert path.exists()
     loaded = json.loads(path.read_text(encoding="utf-8"))
-    assert loaded == data
+    # M1a-plumbing adds schema_version: 1 alongside caller payload.
+    # The rest of the payload must round-trip unchanged.
+    assert loaded["schema_version"] == 1
+    for k, v in data.items():
+        assert loaded[k] == v
 
 
 def test_rid_index_dir_first_and_self_heal(tmp_path) -> None:

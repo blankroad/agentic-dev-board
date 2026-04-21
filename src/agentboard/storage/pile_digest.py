@@ -84,6 +84,7 @@ class DigestWriter:
                 verdict_counts[v] = verdict_counts.get(v, 0) + 1
 
         digest = {
+            "schema_version": 1,
             "rid": rid,
             "iter_count": len(usable),
             "raw_iter_count": len(iter_paths),
