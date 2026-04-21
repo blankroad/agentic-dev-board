@@ -30,6 +30,66 @@ class OverviewPayload(TypedDict):
 
 _PREMISE_BULLET = re.compile(r"^-\s+(.+?)\s*$")
 _DIFF_PLUS_FILE = re.compile(r"^\+\+\+\s+b/(.+)$")
+_STEP_ID_TOKEN = re.compile(r"\bs_(\d{3})\b")
+
+
+def _match_step_for_iter(
+    it: int,
+    reasoning: str,
+    atomic_steps: list[dict],
+) -> dict | None:
+    """Resolve an iter number to its atomic_step. Priority:
+    1. regex — first `s_NNN` in `reasoning` that exists in atomic_steps
+    2. index heuristic — iter N → atomic_steps[N-1] when in range
+    3. None — caller substitutes '?' / defaults
+    """
+    if not atomic_steps:
+        return None
+    known_ids = {s.get("id") for s in atomic_steps if isinstance(s, dict)}
+    m = _STEP_ID_TOKEN.search(reasoning or "")
+    if m:
+        candidate = f"s_{m.group(1)}"
+        if candidate in known_ids:
+            for s in atomic_steps:
+                if isinstance(s, dict) and s.get("id") == candidate:
+                    return s
+    idx = it - 1
+    if 0 <= idx < len(atomic_steps):
+        s = atomic_steps[idx]
+        if isinstance(s, dict):
+            return s
+    return None
+
+
+def _load_raw_atomic_steps(plan_json_path: Path) -> list[dict]:
+    """Load plan.json's atomic_steps as raw list of dicts.
+
+    Unlike _extract_plan_digest which projects a trimmed subset, this returns
+    the full step objects so iteration cross-ref can access behavior/
+    test_file/test_name/impl_file verbatim.
+    """
+    try:
+        data = json.loads(plan_json_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return []
+    steps = data.get("atomic_steps") or []
+    return [s for s in steps if isinstance(s, dict)]
+
+
+def _read_task_status(goal_dir: Path, task_id: str | None) -> str:
+    """Read `status` from task.json, falling back to 'in_progress' on any
+    error. Used by build_overview_payload for current_state.status."""
+    if task_id is None:
+        return "in_progress"
+    task_json = goal_dir / "tasks" / task_id / "task.json"
+    try:
+        data = json.loads(task_json.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return "in_progress"
+    status = data.get("status")
+    if isinstance(status, str) and status:
+        return status
+    return "in_progress"
 
 
 def _extract_purpose(brainstorm_path: Path) -> str:
@@ -159,6 +219,7 @@ def _extract_iterations(
     task_dir: Path,
     project_root: Path | None = None,
     task_id: str | None = None,
+    atomic_steps: list[dict] | None = None,
 ) -> list[dict[str, object]]:
     decisions = task_dir / "decisions.jsonl"
     if not decisions.exists():
@@ -202,15 +263,23 @@ def _extract_iterations(
             diff_path = task_dir / "changes" / f"iter_{it}.diff"
             touched = _extract_touched_files(diff_path)
             stats = _diff_stats(diff_path)
+        reasoning_text = str(primary.get("reasoning", ""))
+        matched_step = _match_step_for_iter(it, reasoning_text, atomic_steps or [])
+        step_id = matched_step.get("id", "?") if matched_step else "?"
         rows.append(
             {
                 "iter": it,
                 "phase": primary.get("phase", ""),
                 "verdict": primary.get("verdict_source", ""),
-                "reasoning": primary.get("reasoning", ""),
+                "reasoning": reasoning_text,
                 "ts": primary.get("ts", ""),
                 "touched_files": touched,
                 "diff_stats": stats,
+                "step_id": step_id,
+                "behavior": matched_step.get("behavior", "") if matched_step else "",
+                "test_file": matched_step.get("test_file", "") if matched_step else "",
+                "test_name": matched_step.get("test_name", "") if matched_step else "",
+                "impl_file": matched_step.get("impl_file", "") if matched_step else "",
             }
         )
     return rows
@@ -306,21 +375,37 @@ def _step_shipping(
 ) -> list[dict[str, object]]:
     """Cross-reference plan.json atomic_steps with decisions GREEN iters.
 
-    Each atomic_step's `behavior` is the authoritative test description.
-    We look for a GREEN iter whose `reasoning` mentions the step's id
-    (e.g. `s_001`). When found, the step is "shipped" with that iter's
-    ts + verdict. Falls back to the step's own `completed` flag.
+    Priority per iter:
+    1. regex — first `s_NNN` in reasoning that matches a known step id
+    2. index heuristic — iter N → atomic_steps[N-1] (when reasoning lacks
+       the token, which is the common case since TDD reasoning often
+       describes the change, not restates the step id)
+
+    An iter that matches multiple atomic_steps only claims the first
+    unclaimed one (setdefault preserves earliest ship_ts). Falls back to
+    the step's own `completed` flag for legacy records.
     """
+    known_ids = {str(s.get("id", "")) for s in atomic_steps}
     green_by_step: dict[str, dict[str, object]] = {}
     for it in iterations:
         phase = str(it.get("phase", ""))
         if not phase.startswith("tdd_green"):
             continue
         reasoning = str(it.get("reasoning", ""))
-        # Step ids are short (s_001, s_002, ..., s_015). Scan reasoning.
+        matched: str | None = None
+        # 1) regex match that corresponds to a real step id
         m = re.search(r"\b(s_\d{3})\b", reasoning)
-        if m:
-            green_by_step.setdefault(m.group(1), it)
+        if m and m.group(1) in known_ids:
+            matched = m.group(1)
+        # 2) index heuristic: iter N → atomic_steps[N-1]
+        if matched is None:
+            it_n = it.get("iter")
+            if isinstance(it_n, int) and 1 <= it_n <= len(atomic_steps):
+                candidate = str(atomic_steps[it_n - 1].get("id", ""))
+                if candidate:
+                    matched = candidate
+        if matched:
+            green_by_step.setdefault(matched, it)
 
     out: list[dict[str, object]] = []
     for s in atomic_steps:
@@ -347,28 +432,44 @@ def _risk_delta(
 ) -> dict[str, object]:
     """Build As-Is risks (from plan.known_failure_modes) vs resolved/remaining.
 
-    A planned risk is considered "resolved" if any tdd_green iter's reasoning
-    or any review-phase row references its key phrase. Unreferenced risks
-    stay under `remaining`. Also collects `known_risk` verdict_source rows as
-    new-risk entries that weren't in the plan.
+    Classification rules (R5 cross-ref):
+    1. Final parallel_review verdict == CLEAN → all planned risks resolved.
+    2. Otherwise: a planned risk is resolved if any tdd_green reasoning
+       mentions a keyword from the risk text after the severity prefix.
+    3. Unmatched risks stay in `remaining`.
+    `KNOWN_RISK` verdict rows are appended to `remaining` as new risks.
     """
     planned = [str(r) for r in (plan_data.get("known_failure_modes") or [])]
     followups = [str(x) for x in (plan_data.get("non_goals") or []) if x]
 
-    # Text corpus of everything the team said during execution.
-    corpus = " ".join(
-        str(d.get("reasoning", "")) for d in decisions
-    ).lower()
+    # Rule 1 — look for the LATEST parallel_review and let CLEAN cover all.
+    last_parallel: dict | None = None
+    for d in decisions:
+        if str(d.get("phase", "")) == "parallel_review":
+            last_parallel = d
+    parallel_clean = (
+        last_parallel is not None
+        and str(last_parallel.get("verdict_source", "")).upper() == "CLEAN"
+    )
 
-    def _referenced(risk: str) -> bool:
-        # Risks look like "CRITICAL: wedge bloat ..." — match on the noun phrase
-        # after the severity prefix.
-        after_colon = risk.split(":", 1)[-1]
-        key = after_colon.strip().split(" ")[0].lower()
-        return bool(key) and key in corpus
+    if parallel_clean:
+        resolved = list(planned)
+        remaining: list[str] = []
+    else:
+        # Rule 2 — keyword match against tdd_green reasoning corpus only.
+        green_corpus = " ".join(
+            str(d.get("reasoning", ""))
+            for d in decisions
+            if str(d.get("phase", "")).startswith("tdd_green")
+        ).lower()
 
-    resolved = [r for r in planned if _referenced(r)]
-    remaining = [r for r in planned if r not in resolved]
+        def _referenced(risk: str) -> bool:
+            after_colon = risk.split(":", 1)[-1]
+            key = after_colon.strip().split(" ")[0].lower()
+            return bool(key) and key in green_corpus
+
+        resolved = [r for r in planned if _referenced(r)]
+        remaining = [r for r in planned if r not in resolved]
 
     # New risks surfaced during execution (not in plan).
     new_risks = [
@@ -393,7 +494,83 @@ def _extract_followups(plan_json_path: Path) -> list[str]:
     return [str(x) for x in ng if x]
 
 
+def _load_learnings_from_files(project_root: Path) -> list[dict[str, object]]:
+    """R5 fix — previous _extract_learnings looked for a non-existent
+    .devboard/learnings.jsonl. Actual learnings are stored as individual
+    .md files with YAML frontmatter via FileStore.save_learning. This
+    helper uses FileStore.list_learnings() (directory-based) and parses
+    each file's frontmatter + first-body-paragraph for summary display.
+    """
+    try:
+        from devboard.storage.file_store import FileStore
+
+        store = FileStore(project_root)
+        paths = store.list_learnings()
+    except Exception:
+        return []
+    out: list[dict[str, object]] = []
+    for p in paths:
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        name = p.stem
+        tags: list[str] = []
+        category = ""
+        confidence = 0.0
+        summary = ""
+        # Minimal YAML frontmatter parse — the save path writes
+        # `---\nkey: val\n---\n...body` but we only extract what we need.
+        body = text
+        if text.startswith("---"):
+            end = text.find("\n---", 3)
+            if end != -1:
+                frontmatter = text[3:end]
+                body = text[end + 4:].lstrip("\n")
+                for line in frontmatter.splitlines():
+                    line = line.strip()
+                    if ":" not in line:
+                        continue
+                    k, _, v = line.partition(":")
+                    k = k.strip().lower()
+                    v = v.strip().strip("\"'")
+                    if k == "name" and v:
+                        name = v
+                    elif k == "tags":
+                        if v.startswith("[") and v.endswith("]"):
+                            tags = [t.strip().strip("\"'") for t in v[1:-1].split(",") if t.strip()]
+                    elif k == "category":
+                        category = v
+                    elif k == "confidence":
+                        try:
+                            confidence = float(v)
+                        except ValueError:
+                            pass
+        # Summary = first non-heading, non-empty body paragraph (first 160
+        # chars, ended at sentence boundary when available).
+        for raw in body.splitlines():
+            s = raw.strip()
+            if not s or s.startswith("#"):
+                continue
+            summary = s[:160]
+            break
+        out.append(
+            {
+                "name": name,
+                "tags": tags,
+                "category": category,
+                "confidence": confidence,
+                "summary": summary,
+            }
+        )
+    return out
+
+
 def _extract_learnings(learnings_path: Path) -> list[dict[str, object]]:
+    """Legacy path — kept so existing callers importing this symbol keep
+    working. Prefer `_load_learnings_from_files(project_root)` for new
+    code; this one is a no-op when the .jsonl doesn't exist (it never
+    does in current layouts)."""
     if not learnings_path.exists():
         return []
     try:
@@ -462,6 +639,10 @@ def build_overview_payload(
         plan_digest = _extract_plan_digest(goal_dir / "plan.json")
     except Exception:
         plan_digest = {}
+    # Load raw atomic_steps for iteration cross-ref (R3: step_id/behavior/
+    # test_file/impl_file fields on iterations[i]). Separate from plan_digest
+    # which has a trimmed projection.
+    raw_atomic_steps = _load_raw_atomic_steps(goal_dir / "plan.json")
     iterations: list[dict[str, object]] = []
     if task_id is not None:
         try:
@@ -469,16 +650,21 @@ def build_overview_payload(
                 goal_dir / "tasks" / task_id,
                 project_root=project_root,
                 task_id=task_id,
+                atomic_steps=raw_atomic_steps,
             )
         except Exception:
             iterations = []
+    # current_state.status is sourced from task.json when available; fall back
+    # to "in_progress" (task exists but task.json unreadable) or
+    # "awaiting_task" (no task_id). R1 fix — was hardcoded "in_progress".
+    task_status = _read_task_status(goal_dir, task_id)
     current_state: dict[str, object] = (
-        {"status": "awaiting_task"} if task_id is None else {"status": "in_progress"}
+        {"status": "awaiting_task"} if task_id is None else {"status": task_status}
     )
     if iterations:
         last = iterations[-1]
         current_state = {
-            "status": "in_progress",
+            "status": task_status,
             "last_iter": last["iter"],
             "last_phase": last["phase"],
             "last_verdict": last["verdict"],
@@ -489,9 +675,7 @@ def build_overview_payload(
     except Exception:
         followups = []
     try:
-        learnings = _extract_learnings(
-            project_root / ".devboard" / "learnings.jsonl"
-        )
+        learnings = _load_learnings_from_files(project_root)
     except Exception:
         learnings = []
 
