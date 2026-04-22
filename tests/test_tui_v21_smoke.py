@@ -23,10 +23,10 @@ def _bootstrap(tmp_path: Path, *goals: tuple[str, str], active: str | None = Non
 
 @pytest.mark.asyncio
 async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "only-goal"), active="g_1")
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         # v2.3: right column removed. Center col is a single #phase-flow
@@ -44,10 +44,10 @@ async def test_app_mounts_v21_layout_and_all_panes_exist(tmp_path: Path) -> None
 
 @pytest.mark.asyncio
 async def test_colon_then_type_works_on_v21_layout(tmp_path: Path) -> None:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "goal-one"), active="g_1")
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await pilot.press("colon")
@@ -77,10 +77,10 @@ async def test_help_modal_has_legend_section(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_v20_commands_still_dispatch(tmp_path: Path) -> None:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_xyz", "one"), active="g_xyz")
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         # Should NOT raise
@@ -92,7 +92,7 @@ async def test_live_status_line_shows_latest_event_at_bottom(tmp_path: Path) -> 
     """A 1-line LiveStatusLine sits above the CommandLine and shows the
     most recent formatted event from runs/*.jsonl. Complements StatusBar
     (top = goal context, bottom = raw live feed)."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
     runs_dir = tmp_path / ".devboard" / "runs"
@@ -100,7 +100,7 @@ async def test_live_status_line_shows_latest_event_at_bottom(tmp_path: Path) -> 
     run_file = runs_dir / "run_live.jsonl"
     run_file.write_text("")
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         # Widget exists
@@ -133,7 +133,7 @@ async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
     widgets (#resources-runs, #context-viewer) that v2.1 removed. All
     4 raised NoMatches from their handlers. Each command must now either
     update v2.1 state or surface a friendly message — never propagate."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
     task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
@@ -145,7 +145,7 @@ async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
         json.dumps({"iter": 1, "phase": "tdd_green"}) + "\n"
     )
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         for cmd in ["runs", "diff t_1", "decisions t_1", "learn hello"]:
@@ -164,7 +164,7 @@ async def test_goto_refreshes_plan_markdown_to_new_goal(tmp_path: Path) -> None:
 
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     (tmp_path / ".devboard").mkdir()
     store = FileStore(tmp_path)
@@ -180,7 +180,7 @@ async def test_goto_refreshes_plan_markdown_to_new_goal(tmp_path: Path) -> None:
     old = time.time() - 1000
     os.utime(tmp_path / ".devboard" / "goals" / "g_alpha" / "plan.md", (old, old))
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         flow = app.query_one("#phase-flow")
@@ -200,7 +200,7 @@ async def test_decisions_cmd_refreshes_phase_flow(tmp_path: Path) -> None:
     PhaseFlowView Dev tab to the target task's decisions. Timeline was
     replaced by the Dev tab inside PhaseFlowView; the refresh contract
     (command re-reads per-task state) must survive the swap."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
     goal_dir = tmp_path / ".devboard" / "goals" / "g_1"
@@ -227,7 +227,7 @@ async def test_decisions_cmd_refreshes_phase_flow(tmp_path: Path) -> None:
     old = time.time() - 1000
     os.utime(goal_dir / "tasks" / "t_other", (old, old))
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         flow = app.query_one("#phase-flow")
@@ -254,7 +254,7 @@ async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Pa
     labels the user saw. After fix: goto ambiguous shows hint in command
     line, sidebar stays in sync with _goal_ids so click always navigates
     to the labeled goal."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(
         tmp_path,
@@ -266,7 +266,7 @@ async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Pa
     for gid in ("g_alpha", "g_bravo", "g_charlie"):
         (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text(f"# {gid}\n")
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         # Ambiguous goto
@@ -308,13 +308,13 @@ async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Pa
 async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None:
     """Clicking a goal in the sidebar should navigate to it — same as
     running ':goto <id>'. Otherwise the list is read-only decoration."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_first", "first"), ("g_second", "second"), active="g_first")
     for gid in ("g_first", "g_second"):
         (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text(f"# PLAN_{gid}\n")
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         # initial active goal
@@ -353,10 +353,10 @@ async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None
 async def test_runs_list_not_in_layout(tmp_path: Path) -> None:
     from textual.css.query import NoMatches
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         with pytest.raises(NoMatches):

@@ -7,7 +7,7 @@ from typing import Callable
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from agentboard.config import DevBoardConfig, LLMConfig
+from agentboard.config import AgentBoardConfig, LLMConfig
 from agentboard.gauntlet.lock import build_locked_plan
 from agentboard.gauntlet.steps.frame import run_frame
 from agentboard.gauntlet.steps.scope import run_scope
@@ -35,7 +35,7 @@ def run_gauntlet(
     goal_id: str,
     goal_description: str,
     store: FileStore,
-    config: DevBoardConfig | None = None,
+    config: AgentBoardConfig | None = None,
     console: Console | None = None,
     on_borderline: Callable[[list[dict]], dict] | None = None,
     learnings: str = "",
@@ -47,7 +47,7 @@ def run_gauntlet(
     If None, uses recommendations automatically.
     client: inject a pre-built LLMClient (useful for testing with mocks).
     """
-    config = config or DevBoardConfig()
+    config = config or AgentBoardConfig()
     console = console or Console()
     if client is None:
         client = LLMClient(config=config.llm)

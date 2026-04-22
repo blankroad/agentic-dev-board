@@ -3,18 +3,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
 
 class GotoError(Exception):
     pass
 
 
-def register(app: "DevBoardApp") -> None:
+def register(app: "AgentBoardApp") -> None:
     app.commands.register("goto", ["prefix"], lambda prefix: _run(app, prefix))
 
 
-def _run(app: "DevBoardApp", prefix: str) -> None:
+def _run(app: "AgentBoardApp", prefix: str) -> None:
     """v2.1: no match / ambiguous cases surface as a hint in the command
     line instead of stuffing labels into the sidebar ListView. Sidebar
     stays in sync with GoalSideList._goal_ids so click navigation always

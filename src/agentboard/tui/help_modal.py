@@ -36,7 +36,7 @@ def _compose_default_entries() -> tuple["HelpEntry", ...]:
         HelpEntry("ctrl+p", "pin phase flow", "pin the phase-flow view to suppress auto-switch"),
         HelpEntry("?", "help", "open this help modal"),
         HelpEntry("esc", "close", "close command line or modal"),
-        HelpEntry("ctrl+q", "quit", "exit devboard"),
+        HelpEntry("ctrl+q", "quit", "exit agentboard"),
     )
     legend = tuple(
         HelpEntry(marker, f"legend: {label}", summary)

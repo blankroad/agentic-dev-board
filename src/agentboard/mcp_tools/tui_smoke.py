@@ -1,4 +1,4 @@
-"""Real-TTY smoke for `devboard board`.
+"""Real-TTY smoke for `agentboard board`.
 
 POSIX-only. Spawns the TUI through pty.openpty() so Textual sees an
 actual terminal (not the VirtualConsole that Pilot uses), waits
@@ -59,7 +59,7 @@ def _open_pty_or_none() -> tuple[int, int] | None:
 
 
 def run_tui_smoke(project_root: Path, timeout_s: float = 3.0) -> dict[str, Any]:
-    """Spawn `devboard board` in a real pty, wait, send Ctrl+Q, capture.
+    """Spawn `agentboard board` in a real pty, wait, send Ctrl+Q, capture.
 
     Returns:
         {mounted, crashed, traceback, captured_bytes, duration_s}

@@ -1,4 +1,4 @@
-DevBoardApp
+AgentBoardApp
 ● TUI 개선 — TOC 위치/점프, 우측패널 활용, 중앙패널 phase-flow화  ▶ iter 15 
 tdd_red
 ✓ pushed

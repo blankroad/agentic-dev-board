@@ -119,7 +119,7 @@ def test_emit_iter_calls_sdk_when_available(monkeypatch) -> None:
 
 
 async def test_log_decision_dispatch_calls_emit_iter(tmp_path, monkeypatch) -> None:
-    """l_005: mcp_server devboard_log_decision dispatch invokes emit_iter
+    """l_005: mcp_server agentboard_log_decision dispatch invokes emit_iter
     after pile sibling write when rid+gid are passed.
     """
     calls: list[dict] = []

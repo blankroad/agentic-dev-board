@@ -30,10 +30,10 @@ async def test_overview_tab_wraps_static_in_vertical_scroll(tmp_path: Path) -> N
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap_minimal(tmp_path)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 30)) as pilot:
         await pilot.pause()
         overview_pane = app.query_one("#overview", TabPane)
@@ -71,10 +71,10 @@ async def test_down_key_scrolls_plan_viewport(tmp_path: Path) -> None:
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap_with_long_plan(tmp_path, lines=300)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     # Intentionally small viewport so even a modest plan overflows.
     async with app.run_test(size=(80, 20)) as pilot:
         await pilot.pause()
@@ -112,10 +112,10 @@ async def test_down_key_scrolls_on_real_user_flow_without_explicit_focus(
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap_with_long_plan(tmp_path, lines=300)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(80, 20)) as pilot:
         await pilot.pause()
         # Real user flow: switch to Plan via number key then just press ↓.
@@ -137,13 +137,13 @@ async def test_down_key_scrolls_on_real_user_flow_without_explicit_focus(
 
 
 def test_center_col_width_is_1fr() -> None:
-    """s_007 — DevBoardApp.CSS must set #center-col width to 1fr (so the
+    """s_007 — AgentBoardApp.CSS must set #center-col width to 1fr (so the
     PhaseFlowView absorbs the horizontal space freed by removing
     #right-col). A lingering `width: 65%` literal would leave a dead
     20% void on the right of the screen."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
-    css = DevBoardApp.CSS
+    css = AgentBoardApp.CSS
     assert "#center-col { width: 1fr; }" in css, (
         f"#center-col must use width: 1fr; full CSS:\n{css}"
     )
@@ -176,8 +176,8 @@ def test_deprecated_widget_files_removed() -> None:
     imports and misleads future readers about active widgets."""
     repo = Path(__file__).resolve().parent.parent
     must_be_gone = [
-        repo / "src" / "devboard" / "tui" / "meta_pane.py",
-        repo / "src" / "devboard" / "tui" / "files_changed_pane.py",
+        repo / "src" / "agentboard" / "tui" / "meta_pane.py",
+        repo / "src" / "agentboard" / "tui" / "files_changed_pane.py",
         repo / "tests" / "test_tui_meta_pane.py",
         repo / "tests" / "test_tui_files_changed_pane.py",
     ]
@@ -187,16 +187,16 @@ def test_deprecated_widget_files_removed() -> None:
 
 @pytest.mark.asyncio
 async def test_app_has_no_right_col_container(tmp_path: Path) -> None:
-    """s_004 — DevBoardApp.compose() must not yield the legacy #right-col
+    """s_004 — AgentBoardApp.compose() must not yield the legacy #right-col
     container. MetaPane + FilesChangedPane are being removed; the
     container that held them must go with them to free up horizontal
     space for the center PhaseFlowView."""
     from textual.css.query import NoMatches
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap_minimal(tmp_path)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 30)) as pilot:
         await pilot.pause()
         with pytest.raises(NoMatches):
@@ -211,10 +211,10 @@ async def test_all_five_tabs_wrap_body_in_vertical_scroll(tmp_path: Path) -> Non
     from textual.containers import VerticalScroll
     from textual.widgets import TabPane
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     _bootstrap_minimal(tmp_path)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 30)) as pilot:
         await pilot.pause()
         missing: list[str] = []

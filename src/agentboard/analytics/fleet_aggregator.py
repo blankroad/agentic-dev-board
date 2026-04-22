@@ -110,8 +110,8 @@ def load_fleet(store: "FileStore") -> list[GoalSummary]:
     Sorted by updated_at_iso descending (latest first). Corrupt goals
     are silently skipped so the list always renders cleanly.
     """
-    goals_dir = store._devboard / "goals"  # type: ignore[attr-defined]
-    runs_dir = store._devboard / "runs"  # type: ignore[attr-defined]
+    goals_dir = store._agentboard / "goals"  # type: ignore[attr-defined]
+    runs_dir = store._agentboard / "runs"  # type: ignore[attr-defined]
     if not goals_dir.exists():
         return []
 

@@ -7,14 +7,14 @@ description: Use when approval Step 0 needs a dependency CVE check, or when the 
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized in this project. Run this Bash command:
+Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
-  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+  > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
 You are the **Dependency Auditor**. Reviewer and CSO have finished. Your only job: catch known CVEs in the dependency tree before push.

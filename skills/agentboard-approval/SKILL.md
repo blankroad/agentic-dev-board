@@ -8,14 +8,14 @@ when_to_use: User signals readiness to push/merge/ship. Automatic after agentboa
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized in this project. Run this Bash command:
+Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
-  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+  > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
 You are the **Approval Gate**. Loop converged → present to user → push on approval.
@@ -135,7 +135,7 @@ if task_meta.get("ui_surface", False):
 
 ### Step 4.5a.2 — Auto-invoke `agentboard-synthesize-report` (ALL goals)
 
-After `agentboard_generate_narrative` (regardless of `ui_surface`), invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.devboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `devboard export <gid> --source report`).
+After `agentboard_generate_narrative` (regardless of `ui_surface`), invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.devboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `agentboard export <gid> --source report`).
 
 The synthesize skill is **non-blocking** by contract: it catches its own failures and logs `NARRATIVE_SKIPPED`. Wrap the Skill call in `try/except` here too so the approval flow never stalls on a missing/broken agent response.
 
@@ -160,7 +160,7 @@ Failure of this hook MUST NOT block Step 4.5b (Outcome), Step 4.6 (TTY smoke), c
 ### Step 4.5b — Write Outcome section
 
 ```python
-from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 from pathlib import Path
 
 plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
@@ -191,13 +191,13 @@ if task_meta.get("ui_surface", False):
     # Run real-TTY smoke
     result = agentboard_tui_render_smoke(project_root, timeout_s=3.0)
 
-    # Graceful skip if pty/devboard unavailable — no Screenshots block
+    # Graceful skip if pty/agentboard unavailable — no Screenshots block
     if "skipped_reason" in result:
         # Log for visibility; do NOT write an empty section
         print(f"[screenshots] skipped: {result['skipped_reason']}")
     else:
-        from devboard.mcp_tools.capture_store import save_tui_capture
-        from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+        from agentboard.mcp_tools.capture_store import save_tui_capture
+        from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
         from pathlib import Path
 
         capture_path = save_tui_capture(project_root, goal_id, result)

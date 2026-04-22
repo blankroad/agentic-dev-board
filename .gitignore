@@ -8,7 +8,7 @@ build/
 venv/
 .env
 
-# devboard runtime state
+# agentboard runtime state
 .devboard/runs/
 .devboard/state.json
 .devboard/state.json.lock
@@ -19,10 +19,10 @@ venv/
 .devboard/.iron-law-history.jsonl
 .devboard/mcp_calls.jsonl
 
-# devboard TUI snapshots (Layer 1/2/3 capture artifacts — regenerated per run)
+# agentboard TUI snapshots (Layer 1/2/3 capture artifacts — regenerated per run)
 tui_snapshots/
 
-# devboard config is tracked (intentional)
+# agentboard config is tracked (intentional)
 !.devboard/config.yaml
 
 # Testing

@@ -2,7 +2,7 @@
 
 Covers: Pilot-based frame capture (text + SVG), key-sequence execution,
 save_to serialization, MCP dispatch wiring, skill chain integration grep,
-and e2e against real DevBoardApp.
+and e2e against real AgentBoardApp.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ import pytest
 
 
 def _bootstrap_goal(tmp_path: Path, gid: str = "g1") -> None:
-    """Minimum .devboard/ state so DevBoardApp can mount against tmp_path."""
+    """Minimum .devboard/ state so AgentBoardApp can mount against tmp_path."""
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
@@ -41,7 +41,7 @@ def _bootstrap_goal(tmp_path: Path, gid: str = "g1") -> None:
 
 
 def test_tui_capture_module_exposes_run() -> None:
-    """s_001: devboard.mcp_tools.tui_capture module is importable and
+    """s_001: agentboard.mcp_tools.tui_capture module is importable and
     exposes a `run` callable.
     """
     from agentboard.mcp_tools import tui_capture
@@ -52,7 +52,7 @@ def test_tui_capture_module_exposes_run() -> None:
 
 
 def test_run_returns_text_for_bootstrapped_app(tmp_path: Path) -> None:
-    """s_002: run() mounts DevBoardApp via Pilot and returns a dict with
+    """s_002: run() mounts AgentBoardApp via Pilot and returns a dict with
     non-empty `text` key.
 
     # guards: integration-wiring
@@ -444,7 +444,7 @@ def test_save_to_empty_returns_crashed_not_raises(tmp_path: Path) -> None:
 
 def test_save_to_violation_skips_pilot_capture(tmp_path: Path) -> None:
     """s_023 MEDIUM: containment violation must be detected BEFORE the
-    Pilot/DevBoardApp thread spawns. Probe via timing — a rejected path
+    Pilot/AgentBoardApp thread spawns. Probe via timing — a rejected path
     should return in < 200ms (no mount), vs. a valid path ≈400ms.
 
     # guards: fail-fast-ordering
@@ -535,7 +535,7 @@ def test_save_to_rejects_relative_traversal_outside_project_root(tmp_path: Path)
 
 def test_e2e_capture_snapshot_reveals_plan_tab(tmp_path: Path) -> None:
     """s_015: end-to-end — agentboard_tui_capture_snapshot against a real
-    DevBoardApp with a bootstrapped goal returns text containing the
+    AgentBoardApp with a bootstrapped goal returns text containing the
     'Plan' tab label from PhaseFlowView (proves the full chain from MCP
     → dispatch → tui_capture.run → Pilot → SVG→text extraction works).
     """

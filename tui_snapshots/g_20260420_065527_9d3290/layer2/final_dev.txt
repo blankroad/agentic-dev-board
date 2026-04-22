@@ -1,4 +1,4 @@
-DevBoardApp
+AgentBoardApp
 ● TUI 개선 — TOC 위치/점프, 우측패널 활용, 중앙패널 phase-flow화  ▶ iter 16 
 tdd_red
   ◆ redteam 
@@ -53,7 +53,7 @@ iter 1 · tdd_refactor · SKIPPED     2026-04-20 12:39:41.443819+00:0
   files :
 │
 │
-    ~ src/devboard/analytics/iter_diffstat.py
+    ~ src/agentboard/analytics/iter_diffstat.py
 │
 │
     ~ tests/test_iter_diffstat.py

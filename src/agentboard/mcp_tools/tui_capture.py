@@ -4,7 +4,7 @@ Companion to `tui_smoke.py`. Roles stay distinct:
   * tui_smoke — crash gate (does `agentboard board` mount in a real pty?)
   * tui_capture — frame extraction (Pilot in-process, text + SVG export)
 
-Used by the `devboard_tui_capture_snapshot` MCP tool and the
+Used by the `agentboard_tui_capture_snapshot` MCP tool and the
 `agentboard-ui-preview` skill at Layer 1 (text) and Layer 2 (SVG).
 """
 
@@ -142,9 +142,9 @@ async def _capture_async(
     fixture_goal_id: str | None,
     timeout_s: float,
 ) -> dict[str, Any]:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
-    app = DevBoardApp(store_root=project_root)
+    app = AgentBoardApp(store_root=project_root)
     if fixture_goal_id:
         known_ids = {g.get("id") for g in app.session.all_goals()}
         if fixture_goal_id not in known_ids:
@@ -181,7 +181,7 @@ def run(
     fixture_goal_id: str | None = None,
     timeout_s: float = 5.0,
 ) -> dict[str, Any]:
-    """Spawn DevBoardApp via Textual Pilot, press keys, capture frame.
+    """Spawn AgentBoardApp via Textual Pilot, press keys, capture frame.
 
     Returns: {text, svg, saved_txt, saved_svg, crashed, traceback,
               duration_s, scene_id}
@@ -191,7 +191,7 @@ def run(
     started = time.time()
 
     # Fail-fast validation BEFORE spawning the Pilot worker — a bad
-    # save_to or fixture_goal_id should not cost a full DevBoardApp
+    # save_to or fixture_goal_id should not cost a full AgentBoardApp
     # mount + render cycle.
     if save_to is not None:
         try:

@@ -73,9 +73,9 @@ def test_render_cards_includes_all_labels() -> None:
 @pytest.mark.asyncio
 async def test_phase_flow_overview_mounts_overview_cards() -> None:
     """s_005 — Overview tab has #overview-cards mounted."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
-    app = DevBoardApp(store_root=REPO)
+    app = AgentBoardApp(store_root=REPO)
     async with app.run_test() as pilot:
         await pilot.pause()
         try:

@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
 
-def register(app: "DevBoardApp") -> None:
+def register(app: "AgentBoardApp") -> None:
     app.commands.register("diff", ["task_id"], lambda task_id: _run(app, task_id))
 
 
-def _run(app: "DevBoardApp", task_id: str) -> None:
+def _run(app: "AgentBoardApp", task_id: str) -> None:
     """:diff <task_id> updates app._task_id and the reactive selected_iter
     to the latest iter of the given task, which triggers StatusBar +
     PhaseFlowView refresh through the usual watch hooks."""

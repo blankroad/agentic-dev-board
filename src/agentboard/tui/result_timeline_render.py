@@ -38,7 +38,7 @@ def _deliverable_label_for_step(s: dict[str, Any]) -> str:
         return "numstat parser"
     if "build_overview_payload" in beh:
         return "OverviewPayload builder"
-    if "mcp tool" in beh or "devboard_build_overview" in beh:
+    if "mcp tool" in beh or "agentboard_build_overview" in beh:
         return "MCP tool registration"
     if "render_overview" in beh:
         return "Overview renderer"
@@ -50,7 +50,7 @@ def _deliverable_label_for_step(s: dict[str, Any]) -> str:
         return "Review renderer"
     if "phaseflowview" in beh or "tabpane" in beh:
         return "PhaseFlowView integration"
-    if "devboardapp" in beh or "keybinding" in beh or "activate_tab" in beh:
+    if "agentboardapp" in beh or "keybinding" in beh or "activate_tab" in beh:
         return "app-level bindings"
     if "test_phase_flow" in beh:
         return "phase_flow tests"

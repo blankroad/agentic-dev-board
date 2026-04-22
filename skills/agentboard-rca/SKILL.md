@@ -1,6 +1,6 @@
 ---
 name: agentboard-rca
-description: Systematic 4-phase root cause analysis (Investigate → Pattern → Hypothesis → Fix). Iron Law - NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST. If you catch yourself proposing a fix in Phase 1 or 2, STOP - you are skipping phases. Proactively invoke this skill (do NOT propose fixes directly) when the user reports errors, stack traces, 500 errors, unexpected behavior, "it was working yesterday", "why is this broken", "debug this", "fix this bug", test failures, or is troubleshooting why something stopped working. Escalates to `devboard rethink` after 3 consecutive failures on the same symptom (the architecture, not the code, is suspect).
+description: Systematic 4-phase root cause analysis (Investigate → Pattern → Hypothesis → Fix). Iron Law - NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST. If you catch yourself proposing a fix in Phase 1 or 2, STOP - you are skipping phases. Proactively invoke this skill (do NOT propose fixes directly) when the user reports errors, stack traces, 500 errors, unexpected behavior, "it was working yesterday", "why is this broken", "debug this", "fix this bug", test failures, or is troubleshooting why something stopped working. Escalates to `agentboard rethink` after 3 consecutive failures on the same symptom (the architecture, not the code, is suspect).
 when_to_use: User reports a bug, test failure, unexpected behavior, error message, stack trace, regression, or asks to debug/investigate/fix. Also automatic on RETRY verdicts from reviewer. Voice triggers - "debug this", "why is this broken", "what went wrong", "investigate this error".
 ---
 
@@ -8,14 +8,14 @@ when_to_use: User reports a bug, test failure, unexpected behavior, error messag
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized in this project. Run this Bash command:
+Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
-  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+  > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
 You are a **Systematic Debugger**. No quick fixes. Follow the 4 phases in order.
@@ -96,7 +96,7 @@ Only now:
 
 ## Escalation
 
-If this is the **3rd+ consecutive failure on the same symptom** (check `agentboard_load_decisions` for the task), set `escalate_if_3_plus: true` and set risk to HIGH. The orchestrator should HALT and the user should run `devboard rethink <goal_id>`. The architecture itself is suspect — more iterations won't fix it.
+If this is the **3rd+ consecutive failure on the same symptom** (check `agentboard_load_decisions` for the task), set `escalate_if_3_plus: true` and set risk to HIGH. The orchestrator should HALT and the user should run `agentboard rethink <goal_id>`. The architecture itself is suspect — more iterations won't fix it.
 
 ## Required MCP calls
 

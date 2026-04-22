@@ -37,7 +37,7 @@ class GoalActivated(Message):
 
 
 class FleetScreen(Screen):
-    """k9s-style fleet cockpit. Push via DevBoardApp 'F' binding."""
+    """k9s-style fleet cockpit. Push via AgentBoardApp 'F' binding."""
 
     CSS = """
     FleetScreen { layout: vertical; }

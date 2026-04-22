@@ -10,8 +10,8 @@ def _write_goal(root: Path, gid: str, title: str = "", plan_text: str | None = N
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    devboard = root / ".devboard"
-    devboard.mkdir(exist_ok=True)
+    agentboard = root / ".devboard"
+    agentboard.mkdir(exist_ok=True)
     store = FileStore(root)
     try:
         board = store.load_board()
@@ -19,7 +19,7 @@ def _write_goal(root: Path, gid: str, title: str = "", plan_text: str | None = N
         board = BoardState()
     board.goals.append(Goal(id=gid, title=title or gid, status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = devboard / "goals" / gid
+    goal_dir = agentboard / "goals" / gid
     goal_dir.mkdir(parents=True, exist_ok=True)
     if plan_text is not None:
         (goal_dir / "plan.md").write_text(plan_text)

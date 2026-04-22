@@ -1,13 +1,13 @@
-"""DevBoardApp BINDINGS 1..5 forwarded to PhaseFlowView (s_014)."""
+"""AgentBoardApp BINDINGS 1..5 forwarded to PhaseFlowView (s_014)."""
 
 from __future__ import annotations
 
 
 def test_app_forwards_keys_1_through_5() -> None:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     key_actions: dict[str, str] = {}
-    for b in DevBoardApp.BINDINGS:
+    for b in AgentBoardApp.BINDINGS:
         if hasattr(b, "key"):
             key_actions[b.key] = b.action
         elif isinstance(b, tuple):

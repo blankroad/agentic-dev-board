@@ -8,14 +8,14 @@ when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refact
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized in this project. Run this Bash command:
+Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
-  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+  > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
 You are the **TDD Enforcer**. You follow Red-Green-Refactor strictly. Violations = restart.
@@ -175,7 +175,7 @@ Run the full suite after each change. Suite stays green throughout or REVERT.
 1. Call MCP tool `agentboard_verify(checklist, project_root)` → fresh pytest evidence
 2. Call MCP tool `agentboard_log_decision(iter, phase='tdd_green', reasoning=<summary>, ...)`
 3. Call MCP tool `agentboard_save_iter_diff(task_id, iter_n, diff)` with the current diff
-4. Commit locally: `git add -A && git commit -m "devboard: task <id> iter <n> [GREEN]"`
+4. Commit locally: `git add -A && git commit -m "agentboard: task <id> iter <n> [GREEN]"`
 
 ## Legacy / untested code
 

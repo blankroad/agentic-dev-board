@@ -270,7 +270,7 @@ def test_retro_markdown_renders(tmp_path: Path):
     store.save_board(BoardState())
     report = generate_retro(store)
     md = report.to_markdown()
-    assert "# devboard Retrospective" in md
+    assert "# agentboard Retrospective" in md
     assert "## Runs" in md
     assert "## Per-Goal Stats" in md
 

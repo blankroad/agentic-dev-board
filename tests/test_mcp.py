@@ -340,13 +340,13 @@ def test_emit_mcp_config_preserves_existing_servers(tmp_path: Path):
     assert "agentboard" in data["mcpServers"]
 
 
-def test_emit_mcp_config_migrates_legacy_agentboard_key(tmp_path: Path):
-    """Legacy 'devboard' server entry is removed when it points at the same
-    Python module — avoids two copies of the same tools after upgrade."""
+def test_emit_mcp_config_migrates_legacy_devboard_key(tmp_path: Path):
+    """Legacy 'devboard' server entry is removed on upgrade — avoids two
+    copies of the same tools after the devboard → agentboard rename."""
     path = tmp_path / ".mcp.json"
     path.write_text(json.dumps({
         "mcpServers": {
-            "devboard": {"command": "/old/py", "args": ["-m", "agentboard.mcp_server"]},
+            "devboard": {"command": "/old/py", "args": ["-m", "devboard.mcp_server"]},
         },
     }))
     emit_mcp_config(tmp_path)

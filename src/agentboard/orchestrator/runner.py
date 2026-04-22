@@ -6,7 +6,7 @@ from pathlib import Path
 from rich.console import Console
 
 from agentboard.agents.router import route
-from agentboard.config import DevBoardConfig
+from agentboard.config import AgentBoardConfig
 from agentboard.llm.client import BudgetTracker, LLMClient
 from agentboard.models import LockedPlan
 from agentboard.orchestrator.checkpointer import Checkpointer
@@ -23,7 +23,7 @@ def run_loop(
     locked_plan: LockedPlan,
     project_root: Path,
     store: FileStore,
-    config: DevBoardConfig | None = None,
+    config: AgentBoardConfig | None = None,
     console: Console | None = None,
     client: LLMClient | None = None,
     run_id: str | None = None,
@@ -33,7 +33,7 @@ def run_loop(
     enable_cso: bool = True,
 ) -> LoopState:
     """Run the plan→impl→test→review cyclic loop via LangGraph until convergence."""
-    config = config or DevBoardConfig()
+    config = config or AgentBoardConfig()
     console = console or Console()
     if client is None:
         client = LLMClient(config=config.llm)

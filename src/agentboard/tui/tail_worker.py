@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from agentboard.tui.anomaly import AnomalyClassifier
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
 
 class FileTail:
@@ -82,7 +82,7 @@ class RunTailWorker:
     concerns. Still bounded per-poll by FileTail's chunked read.
     """
 
-    def __init__(self, app: "DevBoardApp", runs_dir: Path) -> None:
+    def __init__(self, app: "AgentBoardApp", runs_dir: Path) -> None:
         from agentboard.tui.anomaly import AnomalyClassifier
 
         self._app = app

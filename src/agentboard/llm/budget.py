@@ -6,8 +6,8 @@ from pathlib import Path
 from agentboard.llm.client import BudgetTracker
 
 
-def load_budget(goal_id: str, devboard_dir: Path) -> BudgetTracker | None:
-    path = devboard_dir / "goals" / goal_id / "budget.json"
+def load_budget(goal_id: str, agentboard_dir: Path) -> BudgetTracker | None:
+    path = agentboard_dir / "goals" / goal_id / "budget.json"
     if not path.exists():
         return None
     with open(path) as f:
@@ -22,8 +22,8 @@ def load_budget(goal_id: str, devboard_dir: Path) -> BudgetTracker | None:
     return tracker
 
 
-def save_budget(tracker: BudgetTracker, devboard_dir: Path) -> None:
-    d = devboard_dir / "goals" / tracker.goal_id
+def save_budget(tracker: BudgetTracker, agentboard_dir: Path) -> None:
+    d = agentboard_dir / "goals" / tracker.goal_id
     d.mkdir(parents=True, exist_ok=True)
     with open(d / "budget.json", "w") as f:
         json.dump({

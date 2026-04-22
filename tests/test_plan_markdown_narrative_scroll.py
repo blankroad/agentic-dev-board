@@ -71,7 +71,7 @@ def test_narrative_golden_fixture_has_five_h2_headers() -> None:
 async def test_plan_markdown_receives_five_section_narrative_as_markdown_source(
     tmp_path: Path,
 ) -> None:
-    """Integration proof (Pilot-level): booting DevBoardApp with a
+    """Integration proof (Pilot-level): booting AgentBoardApp with a
     plan_summary.md containing the 5-section fixture results in the
     PlanMarkdown widget's body holding a rich.Markdown whose source
     text carries all 5 headers + per-section anchors.
@@ -88,7 +88,7 @@ async def test_plan_markdown_receives_five_section_narrative_as_markdown_source(
     """
     from rich.markdown import Markdown
 
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
     # SessionContext.active_goal_id resolves by walking goals/*/plan.md
     # mtime — it ignores BoardState.active_goal_id. Creating just the
@@ -98,7 +98,7 @@ async def test_plan_markdown_receives_five_section_narrative_as_markdown_source(
     goal_dir = tmp_path / ".devboard" / "goals" / "g_narrative"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan_summary.md").write_text(_read_fixture(), encoding="utf-8")
-    # Intentionally no runs/ dir — DevBoardApp.on_mount's RunTailWorker
+    # Intentionally no runs/ dir — AgentBoardApp.on_mount's RunTailWorker
     # guard skips when .devboard/runs is absent, avoiding Pilot flakiness.
 
     # Unique per-section anchor strings — ensures every section body
@@ -111,7 +111,7 @@ async def test_plan_markdown_receives_five_section_narrative_as_markdown_source(
         "Review": "unit-tests-on-primitives-dont-prove-integration",
     }
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 40)) as pilot:
         await pilot.pause()
         body = app.query_one("#plan-body")

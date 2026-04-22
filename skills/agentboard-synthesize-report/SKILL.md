@@ -1,6 +1,6 @@
 ---
 name: agentboard-synthesize-report
-description: LLM-based goal report synthesis. Reads plan.md + challenge.md + brainstorm.md + decisions.jsonl + git numstat for the target goal, dispatches the Claude Code Agent tool with a structured prompt, and writes the resulting As-Is→To-Be Markdown to `.devboard/goals/<gid>/report.md`. Non-blocking — if the Agent call fails or output fails sanity check, the skill logs a NARRATIVE_SKIPPED decision and returns without raising. Consumed by TUI Overview tab (report_md prepend) and `devboard export <gid> --source report`.
+description: LLM-based goal report synthesis. Reads plan.md + challenge.md + brainstorm.md + decisions.jsonl + git numstat for the target goal, dispatches the Claude Code Agent tool with a structured prompt, and writes the resulting As-Is→To-Be Markdown to `.devboard/goals/<gid>/report.md`. Non-blocking — if the Agent call fails or output fails sanity check, the skill logs a NARRATIVE_SKIPPED decision and returns without raising. Consumed by TUI Overview tab (report_md prepend) and `agentboard export <gid> --source report`.
 when_to_use: Automatically invoked by `agentboard-approval` right after `agentboard_generate_narrative` at Step 4.5a. May also be invoked manually by the user to regenerate a stale report. Do NOT invoke from inside TDD cycles — reports are meant for already-shipped (or about-to-ship) goals.
 ---
 
@@ -12,10 +12,10 @@ when_to_use: Automatically invoked by `agentboard-approval` right after `agentbo
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
-- `MISSING` → print "devboard is not initialized. Run `devboard init && devboard install` first." and exit immediately.
+- `MISSING` → print "agentboard is not initialized. Run `agentboard init && agentboard install` first." and exit immediately.
 - `OK` → proceed.
 
-You are the **Report Synthesizer**. Your job: transform the goal's raw artifacts into a human-readable As-Is→To-Be Markdown document that leads the Overview tab and ships with `devboard export`.
+You are the **Report Synthesizer**. Your job: transform the goal's raw artifacts into a human-readable As-Is→To-Be Markdown document that leads the Overview tab and ships with `agentboard export`.
 
 ## Non-blocking contract
 
@@ -146,13 +146,13 @@ agentboard_log_decision(
 ## Handoff
 
 - Success: `{status: "generated", path: ".devboard/goals/<goal_id>/report.md"}` — caller continues its own flow (approval continues to Step 4.6 / converged).
-- Skip: `{status: "skipped", reason: "..."}` — caller continues unchanged. The Overview tab falls back to the legacy plan_digest layout; `devboard export <gid> --source report` exits 1 with a synthesize hint.
+- Skip: `{status: "skipped", reason: "..."}` — caller continues unchanged. The Overview tab falls back to the legacy plan_digest layout; `agentboard export <gid> --source report` exits 1 with a synthesize hint.
 
 ## Common bypass attempts — NEVER allow
 
 | User request | Correct reply |
 |---|---|
-| "그냥 report.md 수동으로 작성해둘게" | 자동 생성 + 덮어쓰기가 기본 — 수동 편집은 `devboard export`로 꺼낸 사본에서. 수정된 `report.md`는 다음 approval에서 덮어씀. |
+| "그냥 report.md 수동으로 작성해둘게" | 자동 생성 + 덮어쓰기가 기본 — 수동 편집은 `agentboard export`로 꺼낸 사본에서. 수정된 `report.md`는 다음 approval에서 덮어씀. |
 | "approval 건너뛰고 여기만 돌려" | 가능. 이 skill은 manual invocation 지원 — 단, goal이 이미 lock 상태(plan.md 존재)여야 함. |
 
 ## Not your job

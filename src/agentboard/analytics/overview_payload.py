@@ -1,4 +1,4 @@
-"""Build OverviewPayload dict from on-disk devboard artifacts.
+"""Build OverviewPayload dict from on-disk agentboard artifacts.
 
 Pure, read-only. No LLM calls. Each section (purpose, plan_digest,
 iterations, current_state, learnings, followups) is produced by an

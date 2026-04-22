@@ -20,7 +20,7 @@ from agentboard.agents.tdd import (
     parse_green_status, parse_red_status, parse_refactor_status,
     run_tdd_green, run_tdd_red, run_tdd_refactor,
 )
-from agentboard.config import DevBoardConfig
+from agentboard.config import AgentBoardConfig
 from agentboard.llm.client import BudgetTracker, LLMClient
 from agentboard.models import AtomicStep, DecisionEntry, LockedPlan
 from agentboard.orchestrator.checkpointer import Checkpointer
@@ -73,7 +73,7 @@ def build_graph(
     budget: BudgetTracker,
     checkpointer: Checkpointer,
     client: LLMClient,
-    config: DevBoardConfig,
+    config: AgentBoardConfig,
     console: Any,
     hint_queue: HintQueue | None = None,
     enable_redteam: bool = True,
@@ -438,7 +438,7 @@ def build_graph(
             new_state["blocked"] = True
             new_state["block_reason"] = (
                 f"Systematic debug escalates: {consec} consecutive failures on same symptom — "
-                f"architecture may need rework. Run `devboard rethink {state['goal_id']}`."
+                f"architecture may need rework. Run `agentboard rethink {state['goal_id']}`."
             )
             console.print(f"  [bold red]ESCALATE[/bold red]: {consec} consecutive failures")
 
@@ -725,7 +725,7 @@ def _get_diff(project_root: Path) -> str:
 def _local_commit(project_root: Path, task_id: str, iteration: int, verdict: str) -> None:
     try:
         subprocess.run(["git", "add", "-A"], cwd=str(project_root), timeout=10, capture_output=True)
-        msg = f"devboard: task {task_id} iter {iteration} [{verdict}]"
+        msg = f"agentboard: task {task_id} iter {iteration} [{verdict}]"
         subprocess.run(["git", "commit", "-m", msg], cwd=str(project_root), timeout=15, capture_output=True)
     except Exception:
         pass

@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `devboard.docs.plan_sections` — an idempotent `upsert_plan_section()` helper that appends/replaces named Markdown sections in `plan.md` — and wire `devboard-approval` SKILL.md so every push writes a `## Outcome` section. This is Goal #1 of the 5-goal `plan-as-living-doc` spec.
+**Goal:** Build `agentboard.docs.plan_sections` — an idempotent `upsert_plan_section()` helper that appends/replaces named Markdown sections in `plan.md` — and wire `agentboard-approval` SKILL.md so every push writes a `## Outcome` section. This is Goal #1 of the 5-goal `plan-as-living-doc` spec.
 
-**Architecture:** New `src/devboard/docs/` package with a single pure-function helper that reuses existing `atomic_write` + `file_lock` from `storage.file_store`. A `PlanSection` string-enum pins the allowed section headings. Skill doc edit adds the `upsert_plan_section` call to the approval push flow. No new abstractions beyond the helper module.
+**Architecture:** New `src/agentboard/docs/` package with a single pure-function helper that reuses existing `atomic_write` + `file_lock` from `storage.file_store`. A `PlanSection` string-enum pins the allowed section headings. Skill doc edit adds the `upsert_plan_section` call to the approval push flow. No new abstractions beyond the helper module.
 
-**Tech Stack:** Python 3.12 · stdlib `re` for heading regex · `pathlib.Path` · existing `devboard.storage.file_store.atomic_write` + `file_lock` · pytest for tests.
+**Tech Stack:** Python 3.12 · stdlib `re` for heading regex · `pathlib.Path` · existing `agentboard.storage.file_store.atomic_write` + `file_lock` · pytest for tests.
 
 ---
 
@@ -14,10 +14,10 @@
 
 | Path | Status | Responsibility |
 |---|---|---|
-| `src/devboard/docs/__init__.py` | Create | Empty package marker |
-| `src/devboard/docs/plan_sections.py` | Create | `PlanSection` enum + `upsert_plan_section()` |
+| `src/agentboard/docs/__init__.py` | Create | Empty package marker |
+| `src/agentboard/docs/plan_sections.py` | Create | `PlanSection` enum + `upsert_plan_section()` |
 | `tests/test_plan_sections.py` | Create | Helper unit tests (happy + 5 edge cases) |
-| `skills/devboard-approval/SKILL.md` | Modify | Add Outcome write step between push success and task status update |
+| `skills/agentboard-approval/SKILL.md` | Modify | Add Outcome write step between push success and task status update |
 | `tests/test_approval_outcome_section.py` | Create | Skill doc string-assertion that the Outcome step is registered |
 
 ---
@@ -25,25 +25,25 @@
 ## Task 1 — Create the `docs` package
 
 **Files:**
-- Create: `src/devboard/docs/__init__.py`
+- Create: `src/agentboard/docs/__init__.py`
 
 - [ ] **Step 1: Create the empty package marker**
 
 ```bash
-mkdir -p src/devboard/docs
-: > src/devboard/docs/__init__.py
+mkdir -p src/agentboard/docs
+: > src/agentboard/docs/__init__.py
 ```
 
 - [ ] **Step 2: Verify package imports cleanly**
 
-Run: `python -c "import devboard.docs; print(devboard.docs.__name__)"`
-Expected: `devboard.docs`
+Run: `python -c "import agentboard.docs; print(agentboard.docs.__name__)"`
+Expected: `agentboard.docs`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/devboard/docs/__init__.py
-git commit -m "feat(docs): introduce devboard.docs package for plan section helpers"
+git add src/agentboard/docs/__init__.py
+git commit -m "feat(docs): introduce agentboard.docs package for plan section helpers"
 ```
 
 ---
@@ -51,7 +51,7 @@ git commit -m "feat(docs): introduce devboard.docs package for plan section help
 ## Task 2 — Define `PlanSection` enum
 
 **Files:**
-- Create: `src/devboard/docs/plan_sections.py`
+- Create: `src/agentboard/docs/plan_sections.py`
 - Test: `tests/test_plan_sections.py`
 
 - [ ] **Step 1: Write the failing test for the enum values**
@@ -68,7 +68,7 @@ import pytest
 def test_plan_section_enum_has_four_known_members() -> None:
     """# guards: edge-case-red-rule
     edge: empty — enum must be stable and enumerable without instantiation."""
-    from devboard.docs.plan_sections import PlanSection
+    from agentboard.docs.plan_sections import PlanSection
 
     assert {m.value for m in PlanSection} == {
         "Metadata",
@@ -81,12 +81,12 @@ def test_plan_section_enum_has_four_known_members() -> None:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_plan_sections.py::test_plan_section_enum_has_four_known_members -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'devboard.docs.plan_sections'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'agentboard.docs.plan_sections'`
 
 - [ ] **Step 3: Write minimal implementation**
 
 ```python
-# src/devboard/docs/plan_sections.py
+# src/agentboard/docs/plan_sections.py
 from __future__ import annotations
 
 from enum import Enum
@@ -107,7 +107,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/devboard/docs/plan_sections.py tests/test_plan_sections.py
+git add src/agentboard/docs/plan_sections.py tests/test_plan_sections.py
 git commit -m "feat(docs): PlanSection enum — Metadata/Outcome/Screenshots/Lessons"
 ```
 
@@ -116,7 +116,7 @@ git commit -m "feat(docs): PlanSection enum — Metadata/Outcome/Screenshots/Les
 ## Task 3 — Happy path: `upsert_plan_section` appends when missing
 
 **Files:**
-- Modify: `src/devboard/docs/plan_sections.py`
+- Modify: `src/agentboard/docs/plan_sections.py`
 - Modify: `tests/test_plan_sections.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -124,7 +124,7 @@ git commit -m "feat(docs): PlanSection enum — Metadata/Outcome/Screenshots/Les
 ```python
 # append to tests/test_plan_sections.py
 def test_upsert_appends_when_section_missing(tmp_path: Path) -> None:
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     plan.write_text("# Goal\n\n## Problem\n\nexisting body\n")
@@ -146,12 +146,12 @@ Expected: FAIL with `ImportError: cannot import name 'upsert_plan_section'`
 
 - [ ] **Step 3: Add minimal implementation**
 
-Append to `src/devboard/docs/plan_sections.py`:
+Append to `src/agentboard/docs/plan_sections.py`:
 
 ```python
 from pathlib import Path
 
-from devboard.storage.file_store import atomic_write, file_lock
+from agentboard.storage.file_store import atomic_write, file_lock
 
 
 def upsert_plan_section(plan_path: Path, section: PlanSection, content: str) -> None:
@@ -202,7 +202,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/devboard/docs/plan_sections.py tests/test_plan_sections.py
+git add src/agentboard/docs/plan_sections.py tests/test_plan_sections.py
 git commit -m "feat(docs): upsert_plan_section append-when-missing path"
 ```
 
@@ -219,7 +219,7 @@ git commit -m "feat(docs): upsert_plan_section append-when-missing path"
 def test_upsert_replaces_when_section_exists(tmp_path: Path) -> None:
     """# guards: edge-case-red-rule
     edge: cached stale — second upsert must replace, not stack."""
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     plan.write_text("# G\n\n## Problem\n\nx\n")
@@ -258,7 +258,7 @@ git commit -m "test(docs): upsert replaces existing section idempotently"
 def test_upsert_creates_file_when_missing(tmp_path: Path) -> None:
     """# guards: edge-case-red-rule
     edge: empty input — plan.md doesn't exist yet."""
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     assert not plan.exists()
@@ -269,7 +269,7 @@ def test_upsert_creates_file_when_missing(tmp_path: Path) -> None:
 
 
 def test_upsert_on_empty_file_writes_single_block(tmp_path: Path) -> None:
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     plan.write_text("")
@@ -304,7 +304,7 @@ git commit -m "test(docs): upsert handles missing / empty plan.md"
 ## Task 6 — Edge: binary / non-UTF-8 plan.md (graceful skip)
 
 **Files:**
-- Modify: `src/devboard/docs/plan_sections.py`
+- Modify: `src/agentboard/docs/plan_sections.py`
 - Modify: `tests/test_plan_sections.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -314,7 +314,7 @@ def test_upsert_does_not_clobber_binary_plan(tmp_path: Path) -> None:
     """# guards: read-text-in-compose-must-catch-unicode
     edge: binary / non-UTF-8 file — must NOT overwrite a corrupted file
     with a fresh block (data loss risk). Should fall through quietly."""
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     bad = b"\xff\xfe\x00garbled"
@@ -334,7 +334,7 @@ Expected: FAIL — current implementation calls `read_text()` which raises `Unic
 
 - [ ] **Step 3: Wrap read in try/except and return early**
 
-Replace the `original = plan_path.read_text() if plan_path.exists() else ""` line in `src/devboard/docs/plan_sections.py` with:
+Replace the `original = plan_path.read_text() if plan_path.exists() else ""` line in `src/agentboard/docs/plan_sections.py` with:
 
 ```python
 if plan_path.exists():
@@ -356,7 +356,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/devboard/docs/plan_sections.py tests/test_plan_sections.py
+git add src/agentboard/docs/plan_sections.py tests/test_plan_sections.py
 git commit -m "fix(docs): upsert refuses to clobber binary plan.md"
 ```
 
@@ -376,7 +376,7 @@ def test_upsert_is_safe_under_concurrent_writes(tmp_path: Path) -> None:
     must both succeed without data loss."""
     import threading
 
-    from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+    from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 
     plan = tmp_path / "plan.md"
     plan.write_text("# Goal\n\n## Problem\n\np\n")
@@ -434,23 +434,23 @@ def upsert_plan_section(plan_path: Path, section: PlanSection, content: str) -> 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add tests/test_plan_sections.py src/devboard/docs/plan_sections.py
+git add tests/test_plan_sections.py src/agentboard/docs/plan_sections.py
 git commit -m "test(docs): upsert safe under concurrent writes"
 ```
 
 ---
 
-## Task 8 — Wire `devboard-approval` SKILL.md to write Outcome
+## Task 8 — Wire `agentboard-approval` SKILL.md to write Outcome
 
 **Files:**
 - Create: `tests/test_approval_outcome_section.py`
-- Modify: `skills/devboard-approval/SKILL.md`
+- Modify: `skills/agentboard-approval/SKILL.md`
 
 - [ ] **Step 1: Write the failing skill-doc assertion**
 
 ```python
 # tests/test_approval_outcome_section.py
-"""Verify devboard-approval SKILL.md instructs the Outcome upsert step."""
+"""Verify agentboard-approval SKILL.md instructs the Outcome upsert step."""
 
 from __future__ import annotations
 
@@ -460,7 +460,7 @@ from pathlib import Path
 SKILL_PATH = (
     Path(__file__).resolve().parents[1]
     / "skills"
-    / "devboard-approval"
+    / "agentboard-approval"
     / "SKILL.md"
 )
 
@@ -478,13 +478,13 @@ def test_approval_mentions_plan_section_outcome() -> None:
 
 
 def test_approval_outcome_step_placed_between_push_and_status() -> None:
-    """Step must run AFTER devboard_push_pr success (we know the PR URL
-    and commit) and BEFORE devboard_update_task_status 'pushed' (so the
+    """Step must run AFTER agentboard_push_pr success (we know the PR URL
+    and commit) and BEFORE agentboard_update_task_status 'pushed' (so the
     doc reflects reality before the task is marked done)."""
     text = _text()
-    push = text.find("devboard_push_pr")
+    push = text.find("agentboard_push_pr")
     upsert = text.find("upsert_plan_section")
-    status_update = text.find("devboard_update_task_status")
+    status_update = text.find("agentboard_update_task_status")
     assert push != -1 and upsert != -1 and status_update != -1
     assert push < upsert < status_update, (
         f"ordering wrong: push={push} upsert={upsert} status={status_update}"
@@ -496,17 +496,17 @@ def test_approval_outcome_step_placed_between_push_and_status() -> None:
 Run: `pytest tests/test_approval_outcome_section.py -v`
 Expected: FAIL — three AssertionErrors (SKILL.md has no `upsert_plan_section` mention yet).
 
-- [ ] **Step 3: Edit `skills/devboard-approval/SKILL.md`**
+- [ ] **Step 3: Edit `skills/agentboard-approval/SKILL.md`**
 
-Find the section describing the push flow. After the `devboard_push_pr` line and BEFORE `devboard_update_task_status` / `devboard_checkpoint "converged"`, insert this block:
+Find the section describing the push flow. After the `agentboard_push_pr` line and BEFORE `agentboard_update_task_status` / `agentboard_checkpoint "converged"`, insert this block:
 
 ```markdown
 ### Step 4.5 — Write Outcome section to plan.md (MANDATORY)
 
-After `devboard_push_pr` returns success (or a direct-push equivalent completes), write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan:
+After `agentboard_push_pr` returns success (or a direct-push equivalent completes), write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan:
 
 ```python
-from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 from pathlib import Path
 
 plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
@@ -525,10 +525,10 @@ upsert_plan_section(plan_path, PlanSection.OUTCOME, outcome)
 
 The helper is idempotent — re-running approval after a fix produces the same single-section result, no stacking. The `plan.json` locked_hash is unaffected (Outcome lives in plan.md only).
 
-After this write, proceed to `devboard_checkpoint "converged"` and `devboard_update_task_status status="pushed"`.
+After this write, proceed to `agentboard_checkpoint "converged"` and `agentboard_update_task_status status="pushed"`.
 ```
 
-Place this heading block AFTER the existing description of `devboard_push_pr` and BEFORE the `devboard_update_task_status` / `converged` checkpoint instructions. If the SKILL.md does not yet have Step numbering at that depth, use the heading level consistent with surrounding steps.
+Place this heading block AFTER the existing description of `agentboard_push_pr` and BEFORE the `agentboard_update_task_status` / `converged` checkpoint instructions. If the SKILL.md does not yet have Step numbering at that depth, use the heading level consistent with surrounding steps.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -543,7 +543,7 @@ Expected: PASS — prior test count + 10 new tests from Tasks 2-8.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tests/test_approval_outcome_section.py skills/devboard-approval/SKILL.md
+git add tests/test_approval_outcome_section.py skills/agentboard-approval/SKILL.md
 git commit -m "feat(approval): write ## Outcome section to plan.md after push"
 ```
 
@@ -552,7 +552,7 @@ git commit -m "feat(approval): write ## Outcome section to plan.md after push"
 ## Task 9 — Install SKILL.md change to local skills tree
 
 **Files:**
-- Modify: `~/.local/share/agentic-dev-board/skills/devboard-approval/SKILL.md` (via install.sh)
+- Modify: `~/.local/share/agentic-dev-board/skills/agentboard-approval/SKILL.md` (via install.sh)
 
 - [ ] **Step 1: Push to origin**
 
@@ -570,7 +570,7 @@ Expected output includes `updating /Users/ctmctm/.local/share/agentic-dev-board`
 
 - [ ] **Step 3: Verify installed skill has the new Outcome step**
 
-Run: `grep -c "upsert_plan_section" ~/.local/share/agentic-dev-board/skills/devboard-approval/SKILL.md`
+Run: `grep -c "upsert_plan_section" ~/.local/share/agentic-dev-board/skills/agentboard-approval/SKILL.md`
 Expected: `1` (or more — the mention appears at least once).
 
 No commit (install.sh does not produce repo-local changes).
@@ -583,9 +583,9 @@ No commit (install.sh does not produce repo-local changes).
 
 | Spec item | Task |
 |---|---|
-| `src/devboard/docs/__init__.py` + `plan_sections.py` | Tasks 1, 2 |
+| `src/agentboard/docs/__init__.py` + `plan_sections.py` | Tasks 1, 2 |
 | `upsert_plan_section()` helper + `PlanSection` enum | Tasks 2, 3 |
-| `devboard-approval` SKILL.md: push 성공 후 Outcome write 단계 추가 | Task 8 |
+| `agentboard-approval` SKILL.md: push 성공 후 Outcome write 단계 추가 | Task 8 |
 | TDD happy: append when missing | Task 3 |
 | TDD edge empty: plan.md 빈 파일일 때 | Task 5 |
 | TDD edge replace: 기존 섹션 replace (idempotent) | Task 4 |

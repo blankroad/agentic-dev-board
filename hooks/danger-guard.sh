@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse hook — inspects shell commands via devboard_check_command_safety
+# PreToolUse hook — inspects shell commands via agentboard_check_command_safety
 # pattern library. Blocks hard-destructive patterns outright; asks for
 # confirmation on warn-level patterns.
 #

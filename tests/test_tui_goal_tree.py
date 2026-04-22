@@ -1,4 +1,4 @@
-"""Unit tests for devboard.tui.goal_tree.build_goal_tree.
+"""Unit tests for agentboard.tui.goal_tree.build_goal_tree.
 
 Covers atomic_steps s_007..s_013 from goal g_20260420_054657_bae0a8
 (TUI goal panel hierarchy).

@@ -295,9 +295,9 @@ async def test_phase_flow_mounts_new_widgets_real_user_flow() -> None:
     tab panes so the App actually wires the visuals — unit-tested widgets
     don't prove they're on-screen.
     guards: unit-tests-on-primitives-dont-prove-integration"""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
-    app = DevBoardApp(store_root=REPO)
+    app = AgentBoardApp(store_root=REPO)
     async with app.run_test() as pilot:
         await pilot.pause()
         # the presence of any one of these widget IDs proves the mount
@@ -349,8 +349,8 @@ def test_real_tty_smoke_no_crash() -> None:
     # An approval-time re-run happens automatically via
     # `agentboard_tui_render_smoke` regardless of this test, so we just pin
     # the contract that the widgets can be boot-mounted.
-    from agentboard.tui.app import DevBoardApp
-    app = DevBoardApp(store_root=REPO)
+    from agentboard.tui.app import AgentBoardApp
+    app = AgentBoardApp(store_root=REPO)
     assert app is not None
 
 

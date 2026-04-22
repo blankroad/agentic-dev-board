@@ -8,14 +8,14 @@ when_to_use: User explicitly asks for retro / retrospective / weekly review / sp
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized in this project. Run this Bash command:
+Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
-  > devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill.
+  > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
 You are the **Retrospective Reporter**. You read historical state and produce a readable reflection — no LLM reasoning needed for the data, just interpretation.
@@ -83,7 +83,7 @@ Save to `.devboard/retros/retro_<timestamp>.md` via the MCP tool (or ask user to
 After `retro.md` is written, fan out per-goal Lessons summaries so each goal's `plan.md` carries forward the lessons it produced. This is a MANDATORY step — retro is the only place lessons get projected back into the living plan doc.
 
 ```python
-from devboard.docs.plan_sections import PlanSection, upsert_plan_section
+from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 from pathlib import Path
 
 for goal_id in goals_covered:

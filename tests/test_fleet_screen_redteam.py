@@ -51,10 +51,10 @@ def tmp_project(tmp_path: Path) -> Path:
 
 async def test_f_binding_is_idempotent_no_double_push(tmp_project: Path) -> None:
     """CRITICAL #1: pressing F while FleetScreen is already on top must NOT double-push."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_screen import FleetScreen
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()
@@ -72,9 +72,9 @@ async def test_f_binding_is_idempotent_no_double_push(tmp_project: Path) -> None
 
 async def test_r_replay_surfaces_feedback_when_no_handler(tmp_project: Path) -> None:
     """CRITICAL #2: r must NOT be a silent no-op — surface feedback via app.notify."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     notifications: list[str] = []
 
     async with app.run_test() as pilot:
@@ -101,7 +101,7 @@ async def test_r_replay_surfaces_feedback_when_no_handler(tmp_project: Path) -> 
 async def test_k_kill_requires_confirmation_and_uses_enum(tmp_project: Path) -> None:
     """HIGH #3: k must not mutate on single keypress; after confirmation, status is GoalStatus enum."""
     from agentboard.models import GoalStatus
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.storage.file_store import FileStore
 
     def _find(board, gid):
@@ -110,7 +110,7 @@ async def test_k_kill_requires_confirmation_and_uses_enum(tmp_project: Path) -> 
                 return g
         return None
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()
@@ -142,10 +142,10 @@ async def test_k_kill_requires_confirmation_and_uses_enum(tmp_project: Path) -> 
 
 async def test_filter_input_escape_dismisses_without_submit(tmp_project: Path) -> None:
     """HIGH #4: Escape in filter Input restores focus to pane; filter stays empty."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_view import FleetListPane
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()
@@ -173,10 +173,10 @@ async def test_filter_input_escape_dismisses_without_submit(tmp_project: Path) -
 
 async def test_on_goal_activated_guards_wrong_screen(tmp_project: Path) -> None:
     """HIGH #5: on_goal_activated must not pop if FleetScreen is not on top."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_screen import GoalActivated
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.pause()
         # FleetScreen NOT on stack — simulate a stray GoalActivated arriving

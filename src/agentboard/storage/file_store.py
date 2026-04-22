@@ -77,19 +77,19 @@ def file_lock(path: Path, mode: str = "a+"):
 class FileStore(Repository):
     def __init__(self, root: Path) -> None:
         self.root = root
-        self._devboard = root / ".devboard"
+        self._agentboard = root / ".devboard"
 
     def _goals_dir(self, goal_id: str) -> Path:
-        return self._devboard / "goals" / _sanitize_id(goal_id)
+        return self._agentboard / "goals" / _sanitize_id(goal_id)
 
     def _tasks_dir(self, goal_id: str, task_id: str) -> Path:
         return self._goals_dir(goal_id) / "tasks" / _sanitize_id(task_id)
 
     def _runs_dir(self) -> Path:
-        return self._devboard / "runs"
+        return self._agentboard / "runs"
 
     def _learnings_dir(self) -> Path:
-        return self._devboard / "learnings"
+        return self._agentboard / "learnings"
 
     def _run_pile_dir(self, rid: str) -> Path:
         """Directory for a run's canonical artifact pile (M1a-data)."""
@@ -97,7 +97,7 @@ class FileStore(Repository):
 
     def _rid_index_path(self) -> Path:
         """Global rid → run_path reverse index file."""
-        return self._devboard / ".rid_index.json"
+        return self._agentboard / ".rid_index.json"
 
     # ── Pile writers (M1a-data) ──────────────────────────────────────────
 
@@ -142,7 +142,7 @@ class FileStore(Repository):
     def _rid_index_upsert(self, rid: str, *, gid: str, tid: str) -> None:
         """Add/update an rid → {gid, tid} mapping in .rid_index.json."""
         idx_path = self._rid_index_path()
-        self._devboard.mkdir(parents=True, exist_ok=True)
+        self._agentboard.mkdir(parents=True, exist_ok=True)
         with file_lock(idx_path):
             if idx_path.exists():
                 try:
@@ -181,11 +181,11 @@ class FileStore(Repository):
             return None
         # Defense-in-depth: symlink / tampered-index attacks may make a
         # path resolve outside .devboard even after _sanitize_id passes.
-        # Reject any resolved path that escapes the devboard root.
+        # Reject any resolved path that escapes the agentboard root.
         try:
             resolved = pile_dir.resolve()
-            devboard_resolved = self._devboard.resolve()
-            if not resolved.is_relative_to(devboard_resolved):
+            agentboard_resolved = self._agentboard.resolve()
+            if not resolved.is_relative_to(agentboard_resolved):
                 return None
         except (OSError, ValueError):
             return None
@@ -199,14 +199,14 @@ class FileStore(Repository):
     # ── Board ──────────────────────────────────────────────────────────────
 
     def load_board(self) -> BoardState:
-        path = self._devboard / "state.json"
+        path = self._agentboard / "state.json"
         if not path.exists():
             return BoardState()
         with open(path) as f:
             return BoardState.model_validate_json(f.read())
 
     def save_board(self, state: BoardState) -> None:
-        path = self._devboard / "state.json"
+        path = self._agentboard / "state.json"
         state.updated_at = datetime.now(timezone.utc)
         with file_lock(path):
             atomic_write(path, state.model_dump_json(indent=2))

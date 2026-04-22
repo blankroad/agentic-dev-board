@@ -11,7 +11,7 @@ from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Footer, Header, Label, RichLog, Static, TabbedContent, TabPane
 
-from agentboard.config import DevBoardConfig, load_config
+from agentboard.config import AgentBoardConfig, load_config
 from agentboard.models import BoardState, GoalStatus
 from agentboard.storage.file_store import FileStore
 from agentboard.tui.board_view import BoardView
@@ -20,7 +20,7 @@ from agentboard.tui.log_view import LogView
 from agentboard.tui.task_view import TaskView
 
 
-class DevBoardApp(App):
+class AgentBoardApp(App):
     """Autonomous LLM Dev Board — Textual TUI."""
 
     CSS = """
@@ -224,5 +224,5 @@ class DevBoardApp(App):
 
 def run_tui(store_root: Path) -> None:
     """Launch the TUI. Blocks until user quits."""
-    app = DevBoardApp(store_root=store_root)
+    app = AgentBoardApp(store_root=store_root)
     app.run()

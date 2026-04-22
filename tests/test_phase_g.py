@@ -11,7 +11,7 @@ from agentboard.agents.systematic_debug import _parse_rca
 from agentboard.agents.tdd import parse_green_status, parse_red_status, parse_refactor_status
 from agentboard.gauntlet.steps.brainstorm import needs_brainstorm, parse_questions
 from agentboard.tools.base import ToolCall
-from agentboard.config import DevBoardConfig, TDDConfig
+from agentboard.config import AgentBoardConfig, TDDConfig
 from agentboard.gauntlet.lock import build_locked_plan
 from agentboard.llm.client import CompletionResult
 from agentboard.models import AtomicStep, BoardState, Goal, LockedPlan
@@ -83,7 +83,7 @@ def test_build_locked_plan_generates_missing_ids():
 # ── G6: Config toggles ────────────────────────────────────────────────────────
 
 def test_tdd_config_defaults():
-    cfg = DevBoardConfig()
+    cfg = AgentBoardConfig()
     assert cfg.tdd.enabled is True
     assert cfg.tdd.strict is False
     assert cfg.tdd.verify_with_evidence is True
@@ -91,7 +91,7 @@ def test_tdd_config_defaults():
 
 
 def test_tdd_config_can_disable():
-    cfg = DevBoardConfig(tdd=TDDConfig(enabled=False, systematic_debug=False))
+    cfg = AgentBoardConfig(tdd=TDDConfig(enabled=False, systematic_debug=False))
     assert cfg.tdd.enabled is False
     assert cfg.tdd.systematic_debug is False
 
@@ -473,7 +473,7 @@ def test_iron_law_strict_blocks_loop(
     """In strict mode, Iron Law violation in legacy executor path should block."""
     from agentboard.agents.base import AgentResult
     from agentboard.agents.reviewer import ReviewVerdict
-    from agentboard.config import DevBoardConfig, TDDConfig
+    from agentboard.config import AgentBoardConfig, TDDConfig
     from agentboard.orchestrator.runner import run_loop
 
     store = FileStore(tmp_path)
@@ -499,7 +499,7 @@ def test_iron_law_strict_blocks_loop(
     goal = Goal(title="Strict", description="test")
     store.save_goal(goal)
 
-    cfg = DevBoardConfig(tdd=TDDConfig(enabled=False, strict=True, verify_with_evidence=False))
+    cfg = AgentBoardConfig(tdd=TDDConfig(enabled=False, strict=True, verify_with_evidence=False))
 
     result = run_loop(
         goal_id=goal.id, task_id="t_iron", goal_description="test",

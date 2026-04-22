@@ -112,7 +112,7 @@ agentboard skills import my-team-skills.zip --scope global
 ```
 
 ### 여러 언어 (JS/TS/Go/Rust)
-`devboard_verify` 는 프로젝트 루트에서 자동 감지:
+`agentboard_verify` 는 프로젝트 루트에서 자동 감지:
 
 | 파일 | 감지되는 runner |
 |---|---|
@@ -130,7 +130,7 @@ agentboard skills import my-team-skills.zip --scope global
 ### "No runs yet"가 계속 뜸
 Claude Code 세션 안에서 skill이 **발동 안 했음**. 아래 중 하나:
 
-1. **skill이 로드됐는지 확인** — `.claude/skills/devboard-*/SKILL.md` 파일 존재 OR `~/.claude/skills/`에 있는지
+1. **skill이 로드됐는지 확인** — `.claude/skills/agentboard-*/SKILL.md` 파일 존재 OR `~/.claude/skills/`에 있는지
 2. **`.mcp.json` 이 프로젝트 루트에 있는지** — `cat .mcp.json`
 3. **`.mcp.json`의 python path가 유효한지** — `agentboard install --python $(which python)` 으로 재설치
 4. **명시적 invoke** — "use agentboard-gauntlet + agentboard-tdd"
@@ -154,4 +154,4 @@ brew install gh && gh auth login
 
 - `README.md` — 전체 아키텍처
 - `skills/*/SKILL.md` — 각 skill이 하는 일
-- `src/devboard/mcp_server.py` — 24개 MCP tool 스펙
+- `src/agentboard/mcp_server.py` — 24개 MCP tool 스펙

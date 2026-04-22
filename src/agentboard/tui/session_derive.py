@@ -22,8 +22,8 @@ class SessionContext:
 
     def __init__(self, store_root: Path) -> None:
         self.store_root = store_root
-        self._devboard = store_root / ".devboard"
-        self._goals_dir = self._devboard / "goals"
+        self._agentboard = store_root / ".devboard"
+        self._goals_dir = self._agentboard / "goals"
         self._override_goal_id: str | None = None
 
     def set_active_goal(self, goal_id: str | None) -> None:
@@ -79,7 +79,7 @@ class SessionContext:
     def all_goals(self) -> list[dict[str, Any]]:
         """Goals as stored in state.json (list of {id, title, status}).
         Returns empty list if state.json is missing/malformed."""
-        state_file = self._devboard / "state.json"
+        state_file = self._agentboard / "state.json"
         if not state_file.exists():
             return []
         try:

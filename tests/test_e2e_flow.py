@@ -1,5 +1,5 @@
 """End-to-end integration test — simulates the exact sequence of MCP tool
-calls that a well-behaved Claude Code session running the devboard skills
+calls that a well-behaved Claude Code session running the agentboard skills
 would produce. Asserts the resulting .devboard/ state is well-formed and
 complete (no missing phases, all required files present, correct hashes).
 

@@ -78,24 +78,24 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 │                                                                          │
 │   ↓ auto-loads skills per user prompt                                    │
 │                                                                          │
-│  .claude/skills/devboard-*/SKILL.md                                      │
+│  .claude/skills/agentboard-*/SKILL.md                                      │
 │   brainstorm → gauntlet → [plan approval] → tdd → cso → redteam         │
 │   → rca → approval → retro, replay                                       │
 │                                                                          │
 │   ↓ skills call MCP tools for state + verify (no LLM inside MCP)        │
 │                                                                          │
-│  devboard MCP server (local subprocess, 30 tools)                        │
-│   devboard_save_brainstorm()   — save premises/risks/alternatives       │
-│   devboard_approve_plan()      — sign off plan before locking           │
-│   devboard_lock_plan()         — SHA256 hash + plan.md (requires ✓)    │
-│   devboard_verify()            — deterministic pytest runner            │
-│   devboard_log_decision()      — decisions.jsonl append                 │
-│   devboard_check_iron_law()    — TDD violation detection                │
-│   devboard_checkpoint()        — run state snapshot                     │
-│   devboard_metrics()           — convergence/retry/iron-law stats       │
-│   devboard_build_pr_body()     — PR body from plan + decisions          │
-│   devboard_generate_retro()    — sprint retrospective                   │
-│   devboard_replay()            — time-travel branch from checkpoint     │
+│  agentboard MCP server (local subprocess, 30 tools)                        │
+│   agentboard_save_brainstorm()   — save premises/risks/alternatives       │
+│   agentboard_approve_plan()      — sign off plan before locking           │
+│   agentboard_lock_plan()         — SHA256 hash + plan.md (requires ✓)    │
+│   agentboard_verify()            — deterministic pytest runner            │
+│   agentboard_log_decision()      — decisions.jsonl append                 │
+│   agentboard_check_iron_law()    — TDD violation detection                │
+│   agentboard_checkpoint()        — run state snapshot                     │
+│   agentboard_metrics()           — convergence/retry/iron-law stats       │
+│   agentboard_build_pr_body()     — PR body from plan + decisions          │
+│   agentboard_generate_retro()    — sprint retrospective                   │
+│   agentboard_replay()            — time-travel branch from checkpoint     │
 │   ... 30 tools total                                                     │
 │                                                                          │
 │   ↓ hooks run independently of skills                                    │
@@ -108,7 +108,7 @@ curl -fsSL https://raw.githubusercontent.com/blankroad/agentic-dev-board/main/in
 │  agentboard CLI (observability, no LLM calls)                            │
 │   init | install | board | watch | retro | audit | replay | mcp         │
 │                                                                          │
-│  devboard analytics (Kanban, Confluence, JIRA, wiki, PR, metrics)        │
+│  agentboard analytics (Kanban, Confluence, JIRA, wiki, PR, metrics)        │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -143,11 +143,11 @@ agentboard-gauntlet     ← 5-step planning; Arch step runs Complexity Check
     │                    ([NEW]/[MODIFY] tags, >8 files → scope creep OR new-system flag)
     │                    presents plan for review
     ▼
-devboard_approve_plan ← user signs off (or requests revision of specific step)
+agentboard_approve_plan ← user signs off (or requests revision of specific step)
     │
-devboard_lock_plan    ← SHA256 hash locked — immutable from here
+agentboard_lock_plan    ← SHA256 hash locked — immutable from here
     │
-devboard_update_task_status ← sets task.metadata {production_destined, security_sensitive_plan}
+agentboard_update_task_status ← sets task.metadata {production_destined, security_sensitive_plan}
     │
     ├── ENG_REVIEW_NEEDED → agentboard-eng-review (4 checks)
     │
@@ -173,58 +173,58 @@ agentboard-retro         ← periodic; auto-proposes learnings from recurring mo
 ### State — init, goals, plans
 | Tool | Purpose |
 |---|---|
-| `devboard_init` | Scaffold `.devboard/`, update `.gitignore` |
-| `devboard_add_goal` | Register a goal on the board |
-| `devboard_list_goals` | List all goals with status |
-| `devboard_save_brainstorm` | Save brainstorm output (latest alias + versioned copy) |
-| `devboard_approve_plan` | Record plan approval/revision decision before locking |
-| `devboard_lock_plan` | SHA256 hash plan, write plan.md + plan.json (requires prior approval) |
-| `devboard_load_plan` | Load locked plan for a goal |
-| `devboard_verify_plan_integrity` | Re-compute hash, detect plan tampering |
-| `devboard_start_task` | Create Task + start run. Returns `{task_id, run_id}` |
-| `devboard_update_task_status` | Update task lifecycle state |
+| `agentboard_init` | Scaffold `.devboard/`, update `.gitignore` |
+| `agentboard_add_goal` | Register a goal on the board |
+| `agentboard_list_goals` | List all goals with status |
+| `agentboard_save_brainstorm` | Save brainstorm output (latest alias + versioned copy) |
+| `agentboard_approve_plan` | Record plan approval/revision decision before locking |
+| `agentboard_lock_plan` | SHA256 hash plan, write plan.md + plan.json (requires prior approval) |
+| `agentboard_load_plan` | Load locked plan for a goal |
+| `agentboard_verify_plan_integrity` | Re-compute hash, detect plan tampering |
+| `agentboard_start_task` | Create Task + start run. Returns `{task_id, run_id}` |
+| `agentboard_update_task_status` | Update task lifecycle state |
 
 ### Execution & decisions
 | Tool | Purpose |
 |---|---|
-| `devboard_checkpoint` | Append state snapshot to run JSONL |
-| `devboard_log_decision` | Append decision entry to decisions.jsonl |
-| `devboard_load_decisions` | Load all decisions for a task |
-| `devboard_save_iter_diff` | Archive per-iteration diff |
-| `devboard_resume_run` | Find last checkpoint, determine what's next |
+| `agentboard_checkpoint` | Append state snapshot to run JSONL |
+| `agentboard_log_decision` | Append decision entry to decisions.jsonl |
+| `agentboard_load_decisions` | Load all decisions for a task |
+| `agentboard_save_iter_diff` | Archive per-iteration diff |
+| `agentboard_resume_run` | Find last checkpoint, determine what's next |
 
 ### Verification & safety
 | Tool | Purpose |
 |---|---|
-| `devboard_verify` | Run pytest, match checklist items to test output |
-| `devboard_check_iron_law` | Detect production file write without prior test write |
-| `devboard_check_command_safety` | DangerGuard pattern match on shell commands |
-| `devboard_check_security_sensitive` | Classify a diff as security-sensitive (auth/crypto/sql/subprocess/network/deserialization/filesystem) |
-| `devboard_check_dependencies` | Audit dependencies for known CVEs via `pip-audit` / `npm audit` |
+| `agentboard_verify` | Run pytest, match checklist items to test output |
+| `agentboard_check_iron_law` | Detect production file write without prior test write |
+| `agentboard_check_command_safety` | DangerGuard pattern match on shell commands |
+| `agentboard_check_security_sensitive` | Classify a diff as security-sensitive (auth/crypto/sql/subprocess/network/deserialization/filesystem) |
+| `agentboard_check_dependencies` | Audit dependencies for known CVEs via `pip-audit` / `npm audit` |
 
 ### Approval & push
 | Tool | Purpose |
 |---|---|
-| `devboard_get_diff_stats` | `git diff --stat` against HEAD |
-| `devboard_build_pr_body` | Generate PR description from plan + decisions |
-| `devboard_apply_squash_policy` | Reshape commits (squash / semantic / preserve) |
-| `devboard_push_pr` | `git push` + `gh pr create` |
+| `agentboard_get_diff_stats` | `git diff --stat` against HEAD |
+| `agentboard_build_pr_body` | Generate PR description from plan + decisions |
+| `agentboard_apply_squash_policy` | Reshape commits (squash / semantic / preserve) |
+| `agentboard_push_pr` | `git push` + `gh pr create` |
 
 ### Learnings
 | Tool | Purpose |
 |---|---|
-| `devboard_save_learning` | Save a learning with tags, category, confidence |
-| `devboard_search_learnings` | Keyword + tag search |
-| `devboard_relevant_learnings` | Retrieve learnings relevant to current context |
+| `agentboard_save_learning` | Save a learning with tags, category, confidence |
+| `agentboard_search_learnings` | Keyword + tag search |
+| `agentboard_relevant_learnings` | Retrieve learnings relevant to current context |
 
 ### Retro, metrics, replay
 | Tool | Purpose |
 |---|---|
-| `devboard_generate_retro` | Sprint retrospective markdown (per-goal + aggregate) |
-| `devboard_metrics` | Convergence rate, retry rate, Iron Law hits, skill activation |
-| `devboard_diagnose` | Skill activation audit — finds gaps in workflow compliance |
-| `devboard_list_runs` | List all runs with status |
-| `devboard_replay` | Branch run from iteration N with variant note |
+| `agentboard_generate_retro` | Sprint retrospective markdown (per-goal + aggregate) |
+| `agentboard_metrics` | Convergence rate, retry rate, Iron Law hits, skill activation |
+| `agentboard_diagnose` | Skill activation audit — finds gaps in workflow compliance |
+| `agentboard_list_runs` | List all runs with status |
+| `agentboard_replay` | Branch run from iteration N with variant note |
 
 All tools are **stateless** (read/write `.devboard/` directly) and **LLM-free** (Claude Code does the reasoning).
 
@@ -244,7 +244,7 @@ Hooks work **independently of skills** — even if `agentboard-tdd` isn't loaded
 
 ## Analytics outputs
 
-The `devboard.analytics` module produces human-readable artifacts from `.devboard/` state — no extra LLM calls.
+The `agentboard.analytics` module produces human-readable artifacts from `.devboard/` state — no extra LLM calls.
 
 ### Kanban board
 
@@ -343,7 +343,7 @@ You: "I want to add search to the bookmarks app"
 
 Claude auto-loads agentboard-brainstorm (goal is vague):
   → 4 clarifying questions (success criteria, storage, scope boundary, runtime)
-  You answer → calls devboard_save_brainstorm() → brainstorm.md saved
+  You answer → calls agentboard_save_brainstorm() → brainstorm.md saved
 
 Claude auto-loads agentboard-gauntlet:
   Frame:  Problem extracted, non-goals listed
@@ -355,22 +355,22 @@ Claude auto-loads agentboard-gauntlet:
   → presents plan for review
   "Approve to lock? (yes / no + step to revise: problem|scope|arch|challenge)"
   You: yes
-  → calls devboard_approve_plan(approved=True)
-  → calls devboard_lock_plan() → SHA256 hash, immutable
+  → calls agentboard_approve_plan(approved=True)
+  → calls agentboard_lock_plan() → SHA256 hash, immutable
 
 Claude auto-loads agentboard-tdd:
   RED s_001: write test_search_url() → pytest fails "ImportError: no module search"
-    → devboard_checkpoint(tdd_red_complete) + devboard_log_decision(RED_CONFIRMED)
+    → agentboard_checkpoint(tdd_red_complete) + agentboard_log_decision(RED_CONFIRMED)
   GREEN s_001: write search() → pytest passes
-    → devboard_verify() → devboard_checkpoint(tdd_green_complete)
-  RETRY on s_002: tag schema wrong → devboard_log_decision(RETRY)
+    → agentboard_verify() → agentboard_checkpoint(tdd_green_complete)
+  RETRY on s_002: tag schema wrong → agentboard_log_decision(RETRY)
   ... fix + GREEN → converged
 
 Claude auto-loads agentboard-approval:
   Diff stats + 3/3 checklist ✓ + 2 iter, 1 retry
   "Squash policy [1-4]?" → 1 (squash)
   "Push? [y/N]?" → y
-  → devboard_push_pr() → PR URL logged
+  → agentboard_push_pr() → PR URL logged
 ```
 
 All of this is observable in:
@@ -379,7 +379,7 @@ All of this is observable in:
 - `.devboard/goals/<goal_id>/tasks/.../decisions.jsonl` (every *why*)
 - `agentboard watch` (live tail)
 - `agentboard retro` / `agentboard metrics` (aggregation)
-- `devboard.analytics` Confluence/JIRA doc (full development arc)
+- `agentboard.analytics` Confluence/JIRA doc (full development arc)
 
 ---
 
@@ -416,8 +416,8 @@ All of this is observable in:
 - **`_sanitize_id()`** — all `goal_id` and `task_id` inputs to `FileStore` are validated against path traversal (`..`, `/`, `\`) before being used as filesystem paths.
 - **`atomic_write()`** — all file writes use temp file + `os.replace()` so readers never see partial writes.
 - **`file_lock()`** — `fcntl.flock(LOCK_EX)` on writes to prevent races between concurrent Claude Code sessions.
-- **Plan integrity** — `devboard_verify_plan_integrity` re-computes SHA256 over `problem + non_goals + scope_decision + architecture + goal_checklist + atomic_steps` and compares to stored hash. Detects any post-lock modification.
-- **Approval gate** — `devboard_lock_plan` refuses if `plan_review.json` is missing or `status != approved`. Plans cannot be locked without explicit sign-off.
+- **Plan integrity** — `agentboard_verify_plan_integrity` re-computes SHA256 over `problem + non_goals + scope_decision + architecture + goal_checklist + atomic_steps` and compares to stored hash. Detects any post-lock modification.
+- **Approval gate** — `agentboard_lock_plan` refuses if `plan_review.json` is missing or `status != approved`. Plans cannot be locked without explicit sign-off.
 
 ---
 
@@ -425,17 +425,17 @@ All of this is observable in:
 
 6 pillars:
 
-1. **Honest over hopeful** — no "should work" claims; `devboard_verify` runs real pytest, every time
+1. **Honest over hopeful** — no "should work" claims; `agentboard_verify` runs real pytest, every time
 2. **Decisions are first-class artifacts** — *why* is queryable via `decisions.jsonl`; the arc is readable in Confluence
 3. **The loop is the product** — quality comes from iteration + review + reflection
 4. **Human as orchestrator** — Claude Code is the conversation; you redirect, approve, and sign off
-5. **Time-reversible** — every state transition checkpointed; any iteration replayable via `devboard_replay`
+5. **Time-reversible** — every state transition checkpointed; any iteration replayable via `agentboard_replay`
 6. **Local trust, remote ceremony** — loose locally, strict at `git push` / PR boundary
 
 Superpowers/gstack-inspired enforcements on top:
 
 - **Iron Law of TDD** — no production code without a failing test first
-- **Evidence over claims** — `devboard_verify` runs real pytest, not just reasoning
+- **Evidence over claims** — `agentboard_verify` runs real pytest, not just reasoning
 - **Systematic debugging** — 4-phase RCA, no quick fixes
 - **Confidence-gated security** — CSO reports findings only at ≥7/10 confidence
 - **Escalation on repeat failure** — 3× same symptom → rerun Gauntlet, not more iterations
@@ -460,10 +460,10 @@ CI runs Python 3.11 + 3.12 on every push to `main` (`.github/workflows/ci.yml`).
 
 ---
 
-## What's in `src/devboard/`?
+## What's in `src/agentboard/`?
 
 ```
-src/devboard/
+src/agentboard/
 ├── cli.py                    # Typer CLI (observability + installer)
 ├── mcp_server.py             # MCP stdio server — 30 tools (no LLM calls)
 ├── install.py                # copy skills/hooks, emit .mcp.json + settings.json

@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
 
-def register(app: "DevBoardApp") -> None:
+def register(app: "AgentBoardApp") -> None:
     app.commands.register("learn", ["query"], lambda *query: _run(app, " ".join(query)))
 
 
-def _run(app: "DevBoardApp", query: str) -> None:
+def _run(app: "AgentBoardApp", query: str) -> None:
     """v2.1: Learnings tab removed. :learn <query> shows a count hint in
     the command line (full render deferred until a dedicated pane in v2.2)."""
     from agentboard.memory.learnings import search_learnings

@@ -1,4 +1,4 @@
-"""End-to-end CLI test for `devboard export`."""
+"""End-to-end CLI test for `agentboard export`."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def test_cli_export_unknown_goal_exits_nonzero(tmp_path: Path) -> None:
 
 # ---------------------------------------------------------------------------
 # Report source (s_005/s_006/s_007) — new path:
-#   `devboard export <gid> --source report` reads report.md verbatim
+#   `agentboard export <gid> --source report` reads report.md verbatim
 #   (no format rendering; the file is already Markdown).
 # Keeps the legacy plan.md export above unchanged.
 # ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ def _bootstrap_with_report(tmp_path: Path, body: str, goal_id: str = "g_rep") ->
 
 
 def test_export_stdout_prints_report_md(tmp_path: Path) -> None:
-    """s_005 — `devboard export <gid> --source report` must emit report.md
+    """s_005 — `agentboard export <gid> --source report` must emit report.md
     verbatim to stdout (no markdown → X renderer; report is already MD)."""
     _bootstrap_with_report(tmp_path, "SENTINEL_REPORT_S005\n\n본문.\n")
     runner = CliRunner()
@@ -180,7 +180,7 @@ def test_export_rejects_output_path_outside_cwd(tmp_path: Path) -> None:
     """redteam FM#2 — `--output <path>` must stay within cwd/project_root.
     Absolute paths outside the project root or paths resolving above the
     project root must be refused so a shipping script cannot use
-    `devboard export` as a write primitive."""
+    `agentboard export` as a write primitive."""
     import os
 
     _bootstrap_with_report(tmp_path, "body\n")

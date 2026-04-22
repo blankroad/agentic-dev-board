@@ -52,7 +52,7 @@ class TaskView(Widget):
                 lines.append(f"  [dim]☐[/dim] {item}")
             checklist_widget.update("\n".join(lines))
         else:
-            checklist_widget.update("[dim]No locked plan yet — run: devboard goal plan[/dim]")
+            checklist_widget.update("[dim]No locked plan yet — run: agentboard goal plan[/dim]")
 
     def add_iteration(self, n: int, verdict: str, plan_preview: str, test_preview: str) -> None:
         table = self.query_one("#iter-table", DataTable)

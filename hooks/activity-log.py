@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PostToolUse hook — captures every tool invocation to .devboard/activity.jsonl
 so the trial-and-error process (not just final decisions) is reviewable via
-`devboard activity`.
+`agentboard activity`.
 
 Recorded for each call: timestamp, tool, key input fields, error flag, and a
 short result preview. Large outputs are truncated.
@@ -48,7 +48,7 @@ def _summarize(tool_name: str, tool_input: dict, tool_response: dict) -> dict:
                     break
     elif t == "Read":
         summary["path"] = tool_input.get("file_path", "") or tool_input.get("path", "")
-    elif t.startswith("mcp__") or "devboard" in t.lower():
+    elif t.startswith("mcp__") or "agentboard" in t.lower():
         summary["mcp_tool"] = t
         # MCP tools often return JSON — try to capture warnings
         if isinstance(tool_response, dict):

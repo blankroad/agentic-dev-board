@@ -36,7 +36,7 @@ class RetroReport:
     blocked_runs: int = 0
 
     def to_markdown(self) -> str:
-        lines = [f"# devboard Retrospective", f"_generated: {self.generated_at}_", ""]
+        lines = [f"# agentboard Retrospective", f"_generated: {self.generated_at}_", ""]
         lines.append(f"## Runs")
         lines.append(f"- Total runs: **{self.total_runs}**")
         lines.append(f"- Converged: **{self.converged_runs}**")

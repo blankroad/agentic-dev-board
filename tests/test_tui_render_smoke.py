@@ -3,7 +3,7 @@
 Covers _strip_ansi + _detect_traceback unit logic, run_tui_smoke public
 shape, pty-unavailable graceful skip, subprocess env injection, MCP
 server registration, and an optional real-subprocess integration
-smoke (skipped if the `devboard` binary isn't on PATH).
+smoke (skipped if the `agentboard` binary isn't on PATH).
 """
 
 from __future__ import annotations
@@ -132,14 +132,14 @@ def test_mcp_server_registers_tui_render_smoke() -> None:
 
 
 # ------------------------------------------------------------------
-# s_010 — real integration: mount on current project (skipped if devboard absent)
+# s_010 — real integration: mount on current project (skipped if agentboard absent)
 # ------------------------------------------------------------------
 @pytest.mark.skipif(
     shutil.which("agentboard") is None, reason="agentboard binary not on PATH"
 )
 def test_run_tui_smoke_mounts_current_project() -> None:
     """# guards: ui-requires-real-tty-smoke-not-just-pytest
-    edge: real-TTY divergence category — actually spawn devboard board briefly."""
+    edge: real-TTY divergence category — actually spawn agentboard board briefly."""
     from agentboard.mcp_tools.tui_smoke import run_tui_smoke
 
     result = run_tui_smoke(Path.cwd(), timeout_s=3)

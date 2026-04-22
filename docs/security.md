@@ -33,7 +33,7 @@ them an attack surface for prompt injection.
   `load_run`, `get_session`, `get_chapter`). Rejects `..`, `/`, `\` in
   rid. Source: `src/agentboard/storage/file_store.py:18`.
 
-- **`is_relative_to(devboard_resolved)` post-resolve**: catches
+- **`is_relative_to(agentboard_resolved)` post-resolve**: catches
   symlinked run dirs pointing outside `.devboard/`. Source:
   `src/agentboard/storage/file_store.py:load_run`.
 

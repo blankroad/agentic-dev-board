@@ -16,7 +16,7 @@ when_to_use: |
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized in this project:
+Before any other action, verify agentboard is initialized in this project:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING

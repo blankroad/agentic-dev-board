@@ -40,8 +40,8 @@ async def test_mcp_calls_logged_per_dispatch(tmp_path: Path) -> None:
         assert "duration_ms" in entry
         assert "bytes_returned" in entry
         assert entry["tool"] in (
-            "agentboard_get_session", "devboard_get_session",
-            "agentboard_get_chapter", "devboard_get_chapter",
+            "agentboard_get_session", "agentboard_get_session",
+            "agentboard_get_chapter", "agentboard_get_chapter",
         )
 
 
@@ -65,9 +65,9 @@ async def test_telemetry_failure_swallowed(tmp_path: Path, monkeypatch) -> None:
 
     # Make mcp_calls.jsonl unwritable: create as a directory with that name,
     # which causes open(..., 'a') to fail with IsADirectoryError.
-    devboard = tmp_path / ".devboard"
-    devboard.mkdir(parents=True, exist_ok=True)
-    bad_log = devboard / "mcp_calls.jsonl"
+    agentboard = tmp_path / ".devboard"
+    agentboard.mkdir(parents=True, exist_ok=True)
+    bad_log = agentboard / "mcp_calls.jsonl"
     bad_log.mkdir()  # directory instead of file → append will fail
 
     # Primary dispatch must still succeed

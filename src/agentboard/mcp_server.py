@@ -1,4 +1,4 @@
-"""MCP server exposing devboard's deterministic operations as tools.
+"""MCP server exposing agentboard's deterministic operations as tools.
 
 Claude Code (or any MCP client) connects via stdio. Tools wrap existing
 Python functions — no LLM calls happen inside this server. The client
@@ -162,7 +162,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_start_task",
-            description="Create a new Task for a goal and start a new run. Returns {task_id, run_id}. The run_id is used for subsequent devboard_checkpoint calls. Call this ONCE per implementation session, after devboard_lock_plan but before the first TDD cycle.",
+            description="Create a new Task for a goal and start a new run. Returns {task_id, run_id}. The run_id is used for subsequent agentboard_checkpoint calls. Call this ONCE per implementation session, after agentboard_lock_plan but before the first TDD cycle.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -501,7 +501,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_build_overview",
-            description="Build OverviewPayload dict from on-disk devboard artifacts (plan.json, brainstorm.md, decisions.jsonl, changes/iter_N.diff, learnings.jsonl). Pure, read-only. Used by TUI center-panel 5-tab view. Returns purpose, plan_digest, iterations, current_state, learnings, followups.",
+            description="Build OverviewPayload dict from on-disk agentboard artifacts (plan.json, brainstorm.md, decisions.jsonl, changes/iter_N.diff, learnings.jsonl). Pure, read-only. Used by TUI center-panel 5-tab view. Returns purpose, plan_digest, iterations, current_state, learnings, followups.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -532,7 +532,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_diagnose",
-            description="Diagnostic — did devboard skills actually fire? Compares expected events against observed. Returns skill_activation_score + missing events + suggestions.",
+            description="Diagnostic — did agentboard skills actually fire? Compares expected events against observed. Returns skill_activation_score + missing events + suggestions.",
             inputSchema={
                 "type": "object",
                 "properties": {"project_root": {"type": "string"}},
@@ -587,10 +587,10 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="agentboard_tui_render_smoke",
             description=(
-                "Spawn `devboard board` in a real pty for timeout_s seconds, "
+                "Spawn `agentboard board` in a real pty for timeout_s seconds, "
                 "send Ctrl+Q, capture output, detect Python tracebacks. "
                 "Returns {mounted, crashed, traceback, captured_bytes, duration_s} "
-                "or {skipped_reason} if pty/devboard unavailable. POSIX-only."
+                "or {skipped_reason} if pty/agentboard unavailable. POSIX-only."
             ),
             inputSchema={
                 "type": "object",
@@ -604,10 +604,10 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="agentboard_tui_capture_snapshot",
             description=(
-                "Capture a plain-text (and optionally SVG) frame of DevBoardApp "
+                "Capture a plain-text (and optionally SVG) frame of AgentBoardApp "
                 "via Textual Pilot in-process. Presses `keys` sequentially after "
                 "mount, then extracts compositor output from export_screenshot. "
-                "Companion to devboard_tui_render_smoke — smoke is a crash gate, "
+                "Companion to agentboard_tui_render_smoke — smoke is a crash gate, "
                 "this is frame extraction. Used by agentboard-ui-preview skill at "
                 "Layer 1 (text) and Layer 2 (SVG). Returns {scene_id, text, svg, "
                 "saved_txt, saved_svg, crashed, traceback, duration_s}."
@@ -724,12 +724,10 @@ def _append_mcp_call_log(project_root: str, entry: dict) -> None:
 
 @server.call_tool()
 async def call_tool(name: str, args: dict) -> list[TextContent]:
-    # Accept both `agentboard_*` (canonical) and `devboard_*` (legacy alias)
-    # so skills can migrate incrementally and MCP-server restarts don't
-    # break in-flight Claude sessions that already cached old tool names.
+    # Canonical tool names are `agentboard_*`. The legacy `devboard_*` prefix
+    # translator was removed in the great rename; dispatch branches below
+    # now match agentboard_* directly.
     original_name = name
-    if name.startswith("agentboard_"):
-        name = "devboard_" + name[len("agentboard_"):]
 
     import time as _time
     start = _time.monotonic()
@@ -764,12 +762,12 @@ async def call_tool(name: str, args: dict) -> list[TextContent]:
 
 async def _dispatch(name: str, args: dict) -> list[TextContent]:
     # ── init & goals ──────────────────────────────────────────────────────────
-    if name == "devboard_init":
+    if name == "agentboard_init":
         root = Path(args["project_root"]).resolve()
-        devboard = root / ".devboard"
-        if devboard.exists():
+        agentboard = root / ".devboard"
+        if agentboard.exists():
             return _text({"status": "already_initialized", "root": str(root)})
-        for d in [devboard / "goals", devboard / "runs", devboard / "learnings", devboard / "retros"]:
+        for d in [agentboard / "goals", agentboard / "runs", agentboard / "learnings", agentboard / "retros"]:
             d.mkdir(parents=True)
         store = FileStore(root)
         board = BoardState()
@@ -781,10 +779,10 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         additions = [e for e in entries if e not in existing]
         if additions:
             with open(gi, "a") as f:
-                f.write("\n# devboard\n" + "\n".join(additions) + "\n")
+                f.write("\n# agentboard\n" + "\n".join(additions) + "\n")
         return _text({"status": "initialized", "board_id": board.board_id, "root": str(root)})
 
-    if name == "devboard_add_goal":
+    if name == "agentboard_add_goal":
         store = _store(args["project_root"])
         board = store.load_board()
         parent_id = args.get("parent_id")
@@ -803,7 +801,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         store.save_board(board)
         return _text({"goal_id": goal.id, "title": goal.title, "active": board.active_goal_id == goal.id})
 
-    if name == "devboard_list_goals":
+    if name == "agentboard_list_goals":
         store = _store(args["project_root"])
         board = store.load_board()
         goals = [
@@ -816,7 +814,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         ]
         return _text({"board_id": board.board_id, "goals": goals})
 
-    if name == "devboard_update_task_status":
+    if name == "agentboard_update_task_status":
         store = _store(args["project_root"])
         # Find task
         board = store.load_board()
@@ -836,7 +834,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
                     })
         return _text({"error": f"task {task_id} not found"})
 
-    if name == "devboard_start_task":
+    if name == "agentboard_start_task":
         import uuid
         from agentboard.models import Task
         store = _store(args["project_root"])
@@ -873,7 +871,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "goal_id": goal_id,
         })
 
-    if name == "devboard_checkpoint":
+    if name == "agentboard_checkpoint":
         store = _store(args["project_root"])
         run_id = args["run_id"]
         event = args["event"]
@@ -968,7 +966,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "warnings": warnings,
         })
 
-    if name == "devboard_resume_run":
+    if name == "agentboard_resume_run":
         store = _store(args["project_root"])
         run_id = args["run_id"]
         run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
@@ -999,11 +997,11 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         })
 
     # ── plans ─────────────────────────────────────────────────────────────────
-    if name == "devboard_lock_plan":
+    if name == "agentboard_lock_plan":
         store = _store(args["project_root"])
         review = store.load_plan_review(args["goal_id"])
         if review is None or review.get("status") != "approved":
-            return _text({"error": "plan approval required before locking. Call devboard_approve_plan first."})
+            return _text({"error": "plan approval required before locking. Call agentboard_approve_plan first."})
         brainstorm_path = store._goals_dir(args["goal_id"]) / "brainstorm.md"
         warnings: list[str] = []
         if not brainstorm_path.exists():
@@ -1031,14 +1029,14 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "warnings": warnings,
         })
 
-    if name == "devboard_load_plan":
+    if name == "agentboard_load_plan":
         store = _store(args["project_root"])
         plan = store.load_locked_plan(args["goal_id"])
         if plan is None:
             return _text({"error": f"no plan for goal {args['goal_id']}"})
         return _text(plan.model_dump())
 
-    if name == "devboard_verify_plan_integrity":
+    if name == "agentboard_verify_plan_integrity":
         store = _store(args["project_root"])
         plan = store.load_locked_plan(args["goal_id"])
         if plan is None:
@@ -1053,7 +1051,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         })
 
     # ── decisions & diffs ─────────────────────────────────────────────────────
-    if name == "devboard_log_decision":
+    if name == "agentboard_log_decision":
         store = _store(args["project_root"])
         entry = DecisionEntry(
             iter=args["iter"],
@@ -1107,7 +1105,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
 
         return _text({"status": "logged", "phase": args["phase"], "iter": args["iter"]})
 
-    if name == "devboard_log_parallel_review":
+    if name == "agentboard_log_parallel_review":
         required = [
             "project_root", "task_id", "iter",
             "cso_verdict", "redteam_verdict", "overall",
@@ -1164,18 +1162,18 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "iter": args["iter"],
         })
 
-    if name == "devboard_load_decisions":
+    if name == "agentboard_load_decisions":
         store = _store(args["project_root"])
         entries = store.load_decisions(args["task_id"])
         return _text([e.model_dump() for e in entries])
 
-    if name == "devboard_save_iter_diff":
+    if name == "agentboard_save_iter_diff":
         store = _store(args["project_root"])
         store.save_iter_diff(args["task_id"], args["iter_n"], args["diff"])
         return _text({"status": "saved", "task_id": args["task_id"], "iter_n": args["iter_n"]})
 
     # ── verification & safety ─────────────────────────────────────────────────
-    if name == "devboard_verify":
+    if name == "agentboard_verify":
         report = verify_checklist(
             checklist=args["checklist"],
             project_root=Path(args["project_root"]).resolve(),
@@ -1197,7 +1195,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "summary_markdown": report.summary(),
         })
 
-    if name == "devboard_check_iron_law":
+    if name == "agentboard_check_iron_law":
         calls = [
             ToolCall(tool_name=tc["tool_name"], tool_input=tc["tool_input"], result="")
             for tc in args["tool_calls"]
@@ -1210,7 +1208,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "test_writes": verdict.test_writes,
         })
 
-    if name == "devboard_check_command_safety":
+    if name == "agentboard_check_command_safety":
         verdict = check_command(args["command"])
         return _text({
             "level": verdict.level,
@@ -1218,20 +1216,20 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "reason": verdict.reason,
         })
 
-    if name == "devboard_check_security_sensitive":
+    if name == "agentboard_check_security_sensitive":
         from agentboard.security.sensitivity import check_security_sensitive
         return _text(check_security_sensitive(args["diff"]))
 
-    if name == "devboard_check_dependencies":
+    if name == "agentboard_check_dependencies":
         from agentboard.security.dependencies import check_dependencies
         return _text(check_dependencies(Path(args["project_root"]).resolve()))
 
     # ── approval & push ───────────────────────────────────────────────────────
-    if name == "devboard_get_diff_stats":
+    if name == "agentboard_get_diff_stats":
         stats = get_diff_stats(Path(args["project_root"]).resolve())
         return _text({"diff_stats": stats})
 
-    if name == "devboard_build_pr_body":
+    if name == "agentboard_build_pr_body":
         store = _store(args["project_root"])
         plan = store.load_locked_plan(args["goal_id"])
         decisions = store.load_decisions(args["task_id"])
@@ -1243,7 +1241,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text({"pr_body": body})
 
-    if name == "devboard_apply_squash_policy":
+    if name == "agentboard_apply_squash_policy":
         ok = apply_squash_policy(
             project_root=Path(args["project_root"]).resolve(),
             branch=args["branch"],
@@ -1253,7 +1251,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text({"applied": ok, "policy": args["policy"]})
 
-    if name == "devboard_push_pr":
+    if name == "agentboard_push_pr":
         result = push_and_create_pr(
             project_root=Path(args["project_root"]).resolve(),
             branch=args["branch"],
@@ -1270,7 +1268,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         })
 
     # ── learnings ─────────────────────────────────────────────────────────────
-    if name == "devboard_save_learning":
+    if name == "agentboard_save_learning":
         store = _store(args["project_root"])
         path = save_learning(
             store,
@@ -1283,7 +1281,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text({"status": "saved", "path": str(path)})
 
-    if name == "devboard_search_learnings":
+    if name == "agentboard_search_learnings":
         store = _store(args["project_root"])
         results = search_learnings(
             store,
@@ -1299,7 +1297,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             for l in results
         ])
 
-    if name == "devboard_relevant_learnings":
+    if name == "agentboard_relevant_learnings":
         store = _store(args["project_root"])
         md = load_relevant_learnings(
             store,
@@ -1309,7 +1307,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         return _text({"markdown": md})
 
     # ── retro & replay ────────────────────────────────────────────────────────
-    if name == "devboard_generate_retro":
+    if name == "agentboard_generate_retro":
         store = _store(args["project_root"])
         report = generate_retro(
             store,
@@ -1322,7 +1320,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             saved_path = str(save_retro(store, report))
         return _text({"markdown": md, "saved_path": saved_path})
 
-    if name == "devboard_build_overview":
+    if name == "agentboard_build_overview":
         from agentboard.analytics.overview_payload import build_overview_payload
 
         payload = build_overview_payload(
@@ -1332,17 +1330,17 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text(dict(payload))
 
-    if name == "devboard_list_runs":
+    if name == "agentboard_list_runs":
         store = _store(args["project_root"])
         runs = list_runs(store)
         return _text(runs)
 
-    if name == "devboard_metrics":
+    if name == "agentboard_metrics":
         store = _store(args["project_root"])
         m = collect_metrics(store)
         return _text({"dict": m.to_dict(), "markdown": m.to_markdown()})
 
-    if name == "devboard_diagnose":
+    if name == "agentboard_diagnose":
         store = _store(args["project_root"])
         result = diagnose_activations(store)
         return _text({
@@ -1352,7 +1350,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "markdown": result.to_markdown(),
         })
 
-    if name == "devboard_replay":
+    if name == "agentboard_replay":
         store = _store(args["project_root"])
         # Need a plan to branch against — assume the source run referenced a goal
         board = store.load_board()
@@ -1387,7 +1385,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "initial_state": initial_state,
         })
 
-    if name == "devboard_save_brainstorm":
+    if name == "agentboard_save_brainstorm":
         store = _store(args["project_root"])
         goal_id = args["goal_id"]
         if store.load_goal(goal_id) is None:
@@ -1401,7 +1399,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text({"status": "saved", "goal_id": goal_id})
 
-    if name == "devboard_approve_plan":
+    if name == "agentboard_approve_plan":
         store = _store(args["project_root"])
         goal_id = args["goal_id"]
         if store.load_goal(goal_id) is None:
@@ -1414,7 +1412,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         status = "approved" if approved else "revision_pending"
         return _text({"status": status, "goal_id": goal_id})
 
-    if name == "devboard_tui_render_smoke":
+    if name == "agentboard_tui_render_smoke":
         from agentboard.mcp_tools.tui_smoke import run_tui_smoke
 
         result = run_tui_smoke(
@@ -1423,7 +1421,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text(result)
 
-    if name == "devboard_tui_capture_snapshot":
+    if name == "agentboard_tui_capture_snapshot":
         from agentboard.mcp_tools.tui_capture import run as run_tui_capture
 
         result = run_tui_capture(
@@ -1437,13 +1435,13 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         )
         return _text(result)
 
-    if name == "devboard_generate_narrative":
+    if name == "agentboard_generate_narrative":
         from agentboard.mcp_tools.generate_narrative import run_generate_narrative
 
         return _text(run_generate_narrative(args))
 
     # ── M2-fleet-data: fleet snapshot ──────────────────────────────────
-    if name == "devboard_fleet_snapshot":
+    if name == "agentboard_fleet_snapshot":
         from agentboard.analytics.fleet_aggregator import load_fleet
         store = _store(args["project_root"])
         summaries = load_fleet(store)
@@ -1453,7 +1451,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         })
 
     # ── M1a-data: pile read tools ───────────────────────────────────────
-    if name == "devboard_get_session":
+    if name == "agentboard_get_session":
         store = _store(args["project_root"])
         rid = args["rid"]
         try:
@@ -1496,7 +1494,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "content": session_path.read_text(encoding="utf-8"),
         })
 
-    if name == "devboard_get_chapter":
+    if name == "agentboard_get_chapter":
         store = _store(args["project_root"])
         rid = args["rid"]
         chapter = args.get("chapter", "").strip().lower()

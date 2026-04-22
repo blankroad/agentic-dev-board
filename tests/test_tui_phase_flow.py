@@ -490,15 +490,15 @@ async def test_dev_badge_shows_count_over_total(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_app_center_col_mounts_phase_flow_view(tmp_path: Path) -> None:
-    """s_016: DevBoardApp.compose yields a PhaseFlowView with id='phase-flow'
+    """s_016: AgentBoardApp.compose yields a PhaseFlowView with id='phase-flow'
     inside center-col, replacing the legacy PlanMarkdown + ActivityTimeline
     pair.
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.phase_flow import PhaseFlowView
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
         await pilot.pause()
         flow = app.query_one("#phase-flow", PhaseFlowView)
@@ -516,14 +516,14 @@ async def test_app_center_col_mounts_phase_flow_view(tmp_path: Path) -> None:
 async def test_app_on_stream_event_delegates_to_phase_flow_handle_tick(
     tmp_path: Path,
 ) -> None:
-    """s_017: DevBoardApp.on_stream_event invokes
+    """s_017: AgentBoardApp.on_stream_event invokes
     phase_flow_view.handle_tick() at least once per event.
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.phase_flow import PhaseFlowView
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
         await pilot.pause()
         flow = app.query_one("#phase-flow", PhaseFlowView)
@@ -547,14 +547,14 @@ async def test_app_on_stream_event_delegates_to_phase_flow_handle_tick(
 async def test_app_refresh_for_active_goal_reloads_phase_flow(
     tmp_path: Path,
 ) -> None:
-    """s_018: DevBoardApp.refresh_for_active_goal calls
+    """s_018: AgentBoardApp.refresh_for_active_goal calls
     phase_flow_view.refresh_content().
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.phase_flow import PhaseFlowView
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
         await pilot.pause()
         flow = app.query_one("#phase-flow", PhaseFlowView)
@@ -620,21 +620,21 @@ async def test_review_tab_accepts_canonical_review_phase(tmp_path: Path) -> None
 
 @pytest.mark.asyncio
 async def test_number_keys_work_in_real_agentboard_app(tmp_path: Path) -> None:
-    """s_022 CRITICAL: when the real DevBoardApp boots, initial focus goes
+    """s_022 CRITICAL: when the real AgentBoardApp boots, initial focus goes
     to the sidebar ListView (#resources-goals, see app.py:154). Widget-
     level BINDINGS with priority=True on PhaseFlowView then fail to fire
     for character keys like '2' — repro verified at red-team round 1.
 
-    Fix: promote 1/2/3/4 to DevBoardApp.BINDINGS (same pattern as
+    Fix: promote 1/2/3/4 to AgentBoardApp.BINDINGS (same pattern as
     ctrl+p) so they survive any focus chain.
 
     # guards: widget-binding-focus-chain
     """
     _mk_goal(tmp_path, "g1", plan_md="# P")
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from textual.widgets import TabbedContent
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(160, 40)) as pilot:
         await pilot.pause()
         tc = app.query_one("#phase-flow").query_one(TabbedContent)
@@ -646,7 +646,7 @@ async def test_number_keys_work_in_real_agentboard_app(tmp_path: Path) -> None:
         await pilot.press("3")
         await pilot.pause()
         assert tc.active == "dev", (
-            f"press('3') in real DevBoardApp must switch to Dev tab regardless "
+            f"press('3') in real AgentBoardApp must switch to Dev tab regardless "
             f"of sidebar focus; active={tc.active!r}"
         )
 

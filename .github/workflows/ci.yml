@@ -30,4 +30,4 @@ jobs:
         run: pytest --tb=short -q
 
       - name: Check MCP server imports cleanly
-        run: python -c "from devboard.mcp_server import main; print('MCP server OK')"
+        run: python -c "from agentboard.mcp_server import main; print('MCP server OK')"

@@ -4,7 +4,7 @@
 guards: pilot-test-must-not-mask-default-focus-bug
         (learnings/pilot-test-must-not-mask-default-focus-bug.md)
 
-Every test drives the app through DevBoardApp's F binding and then
+Every test drives the app through AgentBoardApp's F binding and then
 presses keys as the user would, WITHOUT calling .focus() on the
 widget under test. This mirrors the real TTY boot path.
 """
@@ -55,11 +55,11 @@ def tmp_project(tmp_path: Path) -> Path:
 
 async def test_fleet_screen_mount_focuses_list_pane(tmp_project: Path) -> None:
     """s_006: FleetScreen mount explicitly focuses FleetListPane so ↓ reaches it."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_screen import FleetScreen
     from agentboard.tui.fleet_view import FleetListPane
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()
@@ -74,10 +74,10 @@ async def test_fleet_screen_real_user_flow_f_down_without_explicit_focus(
     tmp_project: Path,
 ) -> None:
     """s_007: F opens, down moves selection WITHOUT any .focus() cheat."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_view import FleetListPane
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()
@@ -92,10 +92,10 @@ async def test_fleet_screen_real_user_flow_f_down_without_explicit_focus(
 
 async def test_fleet_screen_enter_activates_goal_and_pops(tmp_project: Path) -> None:
     """s_008: Enter on a row pops FleetScreen + sets session.active_goal_id."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_screen import FleetScreen
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()
@@ -112,10 +112,10 @@ async def test_fleet_screen_enter_activates_goal_and_pops(tmp_project: Path) -> 
 
 async def test_fleet_screen_unmount_cancels_tail_interval(tmp_project: Path) -> None:
     """s_009: on_unmount cancels the tail-worker interval timer."""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
     from agentboard.tui.fleet_screen import FleetScreen
 
-    app = DevBoardApp(store_root=tmp_project)
+    app = AgentBoardApp(store_root=tmp_project)
     async with app.run_test() as pilot:
         await pilot.press("F")
         await pilot.pause()

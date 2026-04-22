@@ -36,7 +36,7 @@ def test_approval_guards_on_ui_surface_metadata() -> None:
 def test_approval_handles_skipped_reason() -> None:
     """# guards: edge-case-red-rule
     edge: real-TTY divergence — when tui_render_smoke returns skipped_reason
-    (no pty, no devboard binary), approval must not write an empty Screenshots
+    (no pty, no agentboard binary), approval must not write an empty Screenshots
     section or crash."""
     text = _text().lower()
     assert "skipped_reason" in text or "skipped" in text

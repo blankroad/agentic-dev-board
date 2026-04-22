@@ -8,7 +8,7 @@ from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Footer
 
-from agentboard.config import DevBoardConfig, load_config
+from agentboard.config import AgentBoardConfig, load_config
 from agentboard.models import BoardState
 from agentboard.storage.file_store import FileStore
 from agentboard.tui.activity_row import ActivityRow
@@ -33,7 +33,7 @@ from agentboard.tui.session_derive import SessionContext
 from agentboard.tui.status_bar import StatusBar
 
 
-class DevBoardApp(App):
+class AgentBoardApp(App):
     """v2.3 phase-flow cockpit (right column removed).
 
     Layout:
@@ -88,9 +88,9 @@ class DevBoardApp(App):
         except Exception:
             self._board = BoardState()
         try:
-            self._config: DevBoardConfig = load_config(store_root)
+            self._config: AgentBoardConfig = load_config(store_root)
         except Exception:
-            self._config = DevBoardConfig()
+            self._config = AgentBoardConfig()
         self.commands = CommandRegistry()
         self._session = SessionContext(store_root)
         self._task_id: str | None = self._pick_task_id()
@@ -159,11 +159,11 @@ class DevBoardApp(App):
         except Exception:
             pass
         # wire tail worker for live updates (throttled single-line StatusBar only)
-        devboard_dir = self._store_root / ".devboard"
-        if devboard_dir.exists():
+        agentboard_dir = self._store_root / ".devboard"
+        if agentboard_dir.exists():
             from agentboard.tui.tail_worker import RunTailWorker
 
-            self._tail_worker = RunTailWorker(self, devboard_dir / "runs")
+            self._tail_worker = RunTailWorker(self, agentboard_dir / "runs")
             self.set_interval(0.1, self._tail_worker.poll_once)
 
     def on_stream_event(self, text: str, color: str | None) -> None:
@@ -339,5 +339,5 @@ class DevBoardApp(App):
 
 
 def run_tui(store_root: Path) -> None:
-    app = DevBoardApp(store_root=store_root)
+    app = AgentBoardApp(store_root=store_root)
     app.run()

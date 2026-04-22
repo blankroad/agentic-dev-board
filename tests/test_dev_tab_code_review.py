@@ -172,9 +172,9 @@ async def test_phase_flow_dev_tab_mounts_new_widgets() -> None:
     """s_009 — DevFileTree, DevDiffViewer, DevIssuesPane are mounted in
     PhaseFlowView's Dev tab.
     guards: unit-tests-on-primitives-dont-prove-integration"""
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
-    app = DevBoardApp(store_root=REPO)
+    app = AgentBoardApp(store_root=REPO)
     async with app.run_test() as pilot:
         await pilot.pause()
         # NOTE: issues pane uses id=dev-body (legacy name retained for

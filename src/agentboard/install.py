@@ -1,5 +1,5 @@
 """Installer — copy skills to ~/.claude/skills/ (global) or ./.claude/skills/ (project),
-install hooks, and emit .mcp.json config. Makes devboard portable across Claude Code
+install hooks, and emit .mcp.json config. Makes agentboard portable across Claude Code
 projects and (with format compatibility) OpenCode / Copilot CLI / other skill-aware agents.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def _repo_root() -> Path:
-    # src/devboard/install.py → repo root is two levels up
+    # src/agentboard/install.py → repo root is two levels up
     return Path(__file__).resolve().parent.parent.parent
 
 
@@ -18,9 +18,9 @@ def _skills_src() -> Path:
     """Find skills/ — try repo layout first, then installed-wheel shared-data."""
     candidates = [
         _repo_root() / "skills",                                    # dev install (pip install -e .)
-        Path(__file__).resolve().parent.parent.parent.parent.parent / "share" / "devboard" / "skills",  # wheel
+        Path(__file__).resolve().parent.parent.parent.parent.parent / "share" / "agentboard" / "skills",  # wheel
         Path("/usr/local/share/agentboard/skills"),                   # system install
-        Path.home() / ".local" / "share" / "devboard" / "skills",   # user install
+        Path.home() / ".local" / "share" / "agentboard" / "skills",   # user install
     ]
     for c in candidates:
         if c.exists() and any(c.iterdir()):
@@ -32,9 +32,9 @@ def _skills_src() -> Path:
 def _hooks_src() -> Path:
     candidates = [
         _repo_root() / "hooks",
-        Path(__file__).resolve().parent.parent.parent.parent.parent / "share" / "devboard" / "hooks",
+        Path(__file__).resolve().parent.parent.parent.parent.parent / "share" / "agentboard" / "hooks",
         Path("/usr/local/share/agentboard/hooks"),
-        Path.home() / ".local" / "share" / "devboard" / "hooks",
+        Path.home() / ".local" / "share" / "agentboard" / "hooks",
     ]
     for c in candidates:
         if c.exists() and any(c.iterdir()):
@@ -99,17 +99,13 @@ def emit_mcp_config(target_dir: Path, python_bin: str | None = None) -> Path:
             pass
 
     servers = existing.setdefault("mcpServers", {})
+    # Clean up legacy "devboard" entry if present — the package was renamed.
+    if "devboard" in servers:
+        del servers["devboard"]
     servers["agentboard"] = {
         "command": python_bin or sys.executable,
         "args": ["-m", "agentboard.mcp_server"],
     }
-    # Clean up legacy "devboard" entry when it's the same server — avoids
-    # users seeing two copies of the same tools after upgrade.
-    if (
-        "devboard" in servers
-        and servers.get("devboard", {}).get("args") == ["-m", "agentboard.mcp_server"]
-    ):
-        del servers["devboard"]
     config_path.write_text(json.dumps(existing, indent=2) + "\n")
     return config_path
 
@@ -187,7 +183,7 @@ def emit_settings_hooks(target_dir: Path) -> Path:
                 "command": ".claude/hooks/iron-law-check.sh",
             }],
         })
-    # Activity log for ALL tools — gives devboard activity the full trial-and-error trail
+    # Activity log for ALL tools — gives agentboard activity the full trial-and-error trail
     if not any(
         any(h.get("command", "").endswith("activity-log.py") for h in entry.get("hooks", []))
         for entry in post_use

@@ -1,6 +1,6 @@
-"""MCP dispatch wrapper for devboard_generate_narrative.
+"""MCP dispatch wrapper for agentboard_generate_narrative.
 
-Thin layer over `devboard.narrative.generator.generate_narrative`: validates
+Thin layer over `agentboard.narrative.generator.generate_narrative`: validates
 MCP arguments (per `mcp-required-field-check-must-reject-none` learning),
 invokes the deterministic assembler, and returns a JSON-serializable dict
 with the written `plan_summary_path` plus per-section citation counts.

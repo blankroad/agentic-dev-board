@@ -3,7 +3,7 @@
 ## Architecture
 
 ```
-src/devboard/
+src/agentboard/
   mcp_server.py      — 22 MCP tools (state mgmt, plan lock, verify, iron law). No LLM calls.
   cli.py             — Typer CLI: init, board (TUI), watch, timeline, decisions, replay, retro
   models.py          — Pydantic models: LockedPlan, AtomicStep, BoardState, Goal
@@ -64,10 +64,10 @@ Key routing rules:
 
 | Area | File |
 |------|------|
-| Plan locking / hash | `src/devboard/gauntlet/lock.py`, `src/devboard/models.py:108` |
-| MCP tool dispatch | `src/devboard/mcp_server.py:call_tool` |
-| File I/O safety | `src/devboard/storage/file_store.py` |
-| Iron Law check | `src/devboard/agents/iron_law.py` |
+| Plan locking / hash | `src/agentboard/gauntlet/lock.py`, `src/agentboard/models.py:108` |
+| MCP tool dispatch | `src/agentboard/mcp_server.py:call_tool` |
+| File I/O safety | `src/agentboard/storage/file_store.py` |
+| Iron Law check | `src/agentboard/agents/iron_law.py` |
 | TDD skill | `skills/agentboard-tdd/SKILL.md` |
 
 ## Known deferred issues

@@ -41,7 +41,7 @@ class TDDConfig(BaseModel):
     allow_refactor_skip: bool = True    # LLM may skip refactor step if nothing to clean
 
 
-class DevBoardConfig(BaseModel):
+class AgentBoardConfig(BaseModel):
     max_iterations: int = 10
     token_ceiling: int = 500_000
     git_push_policy: str = "squash"  # squash | semantic | preserve | interactive
@@ -51,11 +51,11 @@ class DevBoardConfig(BaseModel):
     tdd: TDDConfig = Field(default_factory=TDDConfig)
 
 
-_config: DevBoardConfig | None = None
-_devboard_root: Path | None = None
+_config: AgentBoardConfig | None = None
+_agentboard_root: Path | None = None
 
 
-def find_devboard_root(start: Path | None = None) -> Path | None:
+def find_agentboard_root(start: Path | None = None) -> Path | None:
     """Walk up from start looking for .devboard directory."""
     path = start or Path.cwd()
     for parent in [path, *path.parents]:
@@ -65,29 +65,29 @@ def find_devboard_root(start: Path | None = None) -> Path | None:
     return None
 
 
-def get_devboard_dir(root: Path | None = None) -> Path:
-    r = root or find_devboard_root() or Path.cwd()
+def get_agentboard_dir(root: Path | None = None) -> Path:
+    r = root or find_agentboard_root() or Path.cwd()
     return r / ".devboard"
 
 
-def load_config(root: Path | None = None) -> DevBoardConfig:
+def load_config(root: Path | None = None) -> AgentBoardConfig:
     global _config
     if _config is not None:
         return _config
 
-    config_path = get_devboard_dir(root) / "config.yaml"
+    config_path = get_agentboard_dir(root) / "config.yaml"
     if config_path.exists():
         with open(config_path) as f:
             data = yaml.safe_load(f) or {}
-        _config = DevBoardConfig.model_validate(data)
+        _config = AgentBoardConfig.model_validate(data)
     else:
-        _config = DevBoardConfig()
+        _config = AgentBoardConfig()
 
     return _config
 
 
-def save_config(config: DevBoardConfig, root: Path | None = None) -> None:
-    config_path = get_devboard_dir(root) / "config.yaml"
+def save_config(config: AgentBoardConfig, root: Path | None = None) -> None:
+    config_path = get_agentboard_dir(root) / "config.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     with open(config_path, "w") as f:
         yaml.dump(config.model_dump(), f, default_flow_style=False, allow_unicode=True)

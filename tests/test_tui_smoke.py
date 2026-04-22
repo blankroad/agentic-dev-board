@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from agentboard.tui.app import DevBoardApp
+from agentboard.tui.app import AgentBoardApp
 
 
 async def _run_cmd(pilot, cmd: str) -> None:
@@ -50,7 +50,7 @@ async def test_colon_goals_focuses_resources_goals(tmp_path: Path) -> None:
     board.goals.append(Goal(id="g_1", title="goal-one", status=GoalStatus.active))
     store.save_board(board)
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         goals_list = app.query_one("#resources-goals")
@@ -71,7 +71,7 @@ async def test_colon_goals_focuses_resources_goals(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_colon_goto_single_match_selects(tmp_path: Path) -> None:
     _bootstrap_board(tmp_path, ("g_alpha", "alpha"), ("g_beta", "beta"))
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await _run_cmd(pilot, "goto g_al")
@@ -83,7 +83,7 @@ async def test_colon_goto_ambiguous_hints(tmp_path: Path) -> None:
     """v2.1: ambiguous hint shows in command-line (not the sidebar)
     to keep GoalSideList._goal_ids in sync with ListView rows."""
     _bootstrap_board(tmp_path, ("g_alpha", "alpha"), ("g_alpine", "alpine"))
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await _run_cmd(pilot, "goto g_al")
@@ -105,7 +105,7 @@ async def test_help_modal_fuzzy_tolerates_typo(tmp_path: Path) -> None:
 async def test_help_modal_opens_without_crash(tmp_path: Path) -> None:
     from agentboard.tui.help_modal import HelpModal
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await pilot.press("question_mark")
@@ -119,7 +119,7 @@ async def test_help_modal_opens_without_crash(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_command_line_reopen_clears_stale_error_state(tmp_path: Path) -> None:
     _bootstrap_board(tmp_path)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await _run_cmd(pilot, "nope")
@@ -134,7 +134,7 @@ async def test_command_line_reopen_clears_stale_error_state(tmp_path: Path) -> N
 @pytest.mark.asyncio
 async def test_stale_error_timer_does_not_wipe_new_user_input(tmp_path: Path) -> None:
     _bootstrap_board(tmp_path)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         await _run_cmd(pilot, "nope")
@@ -154,7 +154,7 @@ async def test_stale_error_timer_does_not_wipe_new_user_input(tmp_path: Path) ->
 @pytest.mark.asyncio
 async def test_on_input_submitted_catches_arbitrary_handler_exceptions(tmp_path: Path) -> None:
     _bootstrap_board(tmp_path)
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
         await pilot.pause()
         app.commands.register(

@@ -6,7 +6,7 @@ import pytest
 
 from agentboard.models import BoardState, Goal, GoalStatus
 from agentboard.storage.file_store import FileStore
-from agentboard.tui.app_legacy import DevBoardApp
+from agentboard.tui.app_legacy import AgentBoardApp
 from agentboard.tui.gauntlet_view import GauntletView
 
 
@@ -19,7 +19,7 @@ async def test_gauntlet_view_steps(tmp_path: Path):
     board = BoardState()
     store.save_board(board)
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
         gv = app.query_one("#gauntlet-view", GauntletView)
 
@@ -58,7 +58,7 @@ async def test_board_view_renders_goals(tmp_path: Path):
     store.save_board(board)
     store.save_goal(goal)
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
         # The board view should be mounted
         from agentboard.tui.board_view import BoardView
@@ -77,7 +77,7 @@ async def test_app_starts(tmp_path: Path):
     board = BoardState()
     store.save_board(board)
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
         # Header is present
         from textual.widgets import Header
@@ -108,7 +108,7 @@ async def test_log_view_writes(tmp_path: Path):
     board = BoardState()
     store.save_board(board)
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
         from agentboard.tui.log_view import LogView
         lv = app.query_one("#log-view", LogView)
@@ -144,7 +144,7 @@ async def test_goal_selection_updates_task_view(tmp_path: Path):
     })
     store.save_locked_plan(plan)
 
-    app = DevBoardApp(store_root=tmp_path)
+    app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
         # Simulate goal selection
         app._on_goal_selected(goal.id)

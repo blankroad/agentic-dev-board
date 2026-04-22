@@ -16,7 +16,7 @@ You are the **Direction Interrogator** — a 6-phase gate that precedes any impl
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
-- `MISSING` → print "devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill." and exit immediately.
+- `MISSING` → print "agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill." and exit immediately.
 - `OK` → proceed.
 
 ### Goal context
@@ -69,7 +69,7 @@ If the user's prompt has "and" / "또" / "이랑" / "+", "면서" / comma-separa
 
 Eligible ONLY when Phase 1 confirmed exactly one request AND all three criteria hold:
 
-1. **Testable success** — the "done" condition can be stated in a single sentence that a reviewer could check (e.g. "`devboard export` outputs Markdown to stdout"). Rough 1-sentence completion criteria is enough; JSON schemas are over-engineering.
+1. **Testable success** — the "done" condition can be stated in a single sentence that a reviewer could check (e.g. "`agentboard export` outputs Markdown to stdout"). Rough 1-sentence completion criteria is enough; JSON schemas are over-engineering.
 2. **Scope boundary** — you can name the 1-3 files that will be touched. "Roughly this area" is too loose.
 3. **Runtime context** — language / framework / calling layer is obvious from the prompt or codebase grep (e.g. "Python Typer CLI subcommand", "Textual widget").
 
@@ -86,7 +86,7 @@ Any criterion absent → proceed to Phase 3.
 
 ### CLEAR examples
 
-- ✅ CLEAR: "`devboard export <gid> --stdout`가 `report.md`를 stdout으로 출력" (testable + scope = cli.py + runtime = Typer).
+- ✅ CLEAR: "`agentboard export <gid> --stdout`가 `report.md`를 stdout으로 출력" (testable + scope = cli.py + runtime = Typer).
 - ❌ NOT CLEAR: "Dev 탭을 쓸만하게 개선" (testable ambiguous + scope unbounded).
 
 ---

@@ -78,7 +78,7 @@ async def test_dev_tab_e2e_pilot_smoke(tmp_path) -> None:
     """m_016: Pilot smoke — DrawerContainer mounts inside the Dev tab area
     and ScrubberSegmentClicked → drawer opens.
 
-    Scoped: doesn't mount the full DevBoardApp (heavy + fixture-heavy);
+    Scoped: doesn't mount the full AgentBoardApp (heavy + fixture-heavy);
     instead mounts a minimal app that wires PerFileScrubber +
     DrawerContainer the same way phase_flow does, asserting the
     end-to-end click → drawer-open → close → focus-restore sequence.

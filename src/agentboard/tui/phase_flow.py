@@ -644,7 +644,7 @@ class PhaseFlowView(Widget):
     def refresh_content(self, task_id: str | None = ...) -> None:  # type: ignore[assignment]
         """Re-read active goal / task data and push into each tab body.
 
-        Called by DevBoardApp after :goto or :decisions mutates state.
+        Called by AgentBoardApp after :goto or :decisions mutates state.
         Leaves TabbedContent.active untouched — user's current view wins
         unless auto-switch fires separately via handle_new_decision.
         """

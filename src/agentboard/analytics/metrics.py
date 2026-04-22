@@ -224,7 +224,7 @@ def diagnose_activations(store: FileStore) -> DiagnosticResult:
     # Suggestions
     if result.skill_activation_score == 0.0:
         result.suggestions.append(
-            "No skill events detected. Open Claude Code in a project with .mcp.json + .claude/skills/devboard-* installed."
+            "No skill events detected. Open Claude Code in a project with .mcp.json + .claude/skills/agentboard-* installed."
         )
         result.suggestions.append(
             "Try explicit invocation: 'use agentboard-gauntlet + agentboard-tdd to build <goal>'"

@@ -68,7 +68,7 @@ def rebuild_pile_for_goal(store: "FileStore", gid: str) -> dict:
     Returns {status: "ok"|"error", tasks_rebuilt: N, rids: [...], errors: [...]}
     """
     adapter = PileAdapter()
-    goal_tasks_dir = store._devboard / "goals" / gid / "tasks"  # type: ignore[attr-defined]
+    goal_tasks_dir = store._agentboard / "goals" / gid / "tasks"  # type: ignore[attr-defined]
     if not goal_tasks_dir.exists():
         return {"status": "error", "reason": "no_tasks_dir",
                 "tasks_rebuilt": 0, "rids": [], "errors": [f"{gid}: no tasks directory"]}
@@ -114,7 +114,7 @@ def rebuild_pile_for_goal(store: "FileStore", gid: str) -> dict:
 
 def rebuild_pile_all(store: "FileStore") -> dict:
     """Rebuild pile for every goal. Returns per-goal summary."""
-    goals_dir = store._devboard / "goals"  # type: ignore[attr-defined]
+    goals_dir = store._agentboard / "goals"  # type: ignore[attr-defined]
     if not goals_dir.exists():
         return {"status": "error", "reason": "no_goals_dir",
                 "goals_rebuilt": 0, "per_goal": {}}

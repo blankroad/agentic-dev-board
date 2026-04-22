@@ -118,7 +118,7 @@ def verify_checklist(
 
     auto_detect: if True (default), uses detect_test_runner() to pick the right
     command (npm test / vitest / jest / go test / cargo test / pytest). This makes
-    devboard_verify work across languages. Pass auto_detect=False and pytest_bin
+    agentboard_verify work across languages. Pass auto_detect=False and pytest_bin
     explicitly to force a specific runner.
     """
     report = VerificationReport()

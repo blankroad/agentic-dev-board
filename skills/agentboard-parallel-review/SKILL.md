@@ -8,13 +8,13 @@ when_to_use: Automatic after agentboard-tdd issues reviewer PASS for production-
 
 ## Preamble — Project Guard (MANDATORY first check)
 
-Before any other action, verify devboard is initialized:
+Before any other action, verify agentboard is initialized:
 
 ```bash
 test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
-- `MISSING` → print "devboard is not initialized in this project. Run `devboard init && devboard install` first to enable this skill." and exit.
+- `MISSING` → print "agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill." and exit.
 - `OK` → proceed.
 
 You are the **Parallel Review Orchestrator**. Your job is to cut wall-clock time of the CSO + redteam review pair by dispatching both in a single message via the Claude Code `Agent` tool, then aggregating their verdicts.
@@ -77,10 +77,10 @@ Record `end_ts`. Compute `parallel_duration_s = end_ts - start_ts`. If each sub-
 
 ## Step 2 — Aggregate & dedupe
 
-Parse each sub-agent's verdict + findings into `devboard.parallel.models.Finding` objects. Then call the pure functions:
+Parse each sub-agent's verdict + findings into `agentboard.parallel.models.Finding` objects. Then call the pure functions:
 
 ```python
-from devboard.parallel import dedupe_findings, aggregate_verdict
+from agentboard.parallel import dedupe_findings, aggregate_verdict
 
 report = dedupe_findings(cso_findings, redteam_findings)
 verdict = aggregate_verdict(cso=cso_verdict, redteam=redteam_verdict)

@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
 
-def register(app: "DevBoardApp") -> None:
+def register(app: "AgentBoardApp") -> None:
     app.commands.register("decisions", ["task_id"], lambda task_id: _run(app, task_id))
 
 
-def _run(app: "DevBoardApp", task_id: str) -> None:
+def _run(app: "AgentBoardApp", task_id: str) -> None:
     """v2.1: ContextViewer decisions tab removed. ActivityTimeline renders
     the active task's decisions automatically. :decisions <task_id> now
     switches the App's active task_id and shows a hint."""

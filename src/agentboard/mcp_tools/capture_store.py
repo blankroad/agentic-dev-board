@@ -1,4 +1,4 @@
-"""Persist devboard_tui_render_smoke output as text artifacts per goal."""
+"""Persist agentboard_tui_render_smoke output as text artifacts per goal."""
 
 from __future__ import annotations
 

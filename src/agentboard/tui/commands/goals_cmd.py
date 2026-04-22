@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from textual.widgets import Label, ListItem, ListView
 
 if TYPE_CHECKING:
-    from agentboard.tui.app import DevBoardApp
+    from agentboard.tui.app import AgentBoardApp
 
 
 # Ordered from "least done" to "most done"; used to pick the most-progressed
@@ -65,11 +65,11 @@ def _derive_marker(store_root: Path, goal_id: str, declared_status: str) -> str:
     return _STATUS_MARKER.get(declared_status, "·")
 
 
-def register(app: "DevBoardApp") -> None:
+def register(app: "AgentBoardApp") -> None:
     app.commands.register("goals", [], lambda: _run(app))
 
 
-def _run(app: "DevBoardApp") -> None:
+def _run(app: "AgentBoardApp") -> None:
     goals_list = app.query_one("#resources-goals", ListView)
     goals_list.clear()
     for goal in app.board.goals:

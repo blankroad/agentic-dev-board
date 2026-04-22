@@ -1,4 +1,4 @@
-"""devboard CLI — observability and installer.
+"""agentboard CLI — observability and installer.
 
 Orchestration (plan/run/approve/rethink) now lives in Claude Code Skills + MCP server.
 This CLI keeps only:
@@ -24,7 +24,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from agentboard.config import get_devboard_dir, load_config, save_config
+from agentboard.config import get_agentboard_dir, load_config, save_config
 from agentboard.models import BoardState, Goal, GoalStatus
 from agentboard.storage.file_store import FileStore
 
@@ -49,8 +49,8 @@ console = Console()
 
 
 def _get_store(root: Optional[Path] = None) -> FileStore:
-    from agentboard.config import find_devboard_root
-    r = root or find_devboard_root() or Path.cwd()
+    from agentboard.config import find_agentboard_root
+    r = root or find_agentboard_root() or Path.cwd()
     return FileStore(r)
 
 
@@ -140,7 +140,7 @@ def install(
             console.print(f"  Settings:       {result['settings']}")
         console.print(f"\n[dim]Next: start your agent (claude / opencode) here — skills + MCP tools auto-load.[/dim]")
     else:
-        console.print(f"\n[dim]Skills available globally. For hooks + MCP, run [bold]devboard install[/bold] in each project.[/dim]")
+        console.print(f"\n[dim]Skills available globally. For hooks + MCP, run [bold]agentboard install[/bold] in each project.[/dim]")
 
 
 # ── Init ──────────────────────────────────────────────────────────────────
@@ -152,17 +152,17 @@ def init(
 ) -> None:
     """Scaffold .devboard/ in the project root."""
     root = path.resolve()
-    devboard_dir = root / ".devboard"
+    agentboard_dir = root / ".devboard"
 
-    if devboard_dir.exists():
+    if agentboard_dir.exists():
         console.print(f"[yellow].devboard/ already exists at {root}[/yellow]")
         raise typer.Exit(1)
 
     for d in [
-        devboard_dir / "goals",
-        devboard_dir / "runs",
-        devboard_dir / "learnings",
-        devboard_dir / "retros",
+        agentboard_dir / "goals",
+        agentboard_dir / "runs",
+        agentboard_dir / "learnings",
+        agentboard_dir / "retros",
     ]:
         d.mkdir(parents=True)
 
@@ -170,8 +170,8 @@ def init(
     board = BoardState()
     store.save_board(board)
 
-    from agentboard.config import DevBoardConfig
-    save_config(DevBoardConfig(), root)
+    from agentboard.config import AgentBoardConfig
+    save_config(AgentBoardConfig(), root)
 
     gitignore = root / ".gitignore"
     ignore_entries = [
@@ -183,11 +183,11 @@ def init(
     additions = [e for e in ignore_entries if e not in existing]
     if additions:
         with open(gitignore, "a") as f:
-            f.write("\n# devboard\n" + "\n".join(additions) + "\n")
+            f.write("\n# agentboard\n" + "\n".join(additions) + "\n")
 
-    console.print(f"[green]✓[/green] Initialized devboard at [bold]{root}[/bold]")
+    console.print(f"[green]✓[/green] Initialized agentboard at [bold]{root}[/bold]")
     console.print(f"  Board ID: [dim]{board.board_id}[/dim]")
-    console.print(f"\nNext: [bold]devboard install[/bold] to set up skills + hooks + MCP config")
+    console.print(f"\nNext: [bold]agentboard install[/bold] to set up skills + hooks + MCP config")
 
 
 # ── MCP server ────────────────────────────────────────────────────────────
@@ -227,7 +227,7 @@ def goal_list() -> None:
     store = _get_store()
     board = store.load_board()
     if not board.goals:
-        console.print("[dim]No goals yet. Run: devboard goal add \"<description>\"[/dim]")
+        console.print("[dim]No goals yet. Run: agentboard goal add \"<description>\"[/dim]")
         return
 
     table = Table(show_header=True, header_style="bold magenta")
@@ -320,9 +320,9 @@ def task_show(
 
     console.print(
         f"\n[dim]more:[/dim] "
-        f"[bold]devboard decisions {tid}[/bold]  |  "
-        f"[bold]devboard reviews {tid}[/bold]  |  "
-        f"[bold]devboard diff {tid} --iter N[/bold]"
+        f"[bold]agentboard decisions {tid}[/bold]  |  "
+        f"[bold]agentboard reviews {tid}[/bold]  |  "
+        f"[bold]agentboard diff {tid} --iter N[/bold]"
     )
 
 
@@ -340,12 +340,12 @@ def _status_color(s: str) -> str:
 @app.command()
 def board() -> None:
     """Launch the Textual TUI board (observability only)."""
-    from agentboard.config import find_devboard_root
+    from agentboard.config import find_agentboard_root
     from agentboard.tui.app import run_tui
 
-    root = find_devboard_root() or Path.cwd()
+    root = find_agentboard_root() or Path.cwd()
     if not (root / ".devboard").exists():
-        console.print("[red]No .devboard found. Run: devboard init[/red]")
+        console.print("[red]No .devboard found. Run: agentboard init[/red]")
         raise typer.Exit(1)
     run_tui(store_root=root)
 
@@ -362,7 +362,7 @@ def watch(
     """Tail .devboard/runs/*.jsonl and/or decisions.jsonl files live.
 
     If no runs exist yet, falls back to tailing all decisions.jsonl so you
-    always see live skill activity, even before the first `devboard_start_task`.
+    always see live skill activity, even before the first `agentboard_start_task`.
     """
     import json
     import time
@@ -399,7 +399,7 @@ def watch(
 
     if not files_to_tail:
         console.print("[dim]Nothing to watch yet — no runs or decisions.[/dim]")
-        console.print("[dim]Open Claude Code with devboard skills installed, then retry.[/dim]")
+        console.print("[dim]Open Claude Code with agentboard skills installed, then retry.[/dim]")
         return
 
     console.print(
@@ -514,7 +514,7 @@ def status() -> None:
     console.print(f"\n[bold]Board[/bold]  [dim]{board.board_id}[/dim]")
 
     if not board.goals:
-        console.print("  [dim]No goals. Run: devboard goal add \"<description>\"[/dim]")
+        console.print("  [dim]No goals. Run: agentboard goal add \"<description>\"[/dim]")
         return
 
     active = board.get_goal(board.active_goal_id) if board.active_goal_id else None
@@ -569,7 +569,7 @@ def status() -> None:
 
 @skills_app.command("list")
 def skills_list() -> None:
-    """List installed devboard skills (project + global)."""
+    """List installed agentboard skills (project + global)."""
     proj = Path.cwd() / ".claude" / "skills"
     glob = Path.home() / ".claude" / "skills"
 
@@ -577,7 +577,7 @@ def skills_list() -> None:
         if not d.exists():
             console.print(f"[dim]{label}: (not installed)[/dim]")
             continue
-        skills = sorted(p.name for p in d.iterdir() if p.is_dir() and p.name.startswith("devboard-"))
+        skills = sorted(p.name for p in d.iterdir() if p.is_dir() and p.name.startswith("agentboard-"))
         if skills:
             console.print(f"[bold]{label}[/bold] ({d}):")
             for s in skills:
@@ -586,7 +586,7 @@ def skills_list() -> None:
 
 @skills_app.command("export")
 def skills_export(
-    output: Path = typer.Option(Path("devboard-skills.zip"), "--output", "-o"),
+    output: Path = typer.Option(Path("agentboard-skills.zip"), "--output", "-o"),
     scope: str = typer.Option("project", "--scope", help="project | global"),
 ) -> None:
     """Export installed skills as a zip — share with teammates or copy across machines."""
@@ -598,9 +598,9 @@ def skills_export(
         console.print(f"[red]No skills installed at {src_root}[/red]")
         raise typer.Exit(1)
 
-    skill_dirs = [p for p in src_root.iterdir() if p.is_dir() and p.name.startswith("devboard-")]
+    skill_dirs = [p for p in src_root.iterdir() if p.is_dir() and p.name.startswith("agentboard-")]
     if not skill_dirs:
-        console.print(f"[red]No devboard-* skills at {src_root}[/red]")
+        console.print(f"[red]No agentboard-* skills at {src_root}[/red]")
         raise typer.Exit(1)
 
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -619,7 +619,7 @@ def skills_import(
     scope: str = typer.Option("project", "--scope", help="project | global"),
     overwrite: bool = typer.Option(False, "--overwrite", "-f"),
 ) -> None:
-    """Import a skills zip (produced by `devboard skills export`)."""
+    """Import a skills zip (produced by `agentboard skills export`)."""
     import zipfile
     if not archive.exists():
         console.print(f"[red]Not found: {archive}[/red]")
@@ -645,7 +645,7 @@ def skills_import(
 
 @learnings_app.command("export")
 def learnings_export(
-    output: Path = typer.Option(Path("devboard-learnings.zip"), "--output", "-o"),
+    output: Path = typer.Option(Path("agentboard-learnings.zip"), "--output", "-o"),
 ) -> None:
     """Export project learnings as a zip."""
     import zipfile
@@ -954,7 +954,7 @@ def activity(
     log = store.root / ".devboard" / "activity.jsonl"
     if not log.exists():
         console.print("[dim]No activity log yet. The activity-log hook must be installed.[/dim]")
-        console.print("[dim]Run: devboard install  (or re-install with --overwrite)[/dim]")
+        console.print("[dim]Run: agentboard install  (or re-install with --overwrite)[/dim]")
         return
 
     entries = []
@@ -1011,7 +1011,7 @@ def activity(
             "Write": "blue", "Edit": "cyan", "Bash": "magenta",
             "Read": "dim", "MultiEdit": "cyan",
         }.get(t, "white")
-        if t.startswith("mcp__") or "devboard" in t.lower():
+        if t.startswith("mcp__") or "agentboard" in t.lower():
             tool_color = "bright_magenta"
 
         console.print(f"  {icon} [dim]{ts}[/dim] [{tool_color}]{t:<14}[/{tool_color}] {detail}")
@@ -1134,7 +1134,7 @@ def export(
     goal_id: str = typer.Argument(..., help="Goal id to export"),
     format: str = typer.Option("md", "--format", "-f", help="md | html | confluence"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Write to file instead of stdout"),
-    project_root: Optional[Path] = typer.Option(None, "--project-root", help="Project root (defaults to find_devboard_root)"),
+    project_root: Optional[Path] = typer.Option(None, "--project-root", help="Project root (defaults to find_agentboard_root)"),
     source: str = typer.Option("plan", "--source", "-s", help="plan | report"),
 ) -> None:
     """Export a goal's plan.md or report.md.
@@ -1147,10 +1147,10 @@ def export(
     """
     import re as _re
 
-    from agentboard.config import find_devboard_root
+    from agentboard.config import find_agentboard_root
     from agentboard.docs.export import render
 
-    root = project_root or find_devboard_root() or Path.cwd()
+    root = project_root or find_agentboard_root() or Path.cwd()
 
     # Reject goal_ids containing path separators or traversal tokens —
     # prevents directory traversal via `--goal-id ../../etc/passwd`.
@@ -1303,7 +1303,7 @@ def metrics(
 
 @app.command()
 def diagnose() -> None:
-    """Skill activation diagnostic — did devboard skills actually fire?"""
+    """Skill activation diagnostic — did agentboard skills actually fire?"""
     from agentboard.analytics.metrics import diagnose_activations
     store = _get_store()
     result = diagnose_activations(store)
@@ -1321,7 +1321,7 @@ def replay(
     goal: Optional[str] = typer.Option(None, "--goal", "-g"),
 ) -> None:
     """Branch a run from iteration N. Creates a new replay_<id> run."""
-    from agentboard.config import find_devboard_root
+    from agentboard.config import find_agentboard_root
     from agentboard.replay.replay import branch_run
 
     store = _get_store()
@@ -1350,11 +1350,11 @@ def replay(
 
 @app.command()
 def audit() -> None:
-    """Self-audit the devboard CLI + installation."""
+    """Self-audit the agentboard CLI + installation."""
     from subprocess import run as sh
     import os
 
-    console.print("[bold]devboard self-audit[/bold]\n")
+    console.print("[bold]agentboard self-audit[/bold]\n")
 
     commands = [c.name for c in app.registered_commands]
     console.print(f"  Top-level commands: [bold]{len(commands)}[/bold]")
@@ -1369,8 +1369,8 @@ def audit() -> None:
     else:
         console.print(f"  [green]✓[/green] All commands have help text")
 
-    from agentboard.config import find_devboard_root
-    root = find_devboard_root()
+    from agentboard.config import find_agentboard_root
+    root = find_agentboard_root()
     if root:
         console.print(f"  [green]✓[/green] .devboard root: {root}")
         store = _get_store(root)
@@ -1381,7 +1381,7 @@ def audit() -> None:
         runs = list(runs_dir.glob("*.jsonl")) if runs_dir.exists() else []
         console.print(f"    Runs: {len(runs)}")
     else:
-        console.print("  [yellow]![/yellow] No .devboard found (run: devboard init)")
+        console.print("  [yellow]![/yellow] No .devboard found (run: agentboard init)")
 
     # Skills/MCP/hooks installed?
     cwd = Path.cwd()
@@ -1392,8 +1392,8 @@ def audit() -> None:
     for label, p in [("project skills", skills_dir), ("global skills", global_skills), ("MCP config", mcp_config)]:
         if p.exists():
             if p.is_dir():
-                count = sum(1 for d in p.iterdir() if d.is_dir() and d.name.startswith("devboard-"))
-                console.print(f"  [green]✓[/green] {label}: {count} devboard-* skills at {p}")
+                count = sum(1 for d in p.iterdir() if d.is_dir() and d.name.startswith("agentboard-"))
+                console.print(f"  [green]✓[/green] {label}: {count} agentboard-* skills at {p}")
             else:
                 console.print(f"  [green]✓[/green] {label}: {p}")
         else:
@@ -1459,8 +1459,8 @@ def config(
     key: str = typer.Argument(...),
     value: str = typer.Argument(...),
 ) -> None:
-    """Set a config value (e.g., `devboard config tdd.enabled false`)."""
-    from agentboard.config import DevBoardConfig, find_devboard_root
+    """Set a config value (e.g., `agentboard config tdd.enabled false`)."""
+    from agentboard.config import AgentBoardConfig, find_agentboard_root
     cfg = load_config()
     data = cfg.model_dump()
 
@@ -1485,8 +1485,8 @@ def config(
     else:
         target[last] = value
 
-    new_cfg = DevBoardConfig.model_validate(data)
-    root = find_devboard_root() or Path.cwd()
+    new_cfg = AgentBoardConfig.model_validate(data)
+    root = find_agentboard_root() or Path.cwd()
     save_config(new_cfg, root)
     console.print(f"[green]✓[/green] {key} = {target[last]}")
 
@@ -1501,7 +1501,7 @@ def rebuild_pile(
         False, "--all", help="Rebuild every goal under .devboard/goals/"
     ),
     root: Optional[Path] = typer.Option(
-        None, help="Project root (default: auto-detect via find_devboard_root)"
+        None, help="Project root (default: auto-detect via find_agentboard_root)"
     ),
 ) -> None:
     """Reconstruct canonical pile (runs/<rid>/...) from legacy decisions.jsonl.

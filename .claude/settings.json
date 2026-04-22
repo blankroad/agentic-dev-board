@@ -6,7 +6,7 @@
       "Bash(.venv/bin/python *)",
       "Bash(.venv/bin/pip *)",
       "Bash(.venv/bin/pytest *)",
-      "Bash(.venv/bin/devboard *)",
+      "Bash(.venv/bin/agentboard *)",
       "Bash(pip *)",
       "Bash(pip3 *)",
       "Bash(pytest *)",

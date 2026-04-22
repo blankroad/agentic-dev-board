@@ -6,7 +6,7 @@ from pathlib import Path
 
 def test_no_external_callers_of_tui_app_loop_callbacks() -> None:
     """Nothing outside src/agentboard/tui/ may call the orchestrator-loop
-    callbacks on DevBoardApp (log_step, log_verdict, log_tool,
+    callbacks on AgentBoardApp (log_step, log_verdict, log_tool,
     notify_converged, set_gauntlet_step). These exist for a LEGACY
     orchestrator wire that we are removing; external references would break.
 
@@ -22,6 +22,6 @@ def test_no_external_callers_of_tui_app_loop_callbacks() -> None:
         check=False,
     )
     matches = [ln for ln in result.stdout.splitlines() if ln.strip()]
-    tui_pkg = str(src / "devboard" / "tui")
+    tui_pkg = str(src / "agentboard" / "tui")
     external = [m for m in matches if not m.startswith(tui_pkg)]
     assert external == [], f"external callers of TUI loop callbacks found: {external}"

@@ -1,4 +1,4 @@
-DevBoardApp
+AgentBoardApp
 ● TUI 개선 — TOC 위치/점프, 우측패널 활용, 중앙패널 phase-flow화  ▶ iter 16 
 tdd_red
   ◆ redteam 
@@ -77,7 +77,7 @@ iterations list with numstat per iter
 still returned, plan_digest={}
 │
 │
-  • s_007  MCP tool devboard_build_overview registered and dispatches to
+  • s_007  MCP tool agentboard_build_overview registered and dispatches to
 │
 │
 build_overview_payload returning the dict
@@ -116,7 +116,7 @@ and initial=='overview'
   • s_013  PhaseFlowView keybinding 1 activates 'overview' (not 'plan')
 │
 │
-  • s_014  DevBoardApp forwards keys 1..5 to phase_flow.action_activate_tab mapping to the
+  • s_014  AgentBoardApp forwards keys 1..5 to phase_flow.action_activate_tab mapping to the
 │
 │
 5 tab ids
@@ -141,7 +141,7 @@ without altering PHASE_TO_TAB tests
 ## TODOs (후속 할 일)
 │
 │
-  □ R5 우측 패널 재설계 (후속 goal candidate) — src/devboard/tui/board_view.py,
+  □ R5 우측 패널 재설계 (후속 goal candidate) — src/agentboard/tui/board_view.py,
 │
 ^q 
 Quit 

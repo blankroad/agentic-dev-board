@@ -1,12 +1,12 @@
 # Plan as Living Publishable Document — Design Spec
 
 **Date**: 2026-04-20
-**Topic**: devboard TUI v2.2 — plan.md 를 단일 living doc 으로 진화시켜 engineer + manager 청자 레이어링 + Jira/Confluence export 지원
+**Topic**: agentboard TUI v2.2 — plan.md 를 단일 living doc 으로 진화시켜 engineer + manager 청자 레이어링 + Jira/Confluence export 지원
 **Status**: Approved — moving to writing-plans
 
 ## Motivation
 
-현재 `devboard` 파이프라인이 생성하는 `plan.md` 는:
+현재 `agentboard` 파이프라인이 생성하는 `plan.md` 는:
 - Lock 시점에 frozen — 이후 "실제로 뭐가 됐는지" (outcome) 가 decisions.jsonl / commit history 에 흩어져 있어 한눈에 안 보임
 - TUI v2.1 의 PlanMarkdown 은 plan.md + "▸ Raw Artifacts" (gauntlet 5 파일 concat) 을 분리 렌더 — summary/raw 분리가 사용자에게 어색하게 느껴짐
 - Rich markdown 렌더 품질이 충분하지 않고, Jira/Confluence 에 붙이기엔 스타일/구조가 애매
@@ -22,7 +22,7 @@
 - 신규 섹션: `## Metadata`, `## Outcome`, `## Screenshots / Diagrams`, `## Lessons`
 - Skill hooks: gauntlet / approval / retro / tui_render_smoke 가 자동 append
 - 멱등 (idempotent) upsert helper — 재실행해도 중복/손상 없음
-- `devboard export <gid> --format md|html|confluence` CLI 명령 (후순위)
+- `agentboard export <gid> --format md|html|confluence` CLI 명령 (후순위)
 
 ### Out-of-scope
 - GoalSideList 네비게이션 개선 (별도 goal)
@@ -52,7 +52,7 @@ gauntlet lock_plan
 
 ### 핵심 코드
 
-신규 파일 `src/devboard/docs/plan_sections.py`:
+신규 파일 `src/agentboard/docs/plan_sections.py`:
 
 ```python
 from enum import Enum
@@ -129,9 +129,9 @@ graph TD
 ## Implementation plan (5 sequential goals)
 
 ### Goal #1 — `plan_sections` infra + Outcome (approval) — FIRST
-- `src/devboard/docs/__init__.py` + `plan_sections.py`
+- `src/agentboard/docs/__init__.py` + `plan_sections.py`
 - `upsert_plan_section()` + `PlanSection` enum
-- `devboard-approval` SKILL.md: push 성공 후 (정확한 시점: `devboard_push_pr` 성공 반환 + `devboard_checkpoint "converged"` 직후, `devboard_update_task_status "pushed"` 직전) Outcome write 단계 추가
+- `agentboard-approval` SKILL.md: push 성공 후 (정확한 시점: `agentboard_push_pr` 성공 반환 + `agentboard_checkpoint "converged"` 직후, `agentboard_update_task_status "pushed"` 직전) Outcome write 단계 추가
 - TDD (axis 2 rule 적용):
   - happy: append when missing
   - edge empty: plan.md 빈 파일일 때
@@ -141,13 +141,13 @@ graph TD
 - Expected atomic_steps: 8-10
 
 ### Goal #2 — Metadata 섹션 (gauntlet lock 확장)
-- `devboard_lock_plan` MCP tool 또는 gauntlet SKILL.md 에서 lock 직후 Metadata upsert
+- `agentboard_lock_plan` MCP tool 또는 gauntlet SKILL.md 에서 lock 직후 Metadata upsert
 - git config user/email/branch 추출 helper
 - TDD: git config 없을 때 fallback, ISO ts 형식, lock_plan 회귀 테스트
 - Expected atomic_steps: 4-5
 
 ### Goal #3 — Lessons 섹션 (retro 연동)
-- `devboard-retro` SKILL.md: retro 생성 후 plan.md 에 Lessons 요약 append
+- `agentboard-retro` SKILL.md: retro 생성 후 plan.md 에 Lessons 요약 append
 - 다중 goal retro 시 per-goal 분리 투영
 - TDD: learnings 포맷, retro 존재/부재, 재실행 idempotency
 - Expected atomic_steps: 4-5
@@ -159,8 +159,8 @@ graph TD
 - TDD: capture 파일 저장, 링크 생성, UI 아닌 태스크에선 skip, metadata 필드 누락 시 default false
 - Expected atomic_steps: 3-4
 
-### Goal #5 — `devboard export` + Markdown 호환성 (LAST)
-- `devboard export <gid> --format md|html|confluence` CLI
+### Goal #5 — `agentboard export` + Markdown 호환성 (LAST)
+- `agentboard export <gid> --format md|html|confluence` CLI
 - Confluence-flavored: `||header||`, `{code}...{code}`, `*bold*`
 - HTML: pandoc 없이 순수 파이썬 (rich.markdown → rich.console.export_html)
 - TDD: 각 포맷 snapshot, manual paste 검증은 external
@@ -190,10 +190,10 @@ graph TD
 
 ## Success criteria
 
-- `devboard board` 에서 한 goal 을 열면 Metadata ~ Lessons 전체가 한 화면에서 스크롤로 읽힘 (summary/raw 분리 제거)
+- `agentboard board` 에서 한 goal 을 열면 Metadata ~ Lessons 전체가 한 화면에서 스크롤로 읽힘 (summary/raw 분리 제거)
 - Approval push 후 plan.md 의 Outcome 섹션에 push 결과가 자동 기록됨
 - Retro 실행 후 plan.md 의 Lessons 에 회고 요약이 들어감
-- `devboard export <gid> --format confluence` 결과물이 Confluence paste 시 테이블/코드블록이 깨지지 않음
+- `agentboard export <gid> --format confluence` 결과물이 Confluence paste 시 테이블/코드블록이 깨지지 않음
 - 현재 테스트 suite 전부 통과 (+ 새 테스트 누적 ~30+)
 
 ## Next step
