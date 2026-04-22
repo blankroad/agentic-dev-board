@@ -279,8 +279,12 @@ def test_process_sparkline_tolerates_empty_and_single_point() -> None:
     assert isinstance(iter_series, list) and isinstance(ironlaw_series, list)
     assert len(iter_series) == len(ironlaw_series) == 24  # 24 hour buckets
 
-    # single-point → buckets still length 24, one bucket > 0
-    decisions = [{"phase": "tdd_green", "iter": 1, "ts": "2026-04-21T08:00:00Z"}]
+    # single-point → buckets still length 24, one bucket > 0.
+    # Use a timestamp 1h ago so the point lands inside the 24h window
+    # regardless of when the suite is run.
+    from datetime import datetime, timedelta, timezone
+    recent_ts = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    decisions = [{"phase": "tdd_green", "iter": 1, "ts": recent_ts}]
     iter_series, _ = build_series(decisions)
     assert len(iter_series) == 24
     assert sum(iter_series) >= 1

@@ -18,11 +18,11 @@ src/agentboard/
     docgen.py        — PR descriptions, Confluence pages, wiki docs from LockedPlan
   replay/
     replay.py        — branch_run: create new run from a checkpoint iteration
-  orchestrator/      — [LEGACY] LangGraph graph. Not imported by CLI or MCP server.
+  orchestrator/      — approval / checkpointer / push / verify / state helpers used by mcp_server.py, replay, retro. The LangGraph graph + runner + HintQueue were removed in the cleanup; only live helpers remain.
 
 skills/              — Claude Code skill SKILL.md files
 hooks/               — PostToolUse hooks: iron-law-check.sh, danger-guard.sh, activity-log.py
-tests/               — 277 tests. Run: pytest
+tests/               — 738+ tests. Run: pytest
 ```
 
 ## Invariants
