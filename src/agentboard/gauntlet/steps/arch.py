@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentboard.llm.client import LLMClient, CompletionResult, load_prompt
+from agentboard.llm.client import LLMClient, CompletionResult, load_prompt_with_prefix
 
 
 def run_arch(
@@ -9,7 +9,7 @@ def run_arch(
     frame_output: str,
     scope_output: str,
 ) -> tuple[str, CompletionResult]:
-    system = load_prompt("gauntlet/arch")
+    system = load_prompt_with_prefix("gauntlet/arch")
 
     content = f"""## Original Goal
 {goal_description}

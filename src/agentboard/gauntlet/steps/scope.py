@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentboard.llm.client import LLMClient, CompletionResult, load_prompt
+from agentboard.llm.client import LLMClient, CompletionResult, load_prompt_with_prefix
 
 
 def run_scope(
@@ -8,7 +8,7 @@ def run_scope(
     goal_description: str,
     frame_output: str,
 ) -> tuple[str, CompletionResult]:
-    system = load_prompt("gauntlet/scope")
+    system = load_prompt_with_prefix("gauntlet/scope")
 
     content = f"""## Original Goal
 {goal_description}

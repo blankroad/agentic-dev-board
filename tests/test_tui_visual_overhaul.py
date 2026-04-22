@@ -249,45 +249,11 @@ def test_review_timeline_renders_grid_with_empty_input() -> None:
         assert label in rendered.lower()
 
 
-# ─── s_009 — process_swimlane 6 lanes ──────────────────────────────────────
-
-def test_process_swimlane_renders_6_lanes() -> None:
-    """s_009 — swimlane must label all 6 phases even when some are absent
-    in decisions so the user sees a consistent lane structure."""
-    from agentboard.tui.process_swimlane import render_swimlane
-
-    decisions = [
-        {"phase": "tdd_green", "iter": 1, "ts": "2026-04-21T08:00Z"},
-        {"phase": "review", "iter": 1, "ts": "2026-04-21T08:05Z"},
-        {"phase": "approval", "iter": 1, "ts": "2026-04-21T08:10Z"},
-    ]
-    rendered = render_swimlane(decisions)
-    for lane in ("gauntlet", "tdd", "review", "cso", "redteam", "approval"):
-        assert lane in rendered, f"lane {lane!r} missing"
-
-
-# ─── s_010 — process_sparkline empty / 1-point input ───────────────────────
-
-def test_process_sparkline_tolerates_empty_and_single_point() -> None:
-    """s_010 — sparkline data builder survives empty / single-point input,
-    returning lists that the Textual Sparkline widget can accept.
-    edge: empty / None input"""
-    from agentboard.tui.process_sparkline import build_series
-
-    # empty → default zero buckets, no crash
-    iter_series, ironlaw_series = build_series([])
-    assert isinstance(iter_series, list) and isinstance(ironlaw_series, list)
-    assert len(iter_series) == len(ironlaw_series) == 24  # 24 hour buckets
-
-    # single-point → buckets still length 24, one bucket > 0.
-    # Use a timestamp 1h ago so the point lands inside the 24h window
-    # regardless of when the suite is run.
-    from datetime import datetime, timedelta, timezone
-    recent_ts = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
-    decisions = [{"phase": "tdd_green", "iter": 1, "ts": recent_ts}]
-    iter_series, _ = build_series(decisions)
-    assert len(iter_series) == 24
-    assert sum(iter_series) >= 1
+# NOTE: s_009 (process_swimlane) and s_010 (process_sparkline) tests were
+# removed when the Result-tab redesign retired those widgets. The Result tab
+# now renders a CodeRabbit-style layout (Outcome + goal checklist + atomic
+# steps shipping table + verification chain Mermaid), driven entirely by
+# render_result_timeline and decisions.jsonl — no iter-time-series widgets.
 
 
 # ─── s_011 — phase_flow mounts new widgets (integration wiring) ────────────
@@ -295,9 +261,8 @@ def test_process_sparkline_tolerates_empty_and_single_point() -> None:
 @pytest.mark.asyncio
 async def test_phase_flow_mounts_new_widgets_real_user_flow() -> None:
     """s_011 — PhaseFlowView must mount PlanPipeline / ReviewCards /
-    ReviewTimeline / ProcessSwimlane / ProcessSparkline in their respective
-    tab panes so the App actually wires the visuals — unit-tested widgets
-    don't prove they're on-screen.
+    ReviewTimeline in their respective tab panes so the App actually wires
+    the visuals — unit-tested widgets don't prove they're on-screen.
     guards: unit-tests-on-primitives-dont-prove-integration"""
     from agentboard.tui.app import AgentBoardApp
 
@@ -309,8 +274,6 @@ async def test_phase_flow_mounts_new_widgets_real_user_flow() -> None:
             "plan-pipeline",
             "review-cards",
             "review-timeline",
-            "process-swimlane",
-            "process-sparkline",
         ):
             try:
                 app.query_one(f"#{widget_id}")

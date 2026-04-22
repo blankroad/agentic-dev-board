@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentboard.llm.client import LLMClient, CompletionResult, load_prompt
+from agentboard.llm.client import LLMClient, CompletionResult, load_prompt_with_prefix
 
 
 def run_frame(
@@ -8,7 +8,7 @@ def run_frame(
     goal_description: str,
     learnings: str = "",
 ) -> tuple[str, CompletionResult]:
-    system = load_prompt("gauntlet/frame")
+    system = load_prompt_with_prefix("gauntlet/frame")
 
     context_parts = [f"## Goal\n{goal_description}"]
     if learnings:

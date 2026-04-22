@@ -10,6 +10,9 @@ def build_locked_plan(goal_id: str, decide_json: dict) -> LockedPlan:
     atomic_steps = []
     for i, s in enumerate(atomic_steps_raw):
         if isinstance(s, dict):
+            role = s.get("role", "core")
+            if role not in ("core", "supporting", "test_only"):
+                role = "core"
             atomic_steps.append(AtomicStep(
                 id=s.get("id") or f"s_{i+1:03d}",
                 behavior=s.get("behavior", ""),
@@ -17,6 +20,7 @@ def build_locked_plan(goal_id: str, decide_json: dict) -> LockedPlan:
                 test_name=s.get("test_name", ""),
                 impl_file=s.get("impl_file", ""),
                 expected_fail_reason=s.get("expected_fail_reason", ""),
+                role=role,
             ))
 
     plan = LockedPlan(

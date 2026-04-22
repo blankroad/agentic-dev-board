@@ -1,157 +1,211 @@
-"""Result tab renderer: Plan vs execution, grouped into deliverables.
+"""Result tab renderer — empirical evidence layer.
 
-Manager/PM view: shipped-count + thematic deliverable bullets, not a flat
-list of raw atomic_step assertion strings.
+Audience = a developer or future agent code-reviewing a goal after the fact.
+They want to see what shipped, how it was verified, and what's still open.
+They do NOT want iter-by-iter sparklines or swimlanes (those widgets were
+retired with the Plan-tab redesign).
+
+Sections:
+- ## Outcome                — template-generated one-liner
+- ## Goal checklist         — DataTable-shaped
+- ## Atomic steps shipping  — DataTable from step_shipping
+- ## Verification chain     — Mermaid flowchart from decisions phase sequence
+- ## Pending                — unshipped atomic_steps, conditional
 """
 
 from __future__ import annotations
 
-import re
-from typing import Any
+from typing import Any, Iterable
 
 
-# impl_file prefix → deliverable label. First match wins.
-_DELIVERABLE_BUCKETS: tuple[tuple[str, str], ...] = (
-    ("src/agentboard/tui/overview_render", "Overview renderer"),
-    ("src/agentboard/tui/dev_timeline_render", "Dev renderer"),
-    ("src/agentboard/tui/result_timeline_render", "Result renderer"),
-    ("src/agentboard/tui/review_sections_render", "Review renderer"),
-    ("src/agentboard/tui/phase_flow", "PhaseFlowView integration"),
-    ("src/agentboard/tui/app", "app-level bindings"),
-    ("src/agentboard/analytics/overview_payload", "OverviewPayload builder"),
-    ("src/agentboard/analytics/iter_diffstat", "numstat parser"),
-    ("src/agentboard/mcp_server", "MCP tool registration"),
-    ("tests/test_phase_flow", "phase_flow tests"),
-    ("tests/", "test coverage"),
+_VERIFICATION_PHASES: tuple[str, ...] = (
+    "review",
+    "cso",
+    "redteam",
+    "parallel_review",
+    "approval",
 )
 
 
-def _deliverable_label_for_step(s: dict[str, Any]) -> str:
-    impl = str(s.get("impl_file", "") or "")
-    if impl:
-        for prefix, label in _DELIVERABLE_BUCKETS:
-            if impl.startswith(prefix):
-                return label
-    # Fallback: try to infer from behavior text keywords.
-    beh = str(s.get("behavior", "")).lower()
-    if "parse_numstat" in beh:
-        return "numstat parser"
-    if "build_overview_payload" in beh:
-        return "OverviewPayload builder"
-    if "mcp tool" in beh or "agentboard_build_overview" in beh:
-        return "MCP tool registration"
-    if "render_overview" in beh:
-        return "Overview renderer"
-    if "render_dev_timeline" in beh:
-        return "Dev renderer"
-    if "render_result_timeline" in beh:
-        return "Result renderer"
-    if "render_review_sections" in beh:
-        return "Review renderer"
-    if "phaseflowview" in beh or "tabpane" in beh:
-        return "PhaseFlowView integration"
-    if "agentboardapp" in beh or "keybinding" in beh or "activate_tab" in beh:
-        return "app-level bindings"
-    if "test_phase_flow" in beh:
-        return "phase_flow tests"
-    return "other"
-
-
-def render_result_timeline(payload: dict[str, Any]) -> str:
-    shipping = payload.get("step_shipping") or []
+def render_result_timeline(
+    payload: dict[str, Any],
+    decisions: list[dict[str, Any]] | None = None,
+) -> str:
+    decisions = decisions or []
     plan = payload.get("plan_digest") or {}
+    shipping = payload.get("step_shipping") or []
+    atomic_steps = plan.get("atomic_steps") or []
+    checklist = plan.get("goal_checklist") or []
 
-    if not shipping:
-        # Legacy fallback for unit tests that seed only plan_digest.
-        steps = plan.get("atomic_steps") or []
-        if not steps:
-            return "_Plan not locked._"
-        total = plan.get("atomic_steps_total") or len(steps)
-        done = plan.get("atomic_steps_done") or sum(
-            1 for s in steps if s.get("completed")
-        )
-        lines = [f"[{done}/{total} done]", ""]
-        iters = payload.get("iterations") or []
-        green_ts = [
-            str(it.get("ts", "")) for it in iters
-            if str(it.get("phase", "")).startswith("tdd_green")
-        ]
-        done_idx = 0
-        for s in steps:
-            mark = "[x]" if s.get("completed") else "[ ]"
-            row = f"{mark} {s.get('id', '?')}  {s.get('behavior', '')}"
-            if s.get("completed") and done_idx < len(green_ts):
-                row += f"    ✓ {green_ts[done_idx]}"
-                done_idx += 1
-            lines.append(row)
-        return "\n".join(lines)
+    # Legacy fallback — same contract as the prior renderer so test fixtures
+    # that seed nothing still get a meaningful message.
+    if not atomic_steps and not checklist and not shipping:
+        return "_Plan not locked._"
 
-    total = len(shipping)
-    shipped_n = sum(1 for s in shipping if s.get("shipped"))
+    sections: list[str] = [_render_outcome(shipping, atomic_steps, decisions)]
 
-    # Count iterations executed (distinct iter numbers across all decisions) —
-    # pulled from ship_iter which is the GREEN iter; blocked steps get None.
-    green_iters = {
-        s.get("ship_iter") for s in shipping if s.get("ship_iter") is not None
+    if checklist:
+        sections.append(_render_checklist(checklist))
+
+    if atomic_steps or shipping:
+        sections.append(_render_shipping_table(atomic_steps, shipping))
+
+    chain = _build_verification_mermaid(decisions)
+    if chain:
+        sections.append("## Verification chain\n\n```mermaid\n" + chain + "\n```")
+
+    pending_section = _render_pending(shipping, atomic_steps)
+    if pending_section:
+        sections.append(pending_section)
+
+    return "\n\n".join(sections)
+
+
+# ── Outcome ──────────────────────────────────────────────────────────────
+
+
+def _render_outcome(
+    shipping: list[dict[str, Any]],
+    atomic_steps: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+) -> str:
+    total = len(shipping) if shipping else len(atomic_steps)
+    if shipping:
+        shipped_n = sum(1 for s in shipping if s.get("shipped"))
+    else:
+        # Legacy fallback: when step_shipping is empty (unit-test fixtures
+        # that seed only plan_digest), fall back to the atomic_steps
+        # `completed` flag so the Outcome line still reflects progress.
+        shipped_n = sum(1 for s in atomic_steps if s.get("completed"))
+
+    verdicts = _final_verdicts(decisions)
+
+    parts: list[str] = []
+    if total:
+        parts.append(f"Shipped : {shipped_n}/{total} atomic_steps")
+    for phase in ("review", "redteam", "parallel_review", "approval"):
+        v = verdicts.get(phase)
+        if v:
+            parts.append(f"{phase} {v}")
+    if not parts:
+        return "## Outcome\n_(no outcome data yet — plan locked but no verification run)_"
+    return "## Outcome\n" + ". ".join(parts) + "."
+
+
+def _final_verdicts(decisions: Iterable[dict[str, Any]]) -> dict[str, str]:
+    """Walk decisions in order; last-seen verdict per phase wins."""
+    out: dict[str, str] = {}
+    for d in decisions:
+        phase = str(d.get("phase", ""))
+        if phase in _VERIFICATION_PHASES:
+            v = str(d.get("verdict_source") or d.get("verdict") or "")
+            if v:
+                out[phase] = v
+    return out
+
+
+# ── Goal checklist ───────────────────────────────────────────────────────
+
+
+def _render_checklist(checklist: list[Any]) -> str:
+    rows = ["| # | Item |", "|---|---|"]
+    for i, item in enumerate(checklist, 1):
+        rows.append(f"| {i} | {str(item).strip()} |")
+    return "## Goal checklist\n\n" + "\n".join(rows)
+
+
+# ── Atomic steps shipping ────────────────────────────────────────────────
+
+
+def _render_shipping_table(
+    atomic_steps: list[dict[str, Any]],
+    shipping: list[dict[str, Any]],
+) -> str:
+    ship_by_id: dict[str, dict[str, Any]] = {
+        str(s.get("id")): s for s in shipping if s.get("id")
     }
-    iter_count = max(green_iters) if green_iters else 0
+    source = atomic_steps if atomic_steps else shipping
 
-    # Group steps into deliverables.
-    by_deliv: dict[str, list[dict[str, Any]]] = {}
-    for s in shipping:
-        label = _deliverable_label_for_step(s)
-        by_deliv.setdefault(label, []).append(s)
-
-    # Order deliverables by their deepest shipped iter (ship order).
-    def _latest_iter(steps: list[dict[str, Any]]) -> int:
-        return max(
-            (int(s.get("ship_iter") or 0) for s in steps),
-            default=0,
-        )
-
-    ordered = sorted(by_deliv.items(), key=lambda kv: _latest_iter(kv[1]))
-
-    lines = [
-        "## Plan vs execution",
-        f"  Planned : {total} atomic_steps",
-        f"  Shipped : {shipped_n}/{total}"
-        + (f"  (through iter {iter_count})" if iter_count else ""),
-        "",
-        "## Deliverables",
+    rows = [
+        "| ID | Behavior | Impl | Ship iter | Status |",
+        "|---|---|---|---|---|",
     ]
-    for label, group in ordered:
-        group_done = sum(1 for s in group if s.get("shipped"))
-        mark = "✓" if group_done == len(group) else "~"
-        iters = sorted(
-            {int(s.get("ship_iter") or 0) for s in group if s.get("ship_iter") is not None}
+    for s in source:
+        sid = str(s.get("id", "?"))
+        beh = str(s.get("behavior", "")).strip()
+        if len(beh) > 70:
+            beh = beh[:67].rstrip() + "…"
+        impl = s.get("impl_file") or ""
+        impl_ref = f"`{impl}`" if impl else "—"
+        ship = ship_by_id.get(sid) or (s if shipping else {})
+        shipped_ok = bool(ship.get("shipped"))
+        ship_iter_raw = ship.get("ship_iter")
+        ship_iter = str(ship_iter_raw) if ship_iter_raw is not None else "—"
+        # Fall back to `completed` when shipping data is absent (legacy plans
+        # seeded only from plan_digest).
+        if not shipping:
+            shipped_ok = bool(s.get("completed"))
+        status = "[x]" if shipped_ok else "[ ]"
+        # Marker that includes step id first so tests / scan can grep it.
+        rows.append(
+            f"| {sid} | {beh} | {impl_ref} | {ship_iter} | {status} {sid} |"
         )
-        iter_str = ""
-        if iters:
-            iter_str = f"  · iter {_fmt_iter_range(iters)}"
-        lines.append(f"  {mark} {label:<28} {group_done}/{len(group)}{iter_str}")
+    return "## Atomic steps shipping\n\n" + "\n".join(rows)
 
-    # Pending steps, if any.
-    pending = [s for s in shipping if not s.get("shipped")]
-    if pending:
-        lines.append("")
-        lines.append("## Pending")
-        for s in pending:
-            lines.append(f"  [ ] {s.get('id', '?')}  {str(s.get('behavior', ''))[:80]}")
 
+# ── Verification chain (Mermaid flowchart) ───────────────────────────────
+
+
+def _build_verification_mermaid(decisions: Iterable[dict[str, Any]]) -> str:
+    """Render the phase × verdict sequence from decisions as a Mermaid flowchart.
+
+    Only includes verification phases (review / cso / redteam / parallel_review /
+    approval). Returns an empty string when no verification data is available
+    so the caller can skip the section entirely.
+    """
+    seq: list[tuple[str, str, int]] = []
+    for d in decisions:
+        phase = str(d.get("phase", ""))
+        if phase not in _VERIFICATION_PHASES:
+            continue
+        verdict = str(d.get("verdict_source") or d.get("verdict") or "").strip()
+        iter_n = int(d.get("iter", 0) or 0)
+        seq.append((phase, verdict, iter_n))
+    if not seq:
+        return ""
+
+    lines = ["flowchart LR"]
+    nodes: list[str] = []
+    for i, (phase, verdict, _iter) in enumerate(seq):
+        nid = f"N{i}"
+        label = f"{phase}: {verdict}" if verdict else phase
+        # Mermaid labels cannot contain unescaped `|` or `[`, keep them simple.
+        label_safe = label.replace("[", "(").replace("]", ")").replace("|", "/")
+        lines.append(f"  {nid}[{label_safe}]")
+        nodes.append(nid)
+    for a, b in zip(nodes, nodes[1:]):
+        lines.append(f"  {a} --> {b}")
     return "\n".join(lines)
 
 
-def _fmt_iter_range(iters: list[int]) -> str:
-    """Compact "1,2,3,5" → "1-3,5" rendering."""
-    if not iters:
+# ── Pending ──────────────────────────────────────────────────────────────
+
+
+def _render_pending(
+    shipping: list[dict[str, Any]],
+    atomic_steps: list[dict[str, Any]],
+) -> str:
+    """Return a Pending section or empty string when nothing is pending."""
+    if shipping:
+        pending = [s for s in shipping if not s.get("shipped")]
+    else:
+        pending = [s for s in atomic_steps if not s.get("completed")]
+    if not pending:
         return ""
-    runs: list[tuple[int, int]] = []
-    start = prev = iters[0]
-    for n in iters[1:]:
-        if n == prev + 1:
-            prev = n
-            continue
-        runs.append((start, prev))
-        start = prev = n
-    runs.append((start, prev))
-    return ",".join(f"{a}" if a == b else f"{a}-{b}" for a, b in runs)
+    rows = ["| ID | Behavior |", "|---|---|"]
+    for s in pending:
+        beh = str(s.get("behavior", "")).strip()
+        if len(beh) > 80:
+            beh = beh[:77].rstrip() + "…"
+        rows.append(f"| {s.get('id', '?')} | {beh} |")
+    return "## Pending\n\n" + "\n".join(rows)

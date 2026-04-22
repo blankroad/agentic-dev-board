@@ -745,7 +745,7 @@ def plan(
     if locked.non_goals:
         console.print(f"\n[bold]Non-goals[/bold]")
         for ng in locked.non_goals:
-            console.print(f"  - {ng}")
+            console.print(f"  - {ng.render_line()}")
 
     console.print(f"\n[bold]Goal Checklist[/bold] ({len(locked.goal_checklist)} items)")
     for item in locked.goal_checklist:

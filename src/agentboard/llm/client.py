@@ -150,3 +150,19 @@ def load_prompt(name: str) -> str:
     if not path.exists():
         raise FileNotFoundError(f"Prompt not found: {path}")
     return path.read_text()
+
+
+def load_prompt_with_prefix(name: str, prefix: str = "_shared/prefix") -> str:
+    """Load a prompt and prepend the shared prefix (Korean output language,
+    style anchors, visual-first rule, repo context). Use for gauntlet steps
+    and synthesizer skills that should inherit project-wide output conventions.
+
+    The final system prompt is:
+
+        <prefix>
+
+        ---
+
+        <per-step role description>
+    """
+    return load_prompt(prefix) + "\n\n---\n\n" + load_prompt(name)

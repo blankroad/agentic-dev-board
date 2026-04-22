@@ -45,7 +45,7 @@ async def test_overview_tab_wraps_static_in_vertical_scroll(tmp_path: Path) -> N
 
 
 def _bootstrap_with_long_plan(tmp_path: Path, lines: int = 200) -> None:
-    """Fixture with a plan_summary.md far longer than any viewport so the
+    """Fixture with a plan.md far longer than any viewport so the
     Plan tab's VerticalScroll is guaranteed to overflow."""
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
@@ -58,7 +58,6 @@ def _bootstrap_with_long_plan(tmp_path: Path, lines: int = 200) -> None:
     goal_dir = tmp_path / ".devboard" / "goals" / "g_s"
     goal_dir.mkdir(parents=True)
     body = "\n".join(f"## section {i}\n\nparagraph body line {i}." for i in range(lines))
-    (goal_dir / "plan_summary.md").write_text(body)
     (goal_dir / "plan.md").write_text(body)
 
 

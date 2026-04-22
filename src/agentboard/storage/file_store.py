@@ -299,10 +299,68 @@ class FileStore(Repository):
         self._write_plan_md(plan, d)
 
     def _write_plan_md(self, plan: LockedPlan, d: Path) -> None:
-        checklist = "\n".join(f"- [ ] {item}" for item in plan.goal_checklist)
-        non_goals = "\n".join(f"- {ng}" for ng in plan.non_goals)
-        failure_modes = "\n".join(f"- {fm}" for fm in plan.known_failure_modes)
-        guard = "\n".join(f"- {g}" for g in plan.out_of_scope_guard)
+        # Non-goals: render as table when any entry carries rationale/revisit,
+        # otherwise a flat bullet list (backward-compat with legacy string-shaped plans).
+        if plan.non_goals:
+            has_detail = any(ng.rationale or ng.revisit_when for ng in plan.non_goals)
+            if has_detail:
+                rows = [
+                    f"| {ng.item} | {ng.rationale or '—'} | {ng.revisit_when or '—'} |"
+                    for ng in plan.non_goals
+                ]
+                non_goals = (
+                    "| Item | Rationale | Revisit when |\n"
+                    "|---|---|---|\n"
+                    + "\n".join(rows)
+                )
+            else:
+                non_goals = "\n".join(f"- {ng.item}" for ng in plan.non_goals)
+        else:
+            non_goals = "_(none)_"
+
+        # Known failure modes: parse "SEVERITY: body" prefix into a table column
+        # when present; otherwise fall back to a flat bullet.
+        if plan.known_failure_modes:
+            rows = []
+            for fm in plan.known_failure_modes:
+                if ":" in fm:
+                    sev, body = fm.split(":", 1)
+                    rows.append(f"| {sev.strip()} | {body.strip()} |")
+                else:
+                    rows.append(f"| — | {fm} |")
+            failure_modes = (
+                "| Severity | Mode |\n"
+                "|---|---|\n"
+                + "\n".join(rows)
+            )
+        else:
+            failure_modes = "_(none)_"
+
+        checklist = (
+            "\n".join(f"- [ ] {item}" for item in plan.goal_checklist)
+            if plan.goal_checklist else "_(none)_"
+        )
+        guard = (
+            "\n".join(f"- `{g}`" for g in plan.out_of_scope_guard)
+            if plan.out_of_scope_guard else "_(none)_"
+        )
+
+        # Atomic steps table — previously absent from plan.md (only in plan.json).
+        if plan.atomic_steps:
+            rows = []
+            for s in plan.atomic_steps:
+                test_ref = f"`{s.test_file}::{s.test_name}`" if s.test_file else "—"
+                impl_ref = f"`{s.impl_file}`" if s.impl_file else "—"
+                rows.append(
+                    f"| {s.id} | {s.behavior} | {test_ref} | {impl_ref} | {s.role} |"
+                )
+            atomic_steps_section = (
+                "| ID | Behavior | Test | Impl | Role |\n"
+                "|---|---|---|---|---|\n"
+                + "\n".join(rows)
+            )
+        else:
+            atomic_steps_section = "_(none)_"
 
         content = f"""---
 goal_id: {plan.goal_id}
@@ -329,6 +387,9 @@ max_iterations: {plan.max_iterations}
 
 ## Success Criteria / Goal Checklist
 {checklist}
+
+## Atomic Steps
+{atomic_steps_section}
 
 ## Out-of-scope Guard
 {guard}

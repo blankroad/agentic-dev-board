@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentboard.llm.client import LLMClient, CompletionResult, load_prompt
+from agentboard.llm.client import LLMClient, CompletionResult, load_prompt_with_prefix
 from agentboard.gauntlet.lock import parse_decide_output
 
 
@@ -13,7 +13,7 @@ def run_decide(
     challenge_output: str,
 ) -> tuple[dict, CompletionResult]:
     """Synthesize all steps into a locked plan JSON dict."""
-    system = load_prompt("gauntlet/decide")
+    system = load_prompt_with_prefix("gauntlet/decide")
 
     content = f"""## Original Goal
 {goal_description}

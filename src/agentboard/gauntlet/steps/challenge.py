@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentboard.llm.client import LLMClient, CompletionResult, load_prompt
+from agentboard.llm.client import LLMClient, CompletionResult, load_prompt_with_prefix
 
 
 def run_challenge(
@@ -10,7 +10,7 @@ def run_challenge(
     scope_output: str,
     arch_output: str,
 ) -> tuple[str, CompletionResult]:
-    system = load_prompt("gauntlet/challenge")
+    system = load_prompt_with_prefix("gauntlet/challenge")
 
     content = f"""## Goal
 {goal_description}

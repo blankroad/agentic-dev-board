@@ -1,8 +1,12 @@
-"""PhaseFlowView — center-panel 4-tab TabbedContent.
+"""PhaseFlowView — center-panel 5-tab TabbedContent (Overview / Plan / Dev /
+Result / Review), each driven by its own data source through SessionContext.
 
-Replaces legacy PlanMarkdown + ActivityTimeline with a lifecycle-oriented
-view: Plan / Dev / Result / Review. Each tab is driven by its own data
-source through SessionContext.
+Each tab's primary view is either an LLM-synthesized Markdown artifact
+(`report.md` / `dev_review.md` / `review_session.md`) or a structured
+renderer over plan.json + decisions.jsonl. Legacy per-iter visualizations
+(plan_summary, ProcessSparkline, ProcessSwimlane, PlanMarkdown widget)
+were retired in the 2026-04 redesign — see `.devboard/goals/
+g_20260422_125046_4198c6/prompt_audit/_consolidated.md`.
 """
 
 from __future__ import annotations
@@ -23,8 +27,6 @@ from agentboard.tui.session_derive import SessionContext
 from agentboard.tui.plan_pipeline import PlanPipeline
 from agentboard.tui.review_cards import ReviewCards
 from agentboard.tui.review_timeline import ReviewTimeline
-from agentboard.tui.process_swimlane import ProcessSwimlane
-from agentboard.tui.process_sparkline import ProcessSparkline
 from agentboard.tui.dev_file_tree import DevFileTree
 from agentboard.tui.dev_diff_viewer import DevDiffViewer
 from agentboard.tui.dev_issues_pane import DevIssuesPane
@@ -91,8 +93,8 @@ _DEV_PHASE_PREFIX: tuple[str, ...] = ("tdd_", "tdd")
 
 _REVIEW_PHASE_EXACT: frozenset[str] = frozenset(
     # 'review' (not 'reviewer') is the canonical phase string used in
-    # decisions.jsonl across orchestrator/graph.py, analytics/*, narrative/
-    # generator.py, and cli.py. Keep this set in sync with those writers.
+    # decisions.jsonl across analytics/* and cli.py. Keep this set in sync
+    # with those writers.
     {"review", "cso", "redteam", "parallel_review", "approval"}
 )
 
@@ -223,13 +225,27 @@ class PhaseFlowView(Widget):
                         self._load_overview_body(), id="overview-body", markup=False
                     )
             with TabPane("Plan", id="plan"):
-                yield PlanPipeline(goal_dir=self._goal_dir(), id="plan-pipeline")
+                yield PlanPipeline(
+                    goal_dir=self._goal_dir(),
+                    decisions=self._load_decisions(),
+                    id="plan-pipeline",
+                )
                 with VerticalScroll():
                     yield Static(Markdown(self._load_plan_body()), id="plan-body")
             with TabPane("Dev", id="dev"):
                 diff_text = self._load_latest_diff_text()
                 files = _parse_unified_diff(diff_text)
                 with VerticalScroll():
+                    # agentboard-synthesize-dev-review output — CodeRabbit-style
+                    # PR review page. Rendered at the top of the Dev tab when
+                    # present; absent for pre-TDD goals (the skill requires a
+                    # real diff). Non-empty body contains Summary / Walkthrough /
+                    # Changes table / (optional) Sequence diagram / Risk notes.
+                    dev_review_md = self._load_dev_review_body()
+                    if dev_review_md:
+                        yield Static(
+                            Markdown(dev_review_md), id="dev-review-body"
+                        )
                     yield DevFileTree(
                         files=files,
                         reviewed=self._reviewed_paths,
@@ -256,16 +272,27 @@ class PhaseFlowView(Widget):
                     # Empty by default; no layout impact until opened.
                     yield DrawerContainer(id="dev-drawer")
             with TabPane("Result", id="result"):
-                decisions = self._load_decisions()
-                yield ProcessSparkline(decisions=decisions, id="process-sparkline")
-                yield ProcessSwimlane(decisions=decisions, id="process-swimlane")
                 with VerticalScroll():
-                    yield Static(self._load_result_body(), id="result-body", markup=False)
+                    yield Static(
+                        Markdown(self._load_result_body()),
+                        id="result-body",
+                    )
             with TabPane("Review", id="review"):
                 matrix = _build_verdict_matrix(self._load_decisions())
                 yield ReviewCards(matrix=matrix, id="review-cards")
                 yield ReviewTimeline(matrix=matrix, id="review-timeline")
                 with VerticalScroll():
+                    # agentboard-synthesize-session output — future-agent
+                    # lessons (Session story + Problems table + Quality gate
+                    # summary + Learnings table). Rendered at the top when
+                    # present; absent for pre-TDD goals. Legacy review-body
+                    # (Improved / ToImprove / Learned / TODOs prose) remains
+                    # below as a secondary view.
+                    review_session_md = self._load_review_session_body()
+                    if review_session_md:
+                        yield Static(
+                            Markdown(review_session_md), id="review-session-body"
+                        )
                     yield Static(self._load_review_body(), id="review-body", markup=False)
 
     def _build_payload(self) -> dict[str, object]:
@@ -316,13 +343,38 @@ class PhaseFlowView(Widget):
         if not gid:
             return _EMPTY_PLAN
         goal_dir = self._session.store_root / ".devboard" / "goals" / gid
-        summary = goal_dir / "plan_summary.md"
-        if summary.exists():
-            return _safe_read(summary, _EMPTY_PLAN)
         plan = goal_dir / "plan.md"
         if plan.exists():
             return _safe_read(plan, _EMPTY_PLAN)
         return _EMPTY_PLAN
+
+    def _load_dev_review_body(self) -> str:
+        """Return the body of the goal's dev_review.md (agentboard-synthesize-
+        dev-review output), or an empty string when the file is absent or
+        unreadable. Empty triggers the legacy Dev-tab layout (file tree +
+        diff viewer + iter cards) without the CodeRabbit-style prepend."""
+        gid = self._session.active_goal_id
+        if not gid:
+            return ""
+        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        f = goal_dir / "dev_review.md"
+        if not f.exists():
+            return ""
+        return _safe_read(f, "")
+
+    def _load_review_session_body(self) -> str:
+        """Return the body of the goal's review_session.md (agentboard-
+        synthesize-session output), or an empty string when absent. Empty
+        triggers the legacy Review-tab layout (ReviewCards + ReviewTimeline
+        + 4-section prose) without the future-agent lessons prepend."""
+        gid = self._session.active_goal_id
+        if not gid:
+            return ""
+        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        f = goal_dir / "review_session.md"
+        if not f.exists():
+            return ""
+        return _safe_read(f, "")
 
     def plan_body_text(self) -> str:
         try:
@@ -363,7 +415,9 @@ class PhaseFlowView(Widget):
         from agentboard.tui.result_timeline_render import render_result_timeline
 
         try:
-            return render_result_timeline(self._build_payload())
+            return render_result_timeline(
+                self._build_payload(), self._load_decisions()
+            )
         except Exception:
             return ""
 
@@ -372,6 +426,9 @@ class PhaseFlowView(Widget):
             content = self.query_one("#result-body", Static).content
         except Exception:
             return ""
+        markup = getattr(content, "markup", None)
+        if isinstance(markup, str):
+            return markup
         return str(content)
 
     def _load_review_body(self) -> str:

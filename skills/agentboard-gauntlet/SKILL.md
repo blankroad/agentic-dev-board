@@ -246,6 +246,7 @@ The `task_id` and `run_id` you receive from `agentboard_start_task` MUST be thre
 
 After locking + start_task + checkpoint:
 
+0. **Generate provisional Overview report (non-blocking).** Invoke `agentboard-synthesize-report` via the `Skill` tool with `goal_id=<goal_id>`. This writes `.devboard/goals/<goal_id>/report.md` so the TUI Overview tab renders release-notes-style content even before any TDD cycle runs. The skill catches its own failures and logs `NARRATIVE_SKIPPED` by contract — wrap the invocation in try/except conceptually, never gate the rest of the handoff on its success. Rationale: the Overview tab used to be empty until approval ran synthesize-report, so 95% of in-flight goals showed only the legacy plan_digest metadata dump.
 1. Read the Meta section of arch.md and check the `ENG_REVIEW_NEEDED` value
 2. Branch:
    - **ENG_REVIEW_NEEDED = false** → invoke `agentboard-tdd` via Skill tool immediately

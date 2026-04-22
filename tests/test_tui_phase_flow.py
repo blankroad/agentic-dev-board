@@ -31,7 +31,6 @@ def _mk_goal(
     gid: str,
     *,
     plan_md: str | None = None,
-    plan_summary_md: str | None = None,
     plan_json: dict | None = None,
 ) -> None:
     from agentboard.models import BoardState, Goal, GoalStatus
@@ -49,8 +48,6 @@ def _mk_goal(
     goal_dir.mkdir(parents=True, exist_ok=True)
     if plan_md is not None:
         (goal_dir / "plan.md").write_text(plan_md, encoding="utf-8")
-    if plan_summary_md is not None:
-        (goal_dir / "plan_summary.md").write_text(plan_summary_md, encoding="utf-8")
     if plan_json is not None:
         (goal_dir / "plan.json").write_text(json.dumps(plan_json), encoding="utf-8")
 
@@ -101,32 +98,7 @@ async def test_phase_flow_view_composes_four_tabs_in_order(tmp_path: Path) -> No
 
 
 @pytest.mark.asyncio
-async def test_plan_tab_renders_plan_summary_md(tmp_path: Path) -> None:
-    """s_002: Plan tab body contains text from plan_summary.md when that
-    file exists for the active goal.
-
-    # guards: binary-file-read-tolerance, integration-wiring
-    """
-    marker = "PLAN_SUMMARY_MARKER_XYZ"
-    _mk_goal(
-        tmp_path,
-        "g1",
-        plan_summary_md=f"# Summary\n\n{marker}\n",
-        plan_md="# raw\nRAW_PLAN_MARKER\n",
-    )
-    app = await _mount(tmp_path)
-    async with app.run_test(size=(120, 30)) as pilot:
-        await pilot.pause()
-
-        flow = app.query_one("#phase-flow")
-        body = flow.plan_body_text()
-        assert marker in body, (
-            f"Plan tab body should include plan_summary.md marker {marker!r}; got: {body[:300]!r}"
-        )
-
-
-@pytest.mark.asyncio
-async def test_plan_tab_falls_back_to_plan_md_when_no_summary(tmp_path: Path) -> None:
+async def test_plan_tab_renders_plan_md(tmp_path: Path) -> None:
     """s_003: Plan tab body falls back to plan.md content when
     plan_summary.md is absent.
 
@@ -271,8 +243,10 @@ async def test_result_tab_shows_progress_badge(tmp_path: Path) -> None:
     async with app.run_test(size=(120, 30)) as pilot:
         await pilot.pause()
         body = app.query_one("#phase-flow").result_body_text()
-        assert "[2/5 done]" in body, (
-            f"Result tab should include progress badge '[2/5 done]'; got: {body[:400]!r}"
+        # Result tab now uses a single Outcome line with N/M atomic_steps
+        # shipped format (CodeRabbit-style renderer).
+        assert "2/5 atomic_steps" in body, (
+            f"Result tab should show 2/5 atomic_steps shipped; got: {body[:400]!r}"
         )
 
 

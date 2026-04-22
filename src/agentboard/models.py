@@ -4,10 +4,10 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def _uid(prefix: str) -> str:
@@ -113,6 +113,28 @@ class GauntletStep(BaseModel):
     completed_at: datetime | None = None
 
 
+class NonGoal(BaseModel):
+    """A deferred follow-up — explicitly out of scope for this goal with
+    rationale and revisit condition, so future readers (humans or agents)
+    understand why and when to come back."""
+    item: str
+    rationale: str = ""
+    revisit_when: str = ""
+
+    def render_line(self) -> str:
+        """Render as a plan.md / CLI bullet line, compact when rationale
+        and revisit_when are empty (backward-compat with string-shaped
+        non_goals)."""
+        if not self.rationale and not self.revisit_when:
+            return self.item
+        parts = [self.item]
+        if self.rationale:
+            parts.append(f"— {self.rationale}")
+        if self.revisit_when:
+            parts.append(f"(revisit: {self.revisit_when})")
+        return " ".join(parts)
+
+
 class AtomicStep(BaseModel):
     """A bite-sized TDD step (~2-5 minutes): one behavior, one test, one impl."""
     id: str
@@ -122,6 +144,10 @@ class AtomicStep(BaseModel):
     impl_file: str = ""                 # "calculator.py" — may be empty until RED names it
     expected_fail_reason: str = ""      # e.g. "NameError: add not defined"
     completed: bool = False
+    # core = the behavior being validated; supporting = scaffolding needed to
+    # make the core step pass (fixtures, helper funcs); test_only = adds a
+    # regression-proof assertion without changing production code.
+    role: Literal["core", "supporting", "test_only"] = "core"
 
 
 class LockedPlan(BaseModel):
@@ -129,7 +155,7 @@ class LockedPlan(BaseModel):
     locked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     locked_hash: str = ""
     problem: str = ""
-    non_goals: list[str] = Field(default_factory=list)
+    non_goals: list[NonGoal] = Field(default_factory=list)
     scope_decision: str = ""
     architecture: str = ""
     known_failure_modes: list[str] = Field(default_factory=list)
@@ -140,6 +166,23 @@ class LockedPlan(BaseModel):
     max_iterations: int = 10
     gauntlet_steps: list[GauntletStep] = Field(default_factory=list)
     integration_test_command: str = ""
+
+    @field_validator("non_goals", mode="before")
+    @classmethod
+    def _coerce_non_goals(cls, v: Any) -> list[Any]:
+        """Accept legacy string-shaped non_goals by wrapping each string into
+        {item: <str>}. Existing plans on disk and test fixtures that pass
+        list[str] continue to work; new plans use list[{item, rationale,
+        revisit_when}]."""
+        if not v:
+            return []
+        out: list[Any] = []
+        for entry in v:
+            if isinstance(entry, str):
+                out.append({"item": entry})
+            else:
+                out.append(entry)
+        return out
 
     def next_step(self) -> AtomicStep | None:
         for s in self.atomic_steps:
@@ -157,7 +200,10 @@ class LockedPlan(BaseModel):
         content = json.dumps(
             {
                 "problem": self.problem,
-                "non_goals": self.non_goals,
+                # Hash only the `item` string of each non_goal so plans
+                # that gained rationale/revisit_when fields produce the same
+                # hash as their string-shaped predecessors with identical items.
+                "non_goals": [ng.item for ng in self.non_goals],
                 "scope_decision": self.scope_decision,
                 "architecture": self.architecture,
                 "goal_checklist": self.goal_checklist,

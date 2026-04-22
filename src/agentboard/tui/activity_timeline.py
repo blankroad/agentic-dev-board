@@ -50,28 +50,26 @@ class ActivityTimeline(Widget):
                 yield ActivityRow(entry)
 
     def _toc_line(self) -> str:
-        """Parse plan_summary.md (or plan.md) for H2 headings and return
-        them as a dot-separated TOC line. Empty if no plan is available."""
+        """Parse plan.md for H2 headings and return them as a dot-separated
+        TOC line. Empty if no plan is available."""
         gid = self._session.active_goal_id
         if not gid:
             return ""
         goal_dir = self._session.store_root / ".devboard" / "goals" / gid
-        for name in ("plan_summary.md", "plan.md"):
-            f = goal_dir / name
-            if not f.exists():
-                continue
-            try:
-                text = f.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            sections = [
-                line[3:].strip()
-                for line in text.splitlines()
-                if line.startswith("## ")
-            ]
-            if sections:
-                return "TOC: " + " · ".join(sections[:8])
-            break
+        f = goal_dir / "plan.md"
+        if not f.exists():
+            return ""
+        try:
+            text = f.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return ""
+        sections = [
+            line[3:].strip()
+            for line in text.splitlines()
+            if line.startswith("## ")
+        ]
+        if sections:
+            return "TOC: " + " · ".join(sections[:8])
         return ""
 
     def _load_rows(self) -> list[dict]:

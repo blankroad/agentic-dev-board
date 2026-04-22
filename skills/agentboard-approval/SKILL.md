@@ -109,33 +109,13 @@ On y:
 
 ## Step 4.5 — Write Outcome section to plan.md (MANDATORY)
 
-After `agentboard_push_pr` returns success (or a direct-push equivalent completes), first auto-regenerate `plan_summary.md` when the task is UI-surface, then write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan.
+After `agentboard_push_pr` returns success (or a direct-push equivalent completes), write the publishable Outcome block to the goal's `plan.md` so the document records "what actually happened" next to the original plan.
 
-### Step 4.5a — Auto-regenerate plan_summary.md narrative (if `ui_surface`)
+### Step 4.5a — Auto-invoke `agentboard-synthesize-report` (ALL goals)
 
-When `task.metadata.get("ui_surface", False)` is True, call `agentboard_generate_narrative` to refresh `.devboard/goals/<goal_id>/plan_summary.md` BEFORE the Outcome write (so the narrative covers the final push state). Wrap the call in `try/except` — generator failure is non-blocking: log a `NARRATIVE_SKIPPED` decision and continue.
+Invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.devboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `agentboard export <gid> --source report`).
 
-```python
-task_meta = task.metadata or {}
-if task_meta.get("ui_surface", False):
-    try:
-        narrative = agentboard_generate_narrative(
-            project_root=project_root,
-            goal_id=goal_id,
-        )
-        # narrative = {"plan_summary_path": ..., "section_citation_counts": ..., "total_citations": ...}
-    except Exception as exc:
-        agentboard_log_decision(
-            project_root, task_id, iter=iteration,
-            phase="approval",
-            reasoning=f"narrative generation skipped: {exc!r}",
-            verdict_source="NARRATIVE_SKIPPED",
-        )
-```
-
-### Step 4.5a.2 — Auto-invoke `agentboard-synthesize-report` (ALL goals)
-
-After `agentboard_generate_narrative` (regardless of `ui_surface`), invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.devboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `agentboard export <gid> --source report`).
+_Note: the legacy `agentboard_generate_narrative` MCP tool (and its `plan_summary.md` output) was removed in the Plan-tab redesign. The Plan tab now renders `plan.md` directly with structured tables for atomic_steps / failure_modes / non_goals. `synthesize-report` remains the source for the Overview tab's release-notes layer._
 
 The synthesize skill is **non-blocking** by contract: it catches its own failures and logs `NARRATIVE_SKIPPED`. Wrap the Skill call in `try/except` here too so the approval flow never stalls on a missing/broken agent response.
 
@@ -156,6 +136,51 @@ except Exception as exc:
 ```
 
 Failure of this hook MUST NOT block Step 4.5b (Outcome), Step 4.6 (TTY smoke), converged checkpoint, or `task.status=pushed`.
+
+### Step 4.5a.2 — Auto-invoke `agentboard-synthesize-dev-review` (ALL goals with a non-empty diff)
+
+After the release-notes hook, invoke `agentboard-synthesize-dev-review` so the Dev tab ships with a CodeRabbit-style PR-review page. Same non-blocking contract.
+
+```
+try:
+    Skill(
+        skill="agentboard-synthesize-dev-review",
+        args=f"goal_id={goal_id} task_id={task_id}",
+    )
+    # Skill writes dev_review.md on success OR logs NARRATIVE_SKIPPED and returns silently.
+except Exception as exc:
+    agentboard_log_decision(
+        project_root, task_id, iter=iteration,
+        phase="approval",
+        reasoning=f"synthesize-dev-review hook skipped: {exc!r}",
+        verdict_source="NARRATIVE_SKIPPED",
+    )
+```
+
+Rationale: the Dev tab's primary view is the PR-review page (Summary + Walkthrough + Changes table + Risk notes). Without this hook, Dev falls back to the raw file tree + diff viewer + iter cards — usable but not readable for cold reviewers.
+
+### Step 4.5a.3 — Auto-invoke `agentboard-synthesize-session` (ALL goals)
+
+After the Dev-review hook, invoke `agentboard-synthesize-session` so the Review tab ships with future-agent lessons + the goal's learnings are promoted into `.devboard/learnings/*.md` for `agentboard_search_learnings` retrieval by future `frame` steps. Same non-blocking contract.
+
+```
+try:
+    Skill(
+        skill="agentboard-synthesize-session",
+        args=f"goal_id={goal_id} task_id={task_id}",
+    )
+    # Skill writes review_session.md AND opportunistically saves tagged
+    # learnings via agentboard_save_learning. Any failure logs NARRATIVE_SKIPPED.
+except Exception as exc:
+    agentboard_log_decision(
+        project_root, task_id, iter=iteration,
+        phase="approval",
+        reasoning=f"synthesize-session hook skipped: {exc!r}",
+        verdict_source="NARRATIVE_SKIPPED",
+    )
+```
+
+Rationale: the Review tab's primary view should be "what did this session teach us?", not TDD journey enumeration. Learnings wiring turns each goal into a knowledge-accumulation cycle — future goals' `frame` step can surface relevant past patterns automatically.
 
 ### Step 4.5b — Write Outcome section
 
