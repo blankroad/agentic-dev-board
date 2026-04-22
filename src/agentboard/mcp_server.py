@@ -555,7 +555,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_save_brainstorm",
-            description="Save brainstorm output for a goal. Writes brainstorm.md (latest alias) and a versioned brainstorm-{ts}.md. Returns error if goal not found.",
+            description="Save brainstorm output for a goal. Writes brainstorm.md (latest alias) and a versioned brainstorm-{ts}.md. Optional structured fields (scope_mode, refined_goal, wedge, req_list, alternatives_considered, rationale, user_confirmed) are written as YAML frontmatter for gauntlet to consume as the single scope authority. Returns error if goal not found.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -565,6 +565,13 @@ async def list_tools() -> list[Tool]:
                     "risks": {"type": "array", "items": {"type": "string"}},
                     "alternatives": {"type": "array", "items": {"type": "string"}},
                     "existing_code_notes": {"type": "string"},
+                    "scope_mode": {"type": "string", "enum": ["EXPAND", "SELECTIVE", "HOLD", "REDUCE"]},
+                    "refined_goal": {"type": "string"},
+                    "wedge": {"type": "string"},
+                    "req_list": {"type": "array", "items": {"type": "object"}},
+                    "alternatives_considered": {"type": "array", "items": {"type": "object"}},
+                    "rationale": {"type": "string"},
+                    "user_confirmed": {"type": "boolean"},
                 },
                 "required": ["project_root", "goal_id", "premises", "risks", "alternatives", "existing_code_notes"],
             },
@@ -1372,13 +1379,25 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         goal_id = args["goal_id"]
         if store.load_goal(goal_id) is None:
             return _text({"error": f"goal not found: {goal_id}"})
-        store.save_brainstorm(
-            goal_id=goal_id,
-            premises=args["premises"],
-            risks=args["risks"],
-            alternatives=args["alternatives"],
-            existing_code_notes=args["existing_code_notes"],
-        )
+        optional_kwargs = {
+            k: args[k]
+            for k in (
+                "scope_mode", "refined_goal", "wedge", "req_list",
+                "alternatives_considered", "rationale", "user_confirmed",
+            )
+            if k in args
+        }
+        try:
+            store.save_brainstorm(
+                goal_id=goal_id,
+                premises=args["premises"],
+                risks=args["risks"],
+                alternatives=args["alternatives"],
+                existing_code_notes=args["existing_code_notes"],
+                **optional_kwargs,
+            )
+        except ValueError as e:
+            return _text({"error": str(e)})
         return _text({"status": "saved", "goal_id": goal_id})
 
     if name == "agentboard_approve_plan":

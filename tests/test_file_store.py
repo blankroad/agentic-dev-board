@@ -322,3 +322,159 @@ def test_save_brainstorm_creates_versioned_file(store: FileStore) -> None:
     content = versioned[0].read_text()
     assert "goal_id:" in content
     assert "## Premises" in content
+
+
+def test_save_brainstorm_accepts_optional_scope_mode(store: FileStore) -> None:
+    """F4 s_001: save_brainstorm accepts scope_mode kwarg without TypeError."""
+    goal = Goal(title="Scope mode brainstorm")
+    store.save_goal(goal)
+
+    store.save_brainstorm(
+        goal_id=goal.id,
+        premises=["p1"],
+        risks=["r1"],
+        alternatives=["a1"],
+        existing_code_notes="notes",
+        scope_mode="HOLD",
+    )
+
+    bs_path = store._goals_dir(goal.id) / "brainstorm.md"
+    assert bs_path.exists()
+    content = bs_path.read_text()
+    assert "scope_mode: HOLD" in content
+
+
+def test_save_brainstorm_accepts_structured_payload(store: FileStore) -> None:
+    """F4 s_002: save_brainstorm accepts all structured kwargs."""
+    goal = Goal(title="Structured payload brainstorm")
+    store.save_goal(goal)
+
+    store.save_brainstorm(
+        goal_id=goal.id,
+        premises=["p1"],
+        risks=["r1"],
+        alternatives=["a1"],
+        existing_code_notes="notes",
+        scope_mode="REDUCE",
+        refined_goal="Do the minimum viable thing in CLI",
+        wedge="One command prints JSON to stdout",
+        req_list=[
+            {"id": "R1", "text": "CLI command", "status": "in_scope"},
+            {"id": "R2", "text": "HTML report", "status": "deferred"},
+        ],
+        alternatives_considered=[
+            {"name": "ideal", "summary": "full platform", "chosen": False},
+            {"name": "realistic", "summary": "CLI dump", "chosen": True},
+        ],
+        rationale="1-week buildable wedge with testable success",
+        user_confirmed=True,
+    )
+
+    bs_path = store._goals_dir(goal.id) / "brainstorm.md"
+    content = bs_path.read_text()
+    assert "scope_mode: REDUCE" in content
+    assert "refined_goal:" in content
+    assert "Do the minimum viable thing in CLI" in content
+    assert "wedge:" in content
+    assert "req_list:" in content
+    assert "R1" in content
+    assert "alternatives_considered:" in content
+    assert "rationale:" in content
+    assert "user_confirmed: true" in content
+
+
+def test_save_brainstorm_emits_yaml_frontmatter(store: FileStore) -> None:
+    """F4 s_003: emitted brainstorm.md has YAML frontmatter block above prose body."""
+    import frontmatter as fm_lib
+    goal = Goal(title="Frontmatter parseable")
+    store.save_goal(goal)
+
+    store.save_brainstorm(
+        goal_id=goal.id,
+        premises=["p"],
+        risks=["r"],
+        alternatives=["a"],
+        existing_code_notes="n",
+        scope_mode="HOLD",
+        refined_goal="goal X",
+    )
+
+    bs_path = store._goals_dir(goal.id) / "brainstorm.md"
+    post = fm_lib.load(str(bs_path))
+    assert post.metadata["scope_mode"] == "HOLD"
+    assert post.metadata["refined_goal"] == "goal X"
+    assert post.metadata["goal_id"] == goal.id
+    assert "## Premises" in post.content
+
+
+def test_save_brainstorm_legacy_format_unchanged(store: FileStore) -> None:
+    """F4 s_004: legacy 4-arg call produces frontmatter with only goal_id + ts (backward compat)."""
+    import frontmatter as fm_lib
+    goal = Goal(title="Legacy format")
+    store.save_goal(goal)
+
+    store.save_brainstorm(
+        goal_id=goal.id,
+        premises=["p"],
+        risks=["r"],
+        alternatives=["a"],
+        existing_code_notes="n",
+    )
+
+    bs_path = store._goals_dir(goal.id) / "brainstorm.md"
+    post = fm_lib.load(str(bs_path))
+    # only legacy fields present in frontmatter
+    assert set(post.metadata.keys()) == {"goal_id", "ts"}
+    assert "scope_mode" not in post.metadata
+    assert "refined_goal" not in post.metadata
+
+
+def test_save_brainstorm_rejects_non_dict_alternatives(store: FileStore) -> None:
+    """F4 redteam HIGH: non-dict items in alternatives_considered must raise ValueError,
+    not AttributeError. MCP dispatch only catches ValueError."""
+    goal = Goal(title="Non-dict alternatives")
+    store.save_goal(goal)
+
+    with pytest.raises(ValueError, match="alternatives_considered"):
+        store.save_brainstorm(
+            goal_id=goal.id,
+            premises=["p"],
+            risks=["r"],
+            alternatives=["a"],
+            existing_code_notes="n",
+            alternatives_considered=["not a dict", {"name": "B", "chosen": True}],
+        )
+
+
+def test_save_brainstorm_validates_chosen_uniqueness(store: FileStore) -> None:
+    """F4 s_005: save_brainstorm raises ValueError on 0 or >=2 chosen:true in alternatives_considered."""
+    goal = Goal(title="Chosen validation")
+    store.save_goal(goal)
+
+    # zero chosen
+    with pytest.raises(ValueError, match="exactly one alternative"):
+        store.save_brainstorm(
+            goal_id=goal.id,
+            premises=["p"],
+            risks=["r"],
+            alternatives=["a"],
+            existing_code_notes="n",
+            alternatives_considered=[
+                {"name": "A", "chosen": False},
+                {"name": "B", "chosen": False},
+            ],
+        )
+
+    # two chosen
+    with pytest.raises(ValueError, match="exactly one alternative"):
+        store.save_brainstorm(
+            goal_id=goal.id,
+            premises=["p"],
+            risks=["r"],
+            alternatives=["a"],
+            existing_code_notes="n",
+            alternatives_considered=[
+                {"name": "A", "chosen": True},
+                {"name": "B", "chosen": True},
+            ],
+        )

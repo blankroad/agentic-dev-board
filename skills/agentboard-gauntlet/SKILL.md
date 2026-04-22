@@ -1,6 +1,6 @@
 ---
 name: agentboard-gauntlet
-description: MANDATORY planning gate. Proactively invoke this skill (do NOT write code directly) when the user asks to build, implement, add, create, make, or extend anything involving more than one file, tests, auth, payments, sessions, databases, APIs, architecture decisions, or anything destined for main/production. Runs the 5-step Gauntlet (Frame→Scope→Arch→Challenge→Decide) and locks intent with a SHA256-hashed LockedPlan including atomic_steps and out_of_scope_guard. Skip only for hello-world, one-liners, typo fixes, pure config tweaks, or when the user explicitly says "skip planning".
+description: MANDATORY planning gate. Proactively invoke this skill (do NOT write code directly) when the user asks to build, implement, add, create, make, or extend anything involving more than one file, tests, auth, payments, sessions, databases, APIs, architecture decisions, or anything destined for main/production. Runs the 4-step Gauntlet (Frame→Arch→Challenge→Decide) and locks intent with a SHA256-hashed LockedPlan. Scope decisions come from `agentboard-brainstorm` Phase 4 via brainstorm.md YAML frontmatter — the gauntlet no longer re-decides scope. including atomic_steps and out_of_scope_guard. Skip only for hello-world, one-liners, typo fixes, pure config tweaks, or when the user explicitly says "skip planning".
 when_to_use: User asks to build/implement/create/add/make something with multiple files or tests. User says "plan this", "design this", "how should we approach", "think this through", "architect this". MANDATORY before agentboard-tdd for non-trivial work. Also invoke when the user says `rethink` or requests replanning.
 ---
 
@@ -18,33 +18,34 @@ test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
   > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
-You are the **Planning Gauntlet** — a 5-step intent-locking pipeline adapted from gstack. Run each step sequentially, writing the output to `.devboard/goals/<goal_id>/gauntlet/<step>.md`.
+You are the **Planning Gauntlet** — a 4-step intent-locking pipeline adapted from gstack. Run each step sequentially, writing the output to `.devboard/goals/<goal_id>/gauntlet/<step>.md`.
+
+**Scope authority (F4):** Scope decisions (EXPAND / SELECTIVE / HOLD / REDUCE) are owned by `agentboard-brainstorm`, not the gauntlet. Read `brainstorm.md` YAML frontmatter and use its `scope_mode` verbatim. The gauntlet no longer has a Step 2 Scope — running one here would re-litigate a decision the user already confirmed.
 
 ## Step 1 — Frame (problem definition)
 
-Extract from the goal statement:
-- **Problem**: 1-2 sentence statement
-- **Wedge**: the smallest concrete thing that would prove progress
-- **Non-goals**: explicit list of things out of scope
+**First, read `brainstorm.md` frontmatter** (if present at `.devboard/goals/<goal_id>/brainstorm.md`) and use these fields as inputs:
+
+- `scope_mode` → carry into Step 4 Decide as `scope_decision` (do NOT re-derive)
+- `refined_goal` → use as the 1-sentence problem statement root
+- `wedge` → use as the Frame `Wedge` field directly
+- `req_list` items with `status: deferred` → seed into `Non-goals`
+- `rationale` → preserve as context for Step 3 Arch
+
+If `brainstorm.md` is missing or lacks frontmatter (legacy goal), default `scope_mode=HOLD` at Step 4 and log a `no_brainstorm_frontmatter` marker to decisions.jsonl at that time.
+
+Extract from the goal statement + brainstorm frontmatter:
+
+- **Problem**: 1-2 sentence statement (root from `refined_goal` if present)
+- **Wedge**: the smallest concrete thing that would prove progress (from brainstorm `wedge` if present)
+- **Non-goals**: explicit list of things out of scope (seeded from brainstorm `req_list` deferred entries)
 - **Success Definition**: checkable list (each item testable)
 - **Key Assumptions**: 2-3 unstated assumptions being relied on
 - **Riskiest Assumption**: the one most likely to be wrong
 
 Write → `.devboard/goals/<goal_id>/gauntlet/frame.md`
 
-## Step 2 — Scope (ambition check)
-
-Choose ONE mode:
-- **EXPAND**: goal is too small, suggest what to add
-- **SELECTIVE**: keep some parts, drop others (specify which)
-- **HOLD**: scope is right
-- **REDUCE**: goal is too ambitious, suggest what to cut
-
-Output: Rationale (why this mode), Refined Goal Statement, In-scope / Out-of-scope boundaries.
-
-Write → `.devboard/goals/<goal_id>/gauntlet/scope.md`
-
-## Step 3 — Architecture (design lock-in)
+## Step 2 — Architecture (design lock-in)
 
 - **Architecture Overview**: 2-4 sentence technical approach
 - **Data Flow**: input → transformation → output
@@ -69,43 +70,42 @@ Write → `.devboard/goals/<goal_id>/gauntlet/arch.md`
 
 ### Complexity Check (run after Critical Files list is complete)
 
+**Scope authority (F4):** This check sets `ENG_REVIEW_NEEDED` only — it does NOT re-decide scope. Scope is owned by `agentboard-brainstorm` Phase 4 and recorded in `brainstorm.md` frontmatter. Prior versions had a "Case 2: scope creep" AskUserQuestion that asked the user to cut scope mid-gauntlet; that was removed in F4 because it silently overrode the user's Phase 4 confirmation.
+
 When listing Critical Files, tag each with `[NEW]` or `[MODIFY]`:
+
 - `[NEW]` — file to be newly created
 - `[MODIFY]` — existing file to be modified
 
-Then apply the branching below:
+Then apply the branching below.
 
 Counts: `N = total file count`, `NEW_COUNT = number of [NEW]`, `MODIFY_COUNT = number of [MODIFY]`, `NEW_ABSTRACTIONS = number of new classes/services/modules to create`.
 
 Trigger condition: `N > 8` OR `NEW_ABSTRACTIONS ≥ 2`.
 
-**Case 1: No trigger** → Output one line and proceed to Challenge immediately:
+**Case 1: No trigger** → output one line and proceed to Challenge:
 `✅ Complexity OK: {N} files ({NEW_COUNT} new, {MODIFY_COUNT} modified, {NEW_ABSTRACTIONS} new abstractions).`
 
-**Case 2: Trigger fired AND MODIFY_COUNT ≥ NEW_COUNT** → possible scope creep:
-- AskUserQuestion: "이 계획은 기존 파일 {MODIFY_COUNT}개를 포함해 총 {N}개를 건드립니다 (새 abstraction {NEW_ABSTRACTIONS}개). 같은 목표를 더 적은 변경으로 달성할 수 있을까요? scope를 줄이거나 그대로 진행할 수 있습니다."
-- User picks scope reduction → rewrite Arch and re-run Complexity Check
-- User picks proceed-as-is → output `⚠️ Scope creep risk: {N} files modified. Proceeding as-is.` and proceed to Challenge
-
-**Case 3: Trigger fired AND NEW_COUNT > MODIFY_COUNT** → inherent complexity of a new system:
-- Output `⚠️ New system: {NEW_COUNT} new files, {NEW_ABSTRACTIONS} new abstractions. Engineering review recommended.`
-- Proceed to Challenge immediately (no scope reduction prompt)
+**Case 2: Trigger fired** → engineering review recommended (ENG_REVIEW_NEEDED flag only — no scope prompt):
+- Output `⚠️ {NEW_COUNT} new files, {MODIFY_COUNT} modified, {NEW_ABSTRACTIONS} new abstractions. Engineering review recommended.`
+- Set `ENG_REVIEW_NEEDED: true` in the arch.md Meta footer.
+- Proceed to Challenge immediately. Do NOT prompt the user to reduce scope — if scope feels wrong, the answer is to return to `agentboard-brainstorm`, not to cut inside the gauntlet.
 
 ### arch.md footer (flag persistence)
 
-Append the machine-readable section below at the end of arch.md. The Finalize step re-reads this file to branch.
+Append the machine-readable section below at the end of arch.md. The Finalize step re-reads this file to branch on ENG_REVIEW_NEEDED.
 
 ```
 ---
 ## Meta (machine-readable, do not edit)
-COMPLEXITY_CASE: 1 | 2 | 3
-ENG_REVIEW_NEEDED: true | false    # true only when Case 3
+COMPLEXITY_CASE: 1 | 2                  # 1 = no trigger, 2 = ENG_REVIEW_NEEDED
+ENG_REVIEW_NEEDED: true | false         # true only when Case 2
 NEW_COUNT: {NEW_COUNT}
 MODIFY_COUNT: {MODIFY_COUNT}
 NEW_ABSTRACTIONS: {NEW_ABSTRACTIONS}
 ```
 
-## Step 4 — Challenge (red-team the plan)
+## Step 3 — Challenge (red-team the plan)
 
 Find at least 4 failure modes of the PLAN (not the code yet):
 - Scope drift risks
@@ -118,15 +118,21 @@ For each: severity (CRITICAL / HIGH / MEDIUM), mitigation, and "warrants replan?
 
 Write → `.devboard/goals/<goal_id>/gauntlet/challenge.md`
 
-## Step 5 — Decide (synthesize LockedPlan)
+## Step 4 — Decide (synthesize LockedPlan)
 
-Synthesize the prior 4 into a JSON matching this schema:
+Synthesize the prior 3 steps (Frame + Arch + Challenge) into a JSON matching this schema.
+
+**`scope_decision` injection (F4):** Do NOT derive `scope_decision` here — read it from `brainstorm.md` YAML frontmatter at the start of the session:
+
+- If `brainstorm.md` has `scope_mode: <EXPAND|SELECTIVE|HOLD|REDUCE>` in its frontmatter → use that value verbatim as `scope_decision`.
+- If `brainstorm.md` is missing OR has no `scope_mode` field → default to `"HOLD"` AND emit a `agentboard_log_decision(phase="plan", reasoning="no brainstorm frontmatter; defaulted scope_decision=HOLD", verdict_source="default_hold")` marker for retro visibility.
+- Never invent a `scope_decision` different from the brainstorm frontmatter. If you believe the user's Phase 4 choice is wrong, the correct path is to return to `agentboard-brainstorm` and redo Phase 4 — NOT to override here.
 
 ```json
 {
   "problem": "...",
   "non_goals": ["..."],
-  "scope_decision": "EXPAND|SELECTIVE|HOLD|REDUCE",
+  "scope_decision": "<verbatim from brainstorm.md frontmatter scope_mode, or HOLD default>",
   "architecture": "...",
   "known_failure_modes": ["CRITICAL: ...", "HIGH: ..."],
   "goal_checklist": ["...checkable items..."],
@@ -195,7 +201,7 @@ Checking each step: one behavior, one assertion, ≤5 min work.
 After Decide produces the JSON:
 
 1. Resolve any `borderline_decisions` with the user (one question at a time, offer A/B + your recommendation)
-2. Present the plan to the user for review. Ask: "Plan ready. Approve to lock? (yes / no + which step to revise: problem|scope|arch|challenge)"
+2. Present the plan to the user for review. Ask: "Plan ready. Approve to lock? (yes / no + which step to revise: problem|arch|challenge)". Note: `scope` is not revisable here — if scope is wrong, return to `agentboard-brainstorm` Phase 4 instead.
 3. If approved: call `agentboard_approve_plan(project_root, goal_id, approved=True)`
 4. If revision needed: call `agentboard_approve_plan(project_root, goal_id, approved=False, revision_target=<step>)`, then re-run from that step
 5. Once approved, call `agentboard_lock_plan(goal_id, decide_json, project_root)` which:
@@ -266,8 +272,8 @@ Right after `arch.md` is written and BEFORE proceeding to Challenge, check `task
 - **ui_surface=False** → skip this section, go to Challenge as usual.
 - **ui_surface=True** → invoke `agentboard-ui-preview` via the Skill tool with `layer=0` in the argument payload. That skill produces a Layer 0 ASCII mockup, asks the user to confirm, and records the confirmed mockup SHA back into arch.md so the gauntlet hash covers the visual intent. **After Layer 0 is confirmed, and BEFORE proceeding to Challenge, invoke `agentboard-design-review` via the Skill tool.** design-review scores the arch + mockup against a 7-pass UI/UX rubric (Information Architecture, Interaction State Coverage incl. modal stacking / focus trap / z-order, User Journey, AI Slop Risk, Design System Alignment, Responsive+Keyboard, Unresolved Decisions):
 
-  - verdict `APPROVED` or `WARN` → resume the Gauntlet at Step 4 (Challenge). WARN means fix proposals were upserted into arch.md's `## Design Review` section for Challenge to read.
-  - verdict `BLOCKER` → return to Step 3 (Arch) for rewrite. design-review enforces a 1-retry cap + user override escape hatch (`BLOCKER_OVERRIDDEN` sentinel) so the loop cannot run forever.
-  - verdict `NOT_APPLICABLE` → the deliverable is not a mountable UI (e.g. a meta-goal whose impl_file is a markdown skill doc). Skip straight to Step 4.
+  - verdict `APPROVED` or `WARN` → resume the Gauntlet at Step 3 (Challenge). WARN means fix proposals were upserted into arch.md's `## Design Review` section for Challenge to read.
+  - verdict `BLOCKER` → return to Step 2 (Architecture) for rewrite. design-review enforces a 1-retry cap + user override escape hatch (`BLOCKER_OVERRIDDEN` sentinel) so the loop cannot run forever.
+  - verdict `NOT_APPLICABLE` → the deliverable is not a mountable UI (e.g. a meta-goal whose impl_file is a markdown skill doc). Skip straight to Step 3 (Challenge).
 
 Rationale: arch.md describes layout in prose, which is lossy. For `ui_surface=True` tasks, the Layer 0 mockup is the cheapest way to let the user catch "that's not what I pictured" before any code is written, and the design-review gate catches interaction-level UX bugs (e.g. "화면 분할이 모달 뒤에서 일어남") before they reach TDD. See `skills/agentboard-ui-preview/SKILL.md` for the Layer 0 flow and `skills/agentboard-design-review/SKILL.md` for the 7-pass rubric.

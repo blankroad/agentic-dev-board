@@ -211,12 +211,32 @@ retro / parallel-review can then grep `phase="self_review"` to verify this step 
 
 ### MCP call: `agentboard_save_brainstorm`
 
+Supply BOTH the legacy prose fields AND the structured frontmatter fields in the same call. Structured fields are read by `agentboard-gauntlet` as the single scope authority (F4: brainstorm owns scope; gauntlet no longer re-decides).
+
+#### Legacy prose fields (required)
+
 | Parameter | Value |
 |---|---|
 | `premises` | **Confirmed `REQ:` list from Phase 1 FIRST**, then 1-2 summary lines (purpose + key constraint). Include any `ASSUMPTION:` or `SELF_REVIEW_WARNING:` entries. |
 | `risks` | Deferred R-items (name only) + any Phase 3 answers that flagged constraints. Phrased as "X 조건에서 Y 실패" per Self-review rule. |
 | `alternatives` | **All** Approach entries from Phase 4 (not just the recommended). Recommendation line identifies which R{n} this wedge addresses and which are deferred. |
 | `existing_code_notes` | Phase 0 Grep results + any Phase 3 constraint-axis answers about existing code. |
+
+#### Structured frontmatter fields (REQUIRED — gauntlet reads these)
+
+Emit these so the gauntlet can parse `scope_mode` directly from `brainstorm.md` frontmatter instead of re-deciding scope.
+
+| Parameter | Value |
+|---|---|
+| `scope_mode` | One of `"EXPAND"` / `"SELECTIVE"` / `"HOLD"` / `"REDUCE"`. Derive from Phase 4 RECOMMENDATION: 이상적 → `EXPAND`, 현실적 → `HOLD` (or `REDUCE` if explicitly cutting), Approach C → case-by-case. This is the **authoritative scope decision** for the gauntlet. |
+| `refined_goal` | A 1-sentence actionable goal statement reflecting the chosen alternative. Must be concrete enough that a developer can start immediately. |
+| `wedge` | The narrowest concrete thing that would prove progress, from Phase 3 `wedge` axis (multi-request) or a 1-sentence distillation of the chosen alternative (single-request). |
+| `req_list` | Phase 1 REQ items as list of `{id: "R1", text: "...", status: "in_scope"\|"deferred"}` objects. Every Phase 1 item must appear. |
+| `alternatives_considered` | Phase 4 Approach entries as list of `{name: "가장 이상적"\|"현실적"\|"Approach C", summary: "...", chosen: bool}`. **Exactly one** must have `chosen: true` (save_brainstorm raises ValueError otherwise). |
+| `rationale` | 1-2 sentences: why the chosen alternative beats the others. Should reference Phase 3 answers / constraints. |
+| `user_confirmed` | `true` if Phase 1 restatement + Phase 4 RECOMMENDATION were both explicitly confirmed by the user; `false` only if the skill reached Phase 6 without an explicit user confirm (rare — log a decision marker). |
+
+**Why this matters (do not skip):** Before F4, the gauntlet ran its own Step 2 Scope that could silently override the Phase 4 RECOMMENDATION. After F4, the gauntlet reads this frontmatter and stops re-deciding. If these fields are absent, gauntlet falls back to `scope_decision="HOLD"` — which may contradict what the user confirmed in Phase 4.
 
 ### Optional: save a reusable constraint
 

@@ -282,6 +282,8 @@ def test_install_skills_copies_all(tmp_path: Path):
         "agentboard-parallel-review",
         "agentboard-ui-preview",
         "agentboard-synthesize-report",
+        "agentboard-synthesize-dev-review",
+        "agentboard-synthesize-session",
         "agentboard-design-review",
     }
     assert names == expected
@@ -535,6 +537,46 @@ def test_mcp_save_brainstorm_goal_not_found(tmp_path: Path):
     })
     payload = _json_payload(result)
     assert "error" in payload
+
+
+def test_mcp_save_brainstorm_structured_frontmatter(tmp_path: Path):
+    """F4 s_006+s_007: MCP tool accepts optional structured fields and emits YAML frontmatter."""
+    import frontmatter as fm_lib
+    _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
+    add = _dispatch_sync("agentboard_add_goal", {
+        "project_root": str(tmp_path),
+        "title": "Structured brainstorm",
+    })
+    goal_id = _json_payload(add)["goal_id"]
+
+    result = _dispatch_sync("agentboard_save_brainstorm", {
+        "project_root": str(tmp_path),
+        "goal_id": goal_id,
+        "premises": ["p"],
+        "risks": ["r"],
+        "alternatives": ["a"],
+        "existing_code_notes": "n",
+        "scope_mode": "HOLD",
+        "refined_goal": "ship minimum viable X",
+        "wedge": "single CLI command",
+        "req_list": [{"id": "R1", "text": "foo", "status": "in_scope"}],
+        "alternatives_considered": [
+            {"name": "ideal", "chosen": False},
+            {"name": "realistic", "chosen": True},
+        ],
+        "rationale": "1-week scope",
+        "user_confirmed": True,
+    })
+    payload = _json_payload(result)
+    assert payload.get("status") == "saved"
+
+    bs_path = tmp_path / ".devboard" / "goals" / goal_id / "brainstorm.md"
+    post = fm_lib.load(str(bs_path))
+    assert post.metadata["scope_mode"] == "HOLD"
+    assert post.metadata["refined_goal"] == "ship minimum viable X"
+    assert post.metadata["wedge"] == "single CLI command"
+    assert post.metadata["user_confirmed"] is True
+    assert len(post.metadata["req_list"]) == 1
 
 
 # ── agentboard_approve_plan ─────────────────────────────────────────────────────
