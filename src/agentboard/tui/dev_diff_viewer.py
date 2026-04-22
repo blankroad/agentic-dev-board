@@ -26,6 +26,9 @@ def render_diff(text: str) -> str:
 
 class DevDiffViewer(Static):
     def __init__(self, diff_text: str = "", **kwargs) -> None:
+        # Diffs are plain text, not Rich markup. Disable so diffs containing
+        # bracket/equals patterns (e.g. `title="Alpha"`) don't raise MarkupError.
+        kwargs.setdefault("markup", False)
         super().__init__(**kwargs)
         self._diff_text = diff_text
 

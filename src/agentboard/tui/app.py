@@ -74,6 +74,7 @@ class DevBoardApp(App):
         Binding("3", "phase_flow_tab('dev')", "Dev", show=False, priority=True),
         Binding("4", "phase_flow_tab('result')", "Result", show=False, priority=True),
         Binding("5", "phase_flow_tab('review')", "Review", show=False, priority=True),
+        Binding("F", "open_fleet", "Fleet", show=True, priority=True),
     ]
 
     selected_iter: reactive[int | None] = reactive(None)
@@ -247,6 +248,31 @@ class DevBoardApp(App):
     def action_toggle_phase_flow_pin(self) -> None:
         try:
             self.query_one("#phase-flow", PhaseFlowView).action_toggle_pin()
+        except Exception:
+            pass
+
+    def action_open_fleet(self) -> None:
+        """Push FleetScreen — idempotent: no-op if already on top (redteam C#1)."""
+        from agentboard.tui.fleet_screen import FleetScreen
+
+        if isinstance(self.screen, FleetScreen):
+            return
+        self.push_screen(
+            FleetScreen(self._store, self._session, self._store_root)
+        )
+
+    def on_goal_activated(self, event) -> None:
+        """FleetScreen.GoalActivated handler — only acts if FleetScreen is top (redteam H#5)."""
+        from agentboard.tui.fleet_screen import FleetScreen
+
+        if not isinstance(self.screen, FleetScreen):
+            return
+        try:
+            self.pop_screen()
+        except Exception:
+            pass
+        try:
+            self.commands.dispatch(f"goto {event.goal_id}")
         except Exception:
             pass
 
