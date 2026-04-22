@@ -9,7 +9,6 @@ import pytest
 from agentboard.agents.iron_law import IronLawVerdict, _is_test_path, check_iron_law
 from agentboard.agents.systematic_debug import _parse_rca
 from agentboard.agents.tdd import parse_green_status, parse_red_status, parse_refactor_status
-from agentboard.gauntlet.steps.brainstorm import needs_brainstorm, parse_questions
 from agentboard.tools.base import ToolCall
 from agentboard.config import AgentBoardConfig, TDDConfig
 from agentboard.gauntlet.lock import build_locked_plan
@@ -250,38 +249,9 @@ def _r(text):
     return r
 
 
-# ── G5: Brainstorm gate ──────────────────────────────────────────────────────
-
-def test_needs_brainstorm_short_goal():
-    assert needs_brainstorm("build stuff")
-
-
-def test_needs_brainstorm_vague_words():
-    assert needs_brainstorm("build something like a calculator but maybe more")
-    assert needs_brainstorm("add some features, kinda like auth etc")
-
-
-def test_needs_brainstorm_clear_goal_skipped():
-    assert not needs_brainstorm(
-        "Implement calculator.py with add/sub/mul/div functions and a pytest suite. "
-        "div(a, 0) must raise ZeroDivisionError."
-    )
-
-
-def test_parse_questions_clear():
-    result = parse_questions("## Brainstorm\nCLEAR — no questions needed.")
-    assert result == []
-
-
-def test_parse_questions_extracts_numbered_list():
-    text = """## Brainstorm — 2 questions
-
-1. **Success criteria**: How will we know the calculator is done?
-2. **Constraints**: Does this need to run on Python 3.11?"""
-    questions = parse_questions(text)
-    assert len(questions) == 2
-    assert "calculator is done" in questions[0]
-    assert "Python 3.11" in questions[1]
+# ── G5: Brainstorm gate (removed in F4 — brainstorm skill owns scope decisions;
+#        legacy needs_brainstorm / parse_questions helpers deleted along with
+#        src/agentboard/gauntlet/steps/brainstorm.py) ────────────────────────
 
 
 # ── G7: Iron Law detector ────────────────────────────────────────────────────

@@ -59,14 +59,16 @@ Default to tables when in doubt. Reject prose walls with embedded enumeration â€
 
 ## How this prefix is applied
 
-At runtime, Python wrappers in `src/agentboard/gauntlet/steps/*.py` and synthesizer skills load this file and concatenate it as the lead section of the system prompt, before the per-prompt role description. The LLM sees:
+At runtime, synthesizer skills (e.g. `agentboard-synthesize-report`, `agentboard-synthesize-dev-review`, `agentboard-synthesize-session`) load this file and concatenate it as the lead section of the system prompt, before the per-prompt role description. The LLM sees:
 
 ```
 <contents of _shared/prefix.md>
 
 ---
 
-<contents of gauntlet/<step>.md  OR  synthesizer-specific prompt>
+<contents of synthesizer-specific prompt>
 ```
+
+(Historical note: the gauntlet's Frame/Arch/Challenge/Decide prompts used to live as Python wrappers in `src/agentboard/gauntlet/steps/*.py` and markdown files in `llm/prompts/gauntlet/<step>.md`. Those were removed in F4 when the production gauntlet path moved entirely to `skills/agentboard-gauntlet/SKILL.md`.)
 
 Edit this file to shift the standard; every downstream prompt inherits the change.

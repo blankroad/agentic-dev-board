@@ -224,12 +224,12 @@ def test_gauntlet_step_quality_review_section():
     """g_004: Step Quality Review section must exist after Decide section."""
     skill_md = GAUNTLET_DIR / "SKILL.md"
     content = skill_md.read_text()
-    decide_idx = content.find("## Step 5 — Decide")
+    decide_idx = content.find("## Step 4 — Decide")
     review_idx = content.find("## Step Quality Review")
-    assert decide_idx != -1, "## Step 5 — Decide section missing"
+    assert decide_idx != -1, "## Step 4 — Decide section missing"
     assert review_idx != -1, "## Step Quality Review section missing"
     assert decide_idx < review_idx, (
-        "## Step Quality Review must appear after ## Step 5 — Decide"
+        "## Step Quality Review must appear after ## Step 4 — Decide"
     )
 
 
@@ -268,10 +268,10 @@ def test_gauntlet_arch_single_responsibility_rule():
     """sr_001: Step 3 Architecture section must contain Single Responsibility rule."""
     skill_md = GAUNTLET_DIR / "SKILL.md"
     content = skill_md.read_text()
-    step3_idx = content.find("## Step 3 — Architecture")
-    step4_idx = content.find("## Step 4 — Challenge")
-    assert step3_idx != -1, "## Step 3 — Architecture section missing"
-    assert step4_idx != -1, "## Step 4 — Challenge section missing"
+    step3_idx = content.find("## Step 2 — Architecture")
+    step4_idx = content.find("## Step 3 — Challenge")
+    assert step3_idx != -1, "## Step 2 — Architecture section missing"
+    assert step4_idx != -1, "## Step 3 — Challenge section missing"
     step3_body = content[step3_idx:step4_idx]
     assert "Single Responsibility" in step3_body, (
         "Step 3 Architecture section must contain Single Responsibility rule"
@@ -284,8 +284,8 @@ def test_gauntlet_arch_critical_files_bad_example():
     """sr_002: Step 3 Critical Files guidance must contain a bad example."""
     skill_md = GAUNTLET_DIR / "SKILL.md"
     content = skill_md.read_text()
-    step3_idx = content.find("## Step 3 — Architecture")
-    step4_idx = content.find("## Step 4 — Challenge")
+    step3_idx = content.find("## Step 2 — Architecture")
+    step4_idx = content.find("## Step 3 — Challenge")
     step3_body = content[step3_idx:step4_idx]
     assert "Bad:" in step3_body or "❌" in step3_body, (
         "Step 3 Critical Files guidance must contain a bad example (Bad: or ❌)"
@@ -298,8 +298,8 @@ def test_gauntlet_arch_critical_files_good_example():
     """sr_003: Step 3 Critical Files guidance must contain a good example."""
     skill_md = GAUNTLET_DIR / "SKILL.md"
     content = skill_md.read_text()
-    step3_idx = content.find("## Step 3 — Architecture")
-    step4_idx = content.find("## Step 4 — Challenge")
+    step3_idx = content.find("## Step 2 — Architecture")
+    step4_idx = content.find("## Step 3 — Challenge")
     step3_body = content[step3_idx:step4_idx]
     assert "Good:" in step3_body or "✅" in step3_body, (
         "Step 3 Critical Files guidance must contain a good example (Good: or ✅)"
@@ -312,8 +312,8 @@ def test_gauntlet_out_of_scope_guard_intent_annotation():
     """sr_004: Out-of-scope Guard guidance must contain intent annotation pattern."""
     skill_md = GAUNTLET_DIR / "SKILL.md"
     content = skill_md.read_text()
-    step3_idx = content.find("## Step 3 — Architecture")
-    step4_idx = content.find("## Step 4 — Challenge")
+    step3_idx = content.find("## Step 2 — Architecture")
+    step4_idx = content.find("## Step 3 — Challenge")
     step3_body = content[step3_idx:step4_idx]
     assert "out_of_scope_guard" in step3_body, "out_of_scope_guard example missing from Step 3"
     assert " — " in step3_body, (
