@@ -170,10 +170,52 @@ Key routing rules:
 
 See `TODOS.md` for tracked items.
 
-**Planning-layer redesign roadmap:**
+**Planning-layer redesign roadmap (revised 2026-04-23, D-first):**
 
-- ✅ **F4 landed (2026-04-23):** brainstorm YAML frontmatter contract; gauntlet Step 2 Scope deleted; Complexity Check reduced to ENG_REVIEW_NEEDED flag only; `scope_decision` injected from brainstorm.md; dead code removed (`gauntlet/steps/`, `gauntlet/pipeline.py`, `llm/prompts/gauntlet/`).
-- ⏳ **F1–F3 (next):** phase schema (`.devboard/goals/<gid>/phases/<phase>.md` with structured frontmatter) + `phase_start` / `phase_end` events in `decisions.jsonl` + TUI `phases` tab — required foundation for fleet-level cross-agent phase observability.
-- ⏳ **F5 (later):** `--deep` modes on each planning phase (e.g., `intent --deep=ceo`, `architecture --deep=eng`, `visual --deep=design`) to absorb gstack's `plan-*-review` / `office-hours` / `autoplan` / `codex challenge` skills. See `memory/reference_gstack_absorption.md` for the full absorption table.
+### M0 ✅ F4 landed (2026-04-23, merge `dd3b75b`)
+
+Brainstorm YAML frontmatter contract; gauntlet Step 2 Scope deleted; Complexity Check reduced to `ENG_REVIEW_NEEDED` flag only; `scope_decision` injected from `brainstorm.md`; dead code removed (`gauntlet/steps/`, `gauntlet/pipeline.py`, `llm/prompts/gauntlet/`). **The current `agentboard-gauntlet` chain is now FROZEN** — do not invoke for new work (see `memory/feedback_freeze_gauntlet_flow.md`).
+
+### D1 — Phase-skill skeletons (TOP PRIORITY)
+
+Build new phase skills in parallel with the frozen gauntlet (no disruption until D3 cutover). Each skill outputs YAML-frontmatter-first artifacts so later observability layers can parse without retrofit.
+
+- **D1a `agentboard-intent`** — discover + commit to scope (replaces `agentboard-brainstorm` eventually). Writes `brainstorm.md` YAML frontmatter (already defined by F4).
+- **D1b `agentboard-frame`** — surface hidden assumptions + riskiest assumption + success criteria. Reads `brainstorm.md` frontmatter. No scope decisions (owned by intent).
+- **D1c `agentboard-architecture`** — file structure, test strategy, `critical_files`, `out_of_scope_guard`. UI hook + design-review gate when `ui_surface=true`. Complexity Check emits `ENG_REVIEW_NEEDED` only.
+- **D1d `agentboard-stress`** — adversarial plan review (4+ failure modes). Reads prior phases.
+- **D1e `agentboard-lock`** — atomic_steps decomposition, SHA256 hash via `build_locked_plan`, writes `plan.md` + `plan.json`. Mechanical (no LLM re-decision).
+
+### D2 — `--deep` modes (gstack absorption)
+
+Layered on D1 skills. Each `--deep` flag expands the phase with a specific depth rubric imported from gstack:
+
+- `intent --deep=ceo` ← `plan-ceo-review` (10x scope thinking, 4 modes)
+- `intent --deep=officehours` ← `office-hours` (YC 6 forcing questions)
+- `architecture --deep=eng` ← `plan-eng-review` (architecture coherence, test strategy, diagrams)
+- `architecture --deep=design` / `visual --deep=design` ← `plan-design-review` (0-10 rating per dimension, for `ui_surface`)
+- `architecture --deep=devex` ← `plan-devex-review` (persona, magical moments)
+- `stress --deep=codex` ← `codex challenge` (200 IQ adversarial)
+
+All depth-mode outputs remain structured (YAML frontmatter compliant). See `memory/reference_gstack_absorption.md`.
+
+### D3 — Orchestrator + cutover
+
+- Thin `agentboard-plan` skill chains `intent → frame → architecture → (visual?) → stress → lock`.
+- `agentboard-gauntlet` is deprecated and renamed; CLAUDE.md skill routing updated to point at the new chain.
+- `agentboard-brainstorm` is deprecated in favor of `agentboard-intent`.
+- The freeze directive lifts automatically once D3 cutover lands.
+
+### C — Observability layer (after D, deferred)
+
+Because D1 skills already emit YAML-frontmatter artifacts, this layer is additive not invasive:
+
+- **C1** — `phase_start` / `phase_end` events in `decisions.jsonl` (each phase skill already prepared to emit)
+- **C2** — TUI `phases` tab consuming the event stream + artifacts
+
+### Housekeeping (orthogonal, address when convenient)
+
+- **H0** `save_brainstorm` validation hardening (3 MEDIUM findings from F4 redteam) — **may be obsoleted** by D1a since `agentboard-intent` will own the write path.
+- **B0** `atomic_write` alias-vs-versioned concurrency race (pre-existing, affects `file_store.py` broadly) — **promote to D1-prerequisite** if D1 skills reuse the same `atomic_write` pattern; alternatively fix the pattern in a shared helper that D1 skills adopt from day 1.
 
 `install.sh` branch hardcoding: fix before merging to main.

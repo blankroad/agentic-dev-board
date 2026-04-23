@@ -285,6 +285,13 @@ def test_install_skills_copies_all(tmp_path: Path):
         "agentboard-synthesize-dev-review",
         "agentboard-synthesize-session",
         "agentboard-design-review",
+        # D1 phase-skill skeletons (2026-04-23, status=SKELETON,
+        # not auto-invoked until D3 cutover)
+        "agentboard-intent",
+        "agentboard-frame",
+        "agentboard-architecture",
+        "agentboard-stress",
+        "agentboard-lock",
     }
     assert names == expected
 
