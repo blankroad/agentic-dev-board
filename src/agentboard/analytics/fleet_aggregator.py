@@ -1,6 +1,6 @@
 """Fleet aggregator — collect per-goal summaries for the Fleet surface.
 
-Reads .devboard/goals/*/goal.json + the latest run's digest.json to build
+Reads .agentboard/goals/*/goal.json + the latest run's digest.json to build
 a list of GoalSummary records. All reads are best-effort: corrupt files
 are skipped, not propagated as errors. This is the data layer for both
 the agentboard_fleet_snapshot MCP tool and the FleetView Textual widget.
@@ -105,7 +105,7 @@ def _summarize_goal(gdir: Path, runs_dir: Path) -> GoalSummary | None:
 
 
 def load_fleet(store: "FileStore") -> list[GoalSummary]:
-    """Aggregate one GoalSummary per goal under .devboard/goals/.
+    """Aggregate one GoalSummary per goal under .agentboard/goals/.
 
     Sorted by updated_at_iso descending (latest first). Corrupt goals
     are silently skipped so the list always renders cleanly.

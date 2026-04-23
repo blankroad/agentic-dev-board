@@ -12,12 +12,12 @@ def _bootstrap_minimal(tmp_path: Path) -> None:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_s")
     board.goals.append(Goal(id="g_s", title="scroll-fixture", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_s"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_s"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# plan\n")
 
@@ -50,12 +50,12 @@ def _bootstrap_with_long_plan(tmp_path: Path, lines: int = 200) -> None:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_s")
     board.goals.append(Goal(id="g_s", title="scroll-long", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_s"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_s"
     goal_dir.mkdir(parents=True)
     body = "\n".join(f"## section {i}\n\nparagraph body line {i}." for i in range(lines))
     (goal_dir / "plan.md").write_text(body)

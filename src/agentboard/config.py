@@ -56,10 +56,10 @@ _agentboard_root: Path | None = None
 
 
 def find_agentboard_root(start: Path | None = None) -> Path | None:
-    """Walk up from start looking for .devboard directory."""
+    """Walk up from start looking for .agentboard directory."""
     path = start or Path.cwd()
     for parent in [path, *path.parents]:
-        candidate = parent / ".devboard"
+        candidate = parent / ".agentboard"
         if candidate.is_dir():
             return parent
     return None
@@ -67,7 +67,7 @@ def find_agentboard_root(start: Path | None = None) -> Path | None:
 
 def get_agentboard_dir(root: Path | None = None) -> Path:
     r = root or find_agentboard_root() or Path.cwd()
-    return r / ".devboard"
+    return r / ".agentboard"
 
 
 def load_config(root: Path | None = None) -> AgentBoardConfig:

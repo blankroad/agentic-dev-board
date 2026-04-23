@@ -5,7 +5,7 @@ Each tab's primary view is either an LLM-synthesized Markdown artifact
 (`report.md` / `dev_review.md` / `review_session.md`) or a structured
 renderer over plan.json + decisions.jsonl. Legacy per-iter visualizations
 (plan_summary, ProcessSparkline, ProcessSwimlane, PlanMarkdown widget)
-were retired in the 2026-04 redesign — see `.devboard/goals/
+were retired in the 2026-04 redesign — see `.agentboard/goals/
 g_20260422_125046_4198c6/prompt_audit/_consolidated.md`.
 """
 
@@ -342,7 +342,7 @@ class PhaseFlowView(Widget):
         gid = self._session.active_goal_id
         if not gid:
             return _EMPTY_PLAN
-        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        goal_dir = self._session.store_root / ".agentboard" / "goals" / gid
         plan = goal_dir / "plan.md"
         if plan.exists():
             return _safe_read(plan, _EMPTY_PLAN)
@@ -356,7 +356,7 @@ class PhaseFlowView(Widget):
         gid = self._session.active_goal_id
         if not gid:
             return ""
-        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        goal_dir = self._session.store_root / ".agentboard" / "goals" / gid
         f = goal_dir / "dev_review.md"
         if not f.exists():
             return ""
@@ -370,7 +370,7 @@ class PhaseFlowView(Widget):
         gid = self._session.active_goal_id
         if not gid:
             return ""
-        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        goal_dir = self._session.store_root / ".agentboard" / "goals" / gid
         f = goal_dir / "review_session.md"
         if not f.exists():
             return ""
@@ -470,8 +470,8 @@ class PhaseFlowView(Widget):
         gid = self._session.active_goal_id
         if not gid:
             # fallback to store_root so render_pipeline returns 5 missing
-            return self._session.store_root / ".devboard" / "goals" / "_none"
-        return self._session.store_root / ".devboard" / "goals" / gid
+            return self._session.store_root / ".agentboard" / "goals" / "_none"
+        return self._session.store_root / ".agentboard" / "goals" / gid
 
     def _load_decisions(self) -> list[dict]:
         if not self._task_id:
@@ -485,7 +485,7 @@ class PhaseFlowView(Widget):
         gid = self._session.active_goal_id
         if not gid:
             return {}
-        plan_path = self._session.store_root / ".devboard" / "goals" / gid / "plan.json"
+        plan_path = self._session.store_root / ".agentboard" / "goals" / gid / "plan.json"
         if not plan_path.exists():
             return {}
         try:
@@ -510,7 +510,7 @@ class PhaseFlowView(Widget):
         rid = self._resolve_rid() if hasattr(self, "_resolve_rid") else None
         if not rid:
             return "", []
-        digest_path = self._session.store_root / ".devboard" / "runs" / rid / "digest.json"
+        digest_path = self._session.store_root / ".agentboard" / "runs" / rid / "digest.json"
         if not digest_path.exists():
             return "", []
         try:
@@ -558,13 +558,13 @@ class PhaseFlowView(Widget):
         """M1b-wiring w_001/w_002: find the latest run jsonl whose task_id
         matches `self._task_id`. Used to drive pile-source diff loading.
 
-        Scans `.devboard/runs/*.jsonl`, filters by task_id match
+        Scans `.agentboard/runs/*.jsonl`, filters by task_id match
         (reading the first event line of each file), picks the most
         recent by file mtime. Returns the rid (basename without ext).
         """
         if not self._task_id:
             return None
-        runs_dir = self._session.store_root / ".devboard" / "runs"
+        runs_dir = self._session.store_root / ".agentboard" / "runs"
         if not runs_dir.exists():
             return None
         candidates: list[tuple[float, str]] = []
@@ -644,7 +644,7 @@ class PhaseFlowView(Widget):
             if gid:
                 changes_dir = (
                     self._session.store_root
-                    / ".devboard" / "goals" / gid
+                    / ".agentboard" / "goals" / gid
                     / "tasks" / self._task_id / "changes"
                 )
                 if changes_dir.exists():
@@ -676,7 +676,7 @@ class PhaseFlowView(Widget):
         if not gid:
             return 0
         plan_json = (
-            self._session.store_root / ".devboard" / "goals" / gid / "plan.json"
+            self._session.store_root / ".agentboard" / "goals" / gid / "plan.json"
         )
         if not plan_json.exists():
             return 0
@@ -784,7 +784,7 @@ class PhaseFlowView(Widget):
             return
         decisions_path = (
             self._session.store_root
-            / ".devboard"
+            / ".agentboard"
             / "goals"
             / gid
             / "tasks"

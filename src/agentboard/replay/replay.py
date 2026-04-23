@@ -43,7 +43,7 @@ def branch_run(
     The caller passes this initial_state to run_loop(...) to replay from that point.
     Returns None if checkpoint not found.
     """
-    source_path = store.root / ".devboard" / "runs" / f"{source_run_id}.jsonl"
+    source_path = store.root / ".agentboard" / "runs" / f"{source_run_id}.jsonl"
     if not source_path.exists():
         return None
 
@@ -55,7 +55,7 @@ def branch_run(
     new_id = new_run_id or f"replay_{uuid.uuid4().hex[:8]}"
 
     # Write provenance to new run file before returning
-    new_path = store.root / ".devboard" / "runs" / f"{new_id}.jsonl"
+    new_path = store.root / ".agentboard" / "runs" / f"{new_id}.jsonl"
     new_cp = Checkpointer(new_path)
     new_cp.save("replay_start", {
         "source_run_id": source_run_id,
@@ -80,7 +80,7 @@ def branch_run(
 
 def list_runs(store: FileStore) -> list[dict]:
     """List all run files with basic metadata."""
-    runs_dir = store.root / ".devboard" / "runs"
+    runs_dir = store.root / ".agentboard" / "runs"
     if not runs_dir.exists():
         return []
     result = []

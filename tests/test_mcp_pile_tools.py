@@ -54,7 +54,7 @@ async def test_mcp_get_session_all_paths(tmp_path: Path) -> None:
 
     # PILE_ABSENT (orphan index: delete the run dir)
     import shutil
-    shutil.rmtree(tmp_path / ".devboard" / "runs" / rid)
+    shutil.rmtree(tmp_path / ".agentboard" / "runs" / rid)
     orphan = await call_tool(
         "agentboard_get_session",
         {"project_root": str(tmp_path), "rid": rid},
@@ -134,7 +134,7 @@ async def test_log_decision_writes_iter_json_sibling(tmp_path: Path) -> None:
     # Seed goal/task dirs so log_decision's existing path doesn't error
     gid = "g_log_ext"
     tid = "t_log_ext"
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
     (task_dir / "decisions.jsonl").touch()
 
@@ -162,7 +162,7 @@ async def test_log_decision_writes_iter_json_sibling(tmp_path: Path) -> None:
     # Here we only verify the NEW behavior (iter.json sibling).
 
     # New behavior: iter-007.json sibling written to pile
-    iter_json = tmp_path / ".devboard" / "runs" / rid / "iters" / "iter-007.json"
+    iter_json = tmp_path / ".agentboard" / "runs" / rid / "iters" / "iter-007.json"
     assert iter_json.exists(), "log_decision extension must write iter.json sibling"
     iter_data = json.loads(iter_json.read_text(encoding="utf-8"))
     assert iter_data.get("phase") == "tdd_green"
@@ -190,7 +190,7 @@ async def test_integration_5_iter_roundtrip(tmp_path: Path) -> None:
     # Seed task dir so log_decision's legacy path (which we may still
     # exercise via append_decision) doesn't error. Even if goal isn't
     # registered in board, the pile-sibling write should still happen.
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
 
     # 5 iters via MCP log_decision with pile extension
@@ -227,7 +227,7 @@ async def test_integration_5_iter_roundtrip(tmp_path: Path) -> None:
         total_steps=22, last_verdict="PASS",
     )
 
-    pile_dir = tmp_path / ".devboard" / "runs" / rid
+    pile_dir = tmp_path / ".agentboard" / "runs" / rid
     # All expected artifacts present
     assert (pile_dir / "iters" / "iter-001.json").exists()
     assert (pile_dir / "iters" / "iter-005.json").exists()

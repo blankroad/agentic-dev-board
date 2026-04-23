@@ -107,7 +107,7 @@ def render_pipeline(
 ) -> str:
     """Render the 5-step pipeline as a single string.
 
-    `goal_dir` is the goal directory (e.g. `.devboard/goals/<gid>/`).
+    `goal_dir` is the goal directory (e.g. `.agentboard/goals/<gid>/`).
     Gauntlet artifacts live under `goal_dir/gauntlet/*.md`.
 
     When `decisions` is provided, the renderer may emit IN_PROGRESS /

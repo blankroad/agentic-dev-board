@@ -138,7 +138,7 @@ async def test_log_decision_dispatch_calls_emit_iter(tmp_path, monkeypatch) -> N
 
     gid = "g_emit"
     tid = "t_emit"
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
 
     result = await call_tool(

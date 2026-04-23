@@ -52,7 +52,7 @@ Default to tables when in doubt. Reject prose walls with embedded enumeration �
 
 - **Project**: agentboard — agent-driven TDD board. Python 3, Textual TUI, MCP server over stdio, pytest.
 - **Primary package**: `src/agentboard/`. MCP tools: `src/agentboard/mcp_server.py` (no LLM calls allowed here).
-- **Storage**: file-based under `.devboard/` with `atomic_write` + `fcntl.flock` — see `src/agentboard/storage/file_store.py`.
+- **Storage**: file-based under `.agentboard/` with `atomic_write` + `fcntl.flock` — see `src/agentboard/storage/file_store.py`.
 - **Skills**: `skills/` directory drives agent workflow. Key skills: agentboard-gauntlet, agentboard-tdd, agentboard-approval, agentboard-synthesize-report, agentboard-parallel-review, agentboard-cso, agentboard-redteam.
 - **IDs**: goals are `g_YYYYMMDD_hhmmss_xxxxxx`, tasks `t_...`, iter numbers 1..N.
 - **Invariants**: `compute_hash` covers problem/non_goals/scope_decision/architecture/goal_checklist/atomic_steps. See `CLAUDE.md` at repo root.

@@ -33,7 +33,7 @@ State mapping rule (per (goal, phase) cell):
 - `BLOCKED`      → PHASE_ABORT or RETRY observed as the latest event
 - `NOT_STARTED`  → no phase events for that (goal, phase)
 
-Pure function — no I/O side effects beyond reading the .devboard tree.
+Pure function — no I/O side effects beyond reading the .agentboard tree.
 """
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def phases_snapshot(project_root: Path | str) -> dict:
     project_root = Path(project_root)
     store = FileStore(project_root)
 
-    goals_dir = project_root / ".devboard" / "goals"
+    goals_dir = project_root / ".agentboard" / "goals"
     goal_rows: list[dict] = []
 
     if not goals_dir.exists():

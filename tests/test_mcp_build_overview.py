@@ -20,7 +20,7 @@ async def test_agentboard_build_overview_dispatch_returns_payload(tmp_path: Path
     from agentboard.mcp_server import call_tool
 
     gid = "g_mcp_overview"
-    gdir = tmp_path / ".devboard" / "goals" / gid
+    gdir = tmp_path / ".agentboard" / "goals" / gid
     gdir.mkdir(parents=True)
     (gdir / "brainstorm.md").write_text(
         "---\ngoal_id: g_mcp_overview\n---\n## Premises\n- MCP dispatch test\n",

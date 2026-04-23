@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PostToolUse hook — captures every tool invocation to .devboard/activity.jsonl
+"""PostToolUse hook — captures every tool invocation to .agentboard/activity.jsonl
 so the trial-and-error process (not just final decisions) is reviewable via
 `agentboard activity`.
 
@@ -17,7 +17,7 @@ from pathlib import Path
 
 def _find_root(cwd: Path) -> Path | None:
     for d in [cwd] + list(cwd.parents):
-        if (d / ".devboard").is_dir():
+        if (d / ".agentboard").is_dir():
             return d
     return None
 
@@ -97,7 +97,7 @@ def main() -> None:
     tool_response = data.get("tool_response", {}) or {}
     session_id = data.get("session_id", "")
 
-    # Find .devboard/ root
+    # Find .agentboard/ root
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
     root = _find_root(cwd)
     if root is None:
@@ -111,7 +111,7 @@ def main() -> None:
         **_summarize(tool_name, tool_input, tool_response),
     }
 
-    log_path = root / ".devboard" / "activity.jsonl"
+    log_path = root / ".agentboard" / "activity.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         with open(log_path, "a") as f:

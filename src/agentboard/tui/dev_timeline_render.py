@@ -19,7 +19,7 @@ _AREA_BUCKETS: tuple[tuple[str, str], ...] = (
     ("src/agentboard/orchestrator/", "orchestrator"),
     ("src/agentboard/", "agentboard (other)"),
     ("tests/", "tests"),
-    (".devboard/", "agentboard state"),
+    (".agentboard/", "agentboard state"),
     ("tui_snapshots/", "snapshots"),
     ("skills/", "skills"),
     ("hooks/", "hooks"),

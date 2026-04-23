@@ -11,7 +11,7 @@ when_to_use: User explicitly asks for replay, variant exploration, time-travel, 
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
@@ -42,7 +42,7 @@ Returns:
 - `new_run_id` (e.g., "replay_xyz")
 - `initial_state` — the graph state at iter N+1, with `converged=False`, `blocked=False`, fresh reflect_json
 
-The new run file at `.devboard/runs/<new_run_id>.jsonl` starts with a `replay_start` event recording:
+The new run file at `.agentboard/runs/<new_run_id>.jsonl` starts with a `replay_start` event recording:
 - Source run id
 - From iteration
 - Variant note
@@ -62,7 +62,7 @@ The TDD skill resumes RED-GREEN-REFACTOR from that point with the variant influe
 
 ## Step 4 — Audit
 
-Both runs (original and replay) coexist in `.devboard/runs/`:
+Both runs (original and replay) coexist in `.agentboard/runs/`:
 - Original: `run_abc.jsonl`
 - Replay: `replay_xyz.jsonl` (starts with `replay_start` event)
 

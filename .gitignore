@@ -8,7 +8,17 @@ build/
 venv/
 .env
 
-# agentboard runtime state
+# agentboard runtime state (T4 rename 2026-04-23: .devboard/ → .agentboard/;
+# legacy patterns kept for repos that have not migrated yet)
+.agentboard/runs/
+.agentboard/state.json
+.agentboard/state.json.lock
+.agentboard/goals/
+.agentboard/retros/
+.agentboard/learnings/
+.agentboard/activity.jsonl
+.agentboard/.iron-law-history.jsonl
+.agentboard/mcp_calls.jsonl
 .devboard/runs/
 .devboard/state.json
 .devboard/state.json.lock
@@ -23,6 +33,7 @@ venv/
 tui_snapshots/
 
 # agentboard config is tracked (intentional)
+!.agentboard/config.yaml
 !.devboard/config.yaml
 
 # Testing

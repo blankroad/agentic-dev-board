@@ -13,20 +13,20 @@ when_to_use: User asks to build/implement/create/add/make something with multipl
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
   > agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill.
 - Output `OK` → proceed with the skill below.
 
-You are the **Planning Gauntlet** — a 4-step intent-locking pipeline adapted from gstack. Run each step sequentially, writing the output to `.devboard/goals/<goal_id>/gauntlet/<step>.md`.
+You are the **Planning Gauntlet** — a 4-step intent-locking pipeline adapted from gstack. Run each step sequentially, writing the output to `.agentboard/goals/<goal_id>/gauntlet/<step>.md`.
 
 **Scope authority (F4):** Scope decisions (EXPAND / SELECTIVE / HOLD / REDUCE) are owned by `agentboard-brainstorm`, not the gauntlet. Read `brainstorm.md` YAML frontmatter and use its `scope_mode` verbatim. The gauntlet no longer has a Step 2 Scope — running one here would re-litigate a decision the user already confirmed.
 
 ## Step 1 — Frame (problem definition)
 
-**First, read `brainstorm.md` frontmatter** (if present at `.devboard/goals/<goal_id>/brainstorm.md`) and use these fields as inputs:
+**First, read `brainstorm.md` frontmatter** (if present at `.agentboard/goals/<goal_id>/brainstorm.md`) and use these fields as inputs:
 
 - `scope_mode` → carry into Step 4 Decide as `scope_decision` (do NOT re-derive)
 - `refined_goal` → use as the 1-sentence problem statement root
@@ -45,7 +45,7 @@ Extract from the goal statement + brainstorm frontmatter:
 - **Key Assumptions**: 2-3 unstated assumptions being relied on
 - **Riskiest Assumption**: the one most likely to be wrong
 
-Write → `.devboard/goals/<goal_id>/gauntlet/frame.md`
+Write → `.agentboard/goals/<goal_id>/gauntlet/frame.md`
 
 ## Step 2 — Architecture (design lock-in)
 
@@ -68,7 +68,7 @@ Write → `.devboard/goals/<goal_id>/gauntlet/frame.md`
   ]
   ```
 
-Write → `.devboard/goals/<goal_id>/gauntlet/arch.md`
+Write → `.agentboard/goals/<goal_id>/gauntlet/arch.md`
 
 ### Complexity Check (run after Critical Files list is complete)
 
@@ -118,7 +118,7 @@ Find at least 4 failure modes of the PLAN (not the code yet):
 
 For each: severity (CRITICAL / HIGH / MEDIUM), mitigation, and "warrants replan?" yes/no.
 
-Write → `.devboard/goals/<goal_id>/gauntlet/challenge.md`
+Write → `.agentboard/goals/<goal_id>/gauntlet/challenge.md`
 
 ## Step 4 — Decide (synthesize LockedPlan)
 
@@ -209,7 +209,7 @@ After Decide produces the JSON:
 5. Once approved, call `agentboard_lock_plan(goal_id, decide_json, project_root)` which:
    - Verifies `plan_review.json` status=approved (returns error if missing or revision_pending)
    - Computes SHA256 hash of the locked fields
-   - Writes `.devboard/goals/<goal_id>/plan.md` (human-readable) and `plan.json` (machine-readable)
+   - Writes `.agentboard/goals/<goal_id>/plan.md` (human-readable) and `plan.json` (machine-readable)
    - Returns the locked_hash
 
 The plan is now **immutable**. Implementation must follow it. Any drift triggers a `rethink`.
@@ -239,7 +239,7 @@ The CSO/redteam skills read the first two markers to decide whether to auto-run.
 
 ## Required MCP calls
 
-You MUST call these in order. Missing a call leaves `.devboard/` incomplete and breaks retro/replay.
+You MUST call these in order. Missing a call leaves `.agentboard/` incomplete and breaks retro/replay.
 
 | When | Tool | Purpose |
 |---|---|---|
@@ -254,7 +254,7 @@ The `task_id` and `run_id` you receive from `agentboard_start_task` MUST be thre
 
 After locking + start_task + checkpoint:
 
-0. **Generate provisional Overview report (non-blocking).** Invoke `agentboard-synthesize-report` via the `Skill` tool with `goal_id=<goal_id>`. This writes `.devboard/goals/<goal_id>/report.md` so the TUI Overview tab renders release-notes-style content even before any TDD cycle runs. The skill catches its own failures and logs `NARRATIVE_SKIPPED` by contract — wrap the invocation in try/except conceptually, never gate the rest of the handoff on its success. Rationale: the Overview tab used to be empty until approval ran synthesize-report, so 95% of in-flight goals showed only the legacy plan_digest metadata dump.
+0. **Generate provisional Overview report (non-blocking).** Invoke `agentboard-synthesize-report` via the `Skill` tool with `goal_id=<goal_id>`. This writes `.agentboard/goals/<goal_id>/report.md` so the TUI Overview tab renders release-notes-style content even before any TDD cycle runs. The skill catches its own failures and logs `NARRATIVE_SKIPPED` by contract — wrap the invocation in try/except conceptually, never gate the rest of the handoff on its success. Rationale: the Overview tab used to be empty until approval ran synthesize-report, so 95% of in-flight goals showed only the legacy plan_digest metadata dump.
 1. Read the Meta section of arch.md and check the `ENG_REVIEW_NEEDED` value
 2. Branch:
    - **ENG_REVIEW_NEEDED = false** → invoke `agentboard-tdd` via Skill tool immediately

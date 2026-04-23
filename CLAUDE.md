@@ -31,7 +31,7 @@ Rules that matter are enforced by hooks, hashes, and gates — not by prompts as
 
 ### P3. State > Conversation
 
-The source of truth is the `.devboard/` filesystem + MCP tools — not chat history. Chat is volatile and unreproducible; files are permanent and readable by every client. Current state → `agentboard_get_session`. Past decisions → `decisions.jsonl`. Plan → `plan.json`. When a skill needs context, it reads the file, not the transcript.
+The source of truth is the `.agentboard/` filesystem + MCP tools — not chat history. Chat is volatile and unreproducible; files are permanent and readable by every client. Current state → `agentboard_get_session`. Past decisions → `decisions.jsonl`. Plan → `plan.json`. When a skill needs context, it reads the file, not the transcript.
 
 ### P4. Observable by Default
 

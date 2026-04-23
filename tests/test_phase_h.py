@@ -84,7 +84,7 @@ def test_shell_careful_off_allows_all(tmp_path: Path):
 
 def test_save_learning_with_frontmatter(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     path = save_learning(
         store, "div_by_zero_tip",
         "Always handle ZeroDivisionError explicitly in Python arithmetic.",
@@ -103,7 +103,7 @@ def test_save_learning_with_frontmatter(tmp_path: Path):
 
 def test_load_all_learnings_parses_frontmatter(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     save_learning(store, "l1", "content one", tags=["a"], confidence=0.8)
     save_learning(store, "l2", "content two", tags=["b"], confidence=0.3)
     learnings = load_all_learnings(store)
@@ -116,9 +116,9 @@ def test_load_all_learnings_parses_frontmatter(tmp_path: Path):
 def test_load_all_learnings_backwards_compat(tmp_path: Path):
     """Old learnings without frontmatter should still load."""
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
-    (tmp_path / ".devboard" / "learnings").mkdir(parents=True)
-    (tmp_path / ".devboard" / "learnings" / "legacy.md").write_text("just plain text")
+    (tmp_path / ".agentboard").mkdir()
+    (tmp_path / ".agentboard" / "learnings").mkdir(parents=True)
+    (tmp_path / ".agentboard" / "learnings" / "legacy.md").write_text("just plain text")
     learnings = load_all_learnings(store)
     assert len(learnings) == 1
     assert learnings[0].name == "legacy"
@@ -128,7 +128,7 @@ def test_load_all_learnings_backwards_compat(tmp_path: Path):
 
 def test_search_learnings_by_query(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     save_learning(store, "auth_session", "Session tokens expire after 1 hour",
                   tags=["auth"], confidence=0.7)
     save_learning(store, "calc_div", "Handle ZeroDivisionError",
@@ -141,7 +141,7 @@ def test_search_learnings_by_query(tmp_path: Path):
 
 def test_search_learnings_by_tag(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     save_learning(store, "a", "x", tags=["foo"])
     save_learning(store, "b", "y", tags=["bar"])
 
@@ -152,7 +152,7 @@ def test_search_learnings_by_tag(tmp_path: Path):
 
 def test_search_learnings_sorted_by_confidence(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     save_learning(store, "low", "common text", confidence=0.2)
     save_learning(store, "high", "common text", confidence=0.9)
     save_learning(store, "mid", "common text", confidence=0.5)
@@ -163,7 +163,7 @@ def test_search_learnings_sorted_by_confidence(tmp_path: Path):
 
 def test_retriever_uses_tags_and_confidence(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     # Two learnings with similar content overlap but different tags and confidence
     save_learning(store, "auth_tip", "check session tokens",
                   tags=["auth", "session"], confidence=0.9)
@@ -181,7 +181,7 @@ def test_retriever_uses_tags_and_confidence(tmp_path: Path):
 
 def test_retro_empty_board(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store.save_board(BoardState())
     report = generate_retro(store)
     assert report.total_runs == 0
@@ -194,7 +194,7 @@ def test_retro_proposes_learnings_for_recurring_failure_modes(tmp_path: Path):
     """A failure mode appearing in ≥3 decisions becomes a learning proposal."""
     from agentboard.models import DecisionEntry, Goal, GoalStatus, Task
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     board = BoardState()
     goal = Goal(title="x", description="", status=GoalStatus.converged)
     board.goals.append(goal)
@@ -233,7 +233,7 @@ def test_retro_proposes_learnings_for_recurring_failure_modes(tmp_path: Path):
 
 def test_retro_counts_goals_and_tasks(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     board = BoardState()
     goal = Goal(title="Test Goal", description="test", status=GoalStatus.converged)
     board.goals.append(goal)
@@ -266,7 +266,7 @@ def test_retro_counts_goals_and_tasks(tmp_path: Path):
 
 def test_retro_markdown_renders(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store.save_board(BoardState())
     report = generate_retro(store)
     md = report.to_markdown()
@@ -277,7 +277,7 @@ def test_retro_markdown_renders(tmp_path: Path):
 
 def test_retro_filters_by_goal(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     board = BoardState()
     g1 = Goal(title="g1"); g2 = Goal(title="g2")
     board.goals.extend([g1, g2])

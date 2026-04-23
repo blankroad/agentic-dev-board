@@ -16,7 +16,7 @@ def _run(app: "AgentBoardApp", task_id: str) -> None:
     PhaseFlowView refresh through the usual watch hooks."""
     # locate latest iter_N.diff for this task under any goal
     latest_iter: int | None = None
-    for goal_dir in (app.store_root / ".devboard" / "goals").glob("*"):
+    for goal_dir in (app.store_root / ".agentboard" / "goals").glob("*"):
         changes = goal_dir / "tasks" / task_id / "changes"
         if changes.exists():
             diffs = sorted(changes.glob("iter_*.diff"))

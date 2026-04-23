@@ -144,7 +144,7 @@ def _suggest_learnings(counter: Counter) -> list[dict]:
 
 
 def _collect_run_outcomes(store: FileStore) -> tuple[int, int, int]:
-    runs_dir = store.root / ".devboard" / "runs"
+    runs_dir = store.root / ".agentboard" / "runs"
     if not runs_dir.exists():
         return 0, 0, 0
     total = converged = blocked = 0
@@ -182,7 +182,7 @@ def generate_retro(
 
 
 def save_retro(store: FileStore, report: RetroReport) -> Path:
-    retros_dir = store.root / ".devboard" / "retros"
+    retros_dir = store.root / ".agentboard" / "retros"
     retros_dir.mkdir(parents=True, exist_ok=True)
     date = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     path = retros_dir / f"retro_{date}.md"

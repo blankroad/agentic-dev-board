@@ -491,7 +491,7 @@ def _extract_followups(plan_json_path: Path) -> list[str]:
 
 def _load_learnings_from_files(project_root: Path) -> list[dict[str, object]]:
     """R5 fix — previous _extract_learnings looked for a non-existent
-    .devboard/learnings.jsonl. Actual learnings are stored as individual
+    .agentboard/learnings.jsonl. Actual learnings are stored as individual
     .md files with YAML frontmatter via FileStore.save_learning. This
     helper uses FileStore.list_learnings() (directory-based) and parses
     each file's frontmatter + first-body-paragraph for summary display.
@@ -625,7 +625,7 @@ def build_overview_payload(
     goal_id: str,
     task_id: str | None = None,
 ) -> OverviewPayload:
-    goal_dir = project_root / ".devboard" / "goals" / goal_id
+    goal_dir = project_root / ".agentboard" / "goals" / goal_id
     try:
         purpose = _extract_purpose(goal_dir / "brainstorm.md")
     except Exception:

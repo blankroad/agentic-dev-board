@@ -10,7 +10,7 @@ description: Use when gauntlet flags ENG_REVIEW_NEEDED (>8 new files or ≥2 new
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
@@ -32,9 +32,9 @@ Output: `Plan: {goal title} ({goal_id}) — {N} atomic steps, {M} critical files
 ## Step 1 — Load Gauntlet Artifacts
 
 Read the three gauntlet outputs via `Read` tool:
-- `.devboard/goals/{goal_id}/gauntlet/frame.md`
-- `.devboard/goals/{goal_id}/gauntlet/arch.md` (including the Meta footer)
-- `.devboard/goals/{goal_id}/gauntlet/challenge.md`
+- `.agentboard/goals/{goal_id}/gauntlet/frame.md`
+- `.agentboard/goals/{goal_id}/gauntlet/arch.md` (including the Meta footer)
+- `.agentboard/goals/{goal_id}/gauntlet/challenge.md`
 
 ---
 
@@ -98,7 +98,7 @@ If any check fails, add a detail section below:
 
 Before recording the verdict in decisions.jsonl, write the 4-check result
 into a dedicated `## Engineering Review` section at the end of
-`.devboard/goals/<goal_id>/gauntlet/arch.md`. Upsert rule: **idempotent
+`.agentboard/goals/<goal_id>/gauntlet/arch.md`. Upsert rule: **idempotent
 replace, not append** — if a prior `## Engineering Review` heading exists,
 locate its block (from that heading up to the next top-level `##` heading
 or EOF) and REPLACE it wholesale. A second eng-review run on the same

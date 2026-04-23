@@ -94,7 +94,7 @@ class FleetScreen(Screen):
         pane.set_rows(summaries)
         pane.focus()  # neutralize default-focus (CRITICAL in challenge.md)
 
-        runs_dir = self._store_root / ".devboard" / "runs"
+        runs_dir = self._store_root / ".agentboard" / "runs"
         if runs_dir.exists():
             from agentboard.tui.tail_worker import RunTailWorker
 

@@ -18,8 +18,8 @@ import pytest
 
 @pytest.fixture()
 def tmp_project(tmp_path: Path) -> Path:
-    """A .devboard fixture with two goals so Fleet has rows to show."""
-    dev = tmp_path / ".devboard"
+    """A .agentboard fixture with two goals so Fleet has rows to show."""
+    dev = tmp_path / ".agentboard"
     (dev / "goals" / "g_alpha" / "tasks" / "t_a").mkdir(parents=True)
     (dev / "goals" / "g_beta" / "tasks" / "t_b").mkdir(parents=True)
     (dev / "runs").mkdir(parents=True)

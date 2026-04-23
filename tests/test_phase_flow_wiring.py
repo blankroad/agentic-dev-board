@@ -34,7 +34,7 @@ def test_resolve_rid_returns_latest_matching_run(tmp_path) -> None:
     """w_001: _resolve_rid picks the latest run file whose task_id matches."""
     import time
     tid = "t_wire"
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     # Two runs, same task — second must be selected
     _write_run_jsonl(runs_dir, "run_older", tid)
     time.sleep(0.02)
@@ -48,7 +48,7 @@ def test_resolve_rid_returns_latest_matching_run(tmp_path) -> None:
 
 def test_resolve_rid_returns_none_when_no_match(tmp_path) -> None:
     """w_002: _resolve_rid returns None when no run matches current task_id."""
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     _write_run_jsonl(runs_dir, "run_other", "t_other_task")
 
     view = _make_view(tmp_path, "t_missing")
@@ -63,13 +63,13 @@ def test_load_latest_diff_text_prefers_pile(tmp_path, monkeypatch) -> None:
     rid = "run_pile"
 
     # Seed run jsonl so _resolve_rid finds it
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     _write_run_jsonl(runs_dir, rid, tid)
 
     # Seed pile with iter + diff
     gid = "g_pile"
     store = FileStore(tmp_path)
-    task_changes = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid / "changes"
+    task_changes = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid / "changes"
     task_changes.mkdir(parents=True)
     pile_diff = """diff --git a/src/pile_marker.py b/src/pile_marker.py
 --- a/src/pile_marker.py
@@ -98,7 +98,7 @@ def test_load_latest_diff_text_falls_back_to_git_when_pile_empty(tmp_path) -> No
     """
     tid = "t_empty"
     rid = "run_empty"
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     _write_run_jsonl(runs_dir, rid, tid)
 
     # No pile seeded → pile-loader returns [] → empty string

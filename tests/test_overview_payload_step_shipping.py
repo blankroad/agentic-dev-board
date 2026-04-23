@@ -25,12 +25,12 @@ def _bootstrap_task_with_plan(
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_s")
     board.goals.append(Goal(id="g_s", title="fx", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_s"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_s"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# plan\n")
     steps = atomic_steps or [
@@ -113,12 +113,12 @@ def test_risk_delta_does_not_blanket_resolve_on_clean(tmp_path: Path) -> None:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_fp")
     board.goals.append(Goal(id="g_fp", title="fp", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_fp"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_fp"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# plan\n")
 
@@ -165,12 +165,12 @@ def test_risk_delta_cross_ref_uses_evidence_corpus(tmp_path: Path) -> None:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_r")
     board.goals.append(Goal(id="g_r", title="r", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_r"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_r"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# plan\n")
 

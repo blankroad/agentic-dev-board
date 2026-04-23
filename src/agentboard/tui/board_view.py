@@ -68,7 +68,7 @@ class BoardView(Widget):
         for goal in self._board.goals:
             color = STATUS_COLOR.get(goal.status, "white")
             icon = STATUS_ICON.get(goal.status, "?")
-            has_plan = (self._store_root / ".devboard" / "goals" / goal.id / "plan.md").exists()
+            has_plan = (self._store_root / ".agentboard" / "goals" / goal.id / "plan.md").exists()
             table.add_row(
                 f"[{color}]{icon} {goal.status.value}[/{color}]",
                 goal.title[:50],

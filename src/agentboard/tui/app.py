@@ -115,7 +115,7 @@ class AgentBoardApp(App):
         gid = self._session.active_goal_id
         if not gid:
             return None
-        tasks_dir = self._store_root / ".devboard" / "goals" / gid / "tasks"
+        tasks_dir = self._store_root / ".agentboard" / "goals" / gid / "tasks"
         if not tasks_dir.exists():
             return None
         dirs = [p for p in tasks_dir.iterdir() if p.is_dir()]
@@ -159,7 +159,7 @@ class AgentBoardApp(App):
         except Exception:
             pass
         # wire tail worker for live updates (throttled single-line StatusBar only)
-        agentboard_dir = self._store_root / ".devboard"
+        agentboard_dir = self._store_root / ".agentboard"
         if agentboard_dir.exists():
             from agentboard.tui.tail_worker import RunTailWorker
 

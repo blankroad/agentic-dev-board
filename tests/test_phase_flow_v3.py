@@ -8,7 +8,7 @@ import pytest
 
 
 def _mk_goal(tmp_path: Path, gid: str = "g1", plan_md: str = "# P\n") -> None:
-    d = tmp_path / ".devboard" / "goals" / gid
+    d = tmp_path / ".agentboard" / "goals" / gid
     d.mkdir(parents=True)
     (d / "plan.md").write_text(plan_md, encoding="utf-8")
 
@@ -73,7 +73,7 @@ async def test_dev_body_uses_render_dev_timeline(tmp_path: Path) -> None:
     """
     _mk_goal(tmp_path)
     # write a dev iter so the renderer produces its characteristic "delta :" block
-    gdir = tmp_path / ".devboard" / "goals" / "g1" / "tasks" / "t1"
+    gdir = tmp_path / ".agentboard" / "goals" / "g1" / "tasks" / "t1"
     (gdir / "changes").mkdir(parents=True)
     (gdir / "decisions.jsonl").write_text(
         '{"iter": 1, "phase": "tdd_green", "verdict_source": "GREEN_MARKER", "ts": "t1"}\n',
@@ -138,7 +138,7 @@ def test_plan_digest_rejects_truthy_string_completed(tmp_path: Path) -> None:
     """
     from agentboard.analytics.overview_payload import build_overview_payload
 
-    gdir = tmp_path / ".devboard" / "goals" / "g1"
+    gdir = tmp_path / ".agentboard" / "goals" / "g1"
     gdir.mkdir(parents=True)
     (gdir / "plan.json").write_text(
         '{"atomic_steps": ['

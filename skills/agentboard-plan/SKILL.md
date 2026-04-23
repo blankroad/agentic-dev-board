@@ -13,7 +13,7 @@ You are the **Planning Orchestrator** — a thin router that starts the D1 phase
 ## Preamble — Project Guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → print "agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill." and exit immediately.
@@ -32,7 +32,7 @@ Output: `Planning goal: {title} ({goal_id})`.
 
 ## Step 2 — Pick the entry point
 
-Scan `.devboard/goals/<goal_id>/` to determine where in the chain we already are:
+Scan `.agentboard/goals/<goal_id>/` to determine where in the chain we already are:
 
 | Artifact present | Meaning | Entry point |
 |---|---|---|
@@ -137,7 +137,7 @@ Each step is a separate skill with its own SKILL.md. Read their files for the de
 ## Design notes
 
 - **Thin by design.** The phase chain already has inter-phase handoffs wired up (intent → frame, frame → architecture, etc.). An orchestrator that re-implements the chain would duplicate that wiring. All this skill needs to do is pick the right entry point and kick off.
-- **Entry-point detection is observable.** Scanning `.devboard/goals/<goal_id>/` for phase artifacts gives a deterministic resume point without needing a state machine. Files as truth (P3 State > Conversation).
+- **Entry-point detection is observable.** Scanning `.agentboard/goals/<goal_id>/` for phase artifacts gives a deterministic resume point without needing a state machine. Files as truth (P3 State > Conversation).
 - **`--deep` pass-through keeps depth opt-in per phase.** The user writes one flag on the orchestrator; we forward it to the phase it applies to. No magic routing.
 - **No planning work happens here.** If you find yourself reasoning about scope / assumptions / architecture in this skill — STOP. That belongs in intent / frame / architecture.
 - **Plan already exists → resume, don't re-plan.** Invoking `agentboard-plan` on a locked goal doesn't re-lock; it routes to execute / parallel-review / approval depending on state. Users who want to replan use the "rethink" verb explicitly.

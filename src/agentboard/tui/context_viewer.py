@@ -47,7 +47,7 @@ class ContextViewer(Widget):
         No-op for missing files — the default action-prompt stays in place."""
         if not active_goal_id:
             return
-        goal_dir = store_root / ".devboard" / "goals" / active_goal_id
+        goal_dir = store_root / ".agentboard" / "goals" / active_goal_id
         plan_file = goal_dir / "plan.md"
         if plan_file.exists():
             try:

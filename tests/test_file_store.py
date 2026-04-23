@@ -15,7 +15,7 @@ from agentboard.storage.file_store import FileStore
 @pytest.fixture
 def store(tmp_path: Path) -> FileStore:
     s = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     return s
 
 
@@ -250,7 +250,7 @@ def test_sanitize_id_traversal_raises():
 
 
 def test_sanitize_id_existing_goal_id_format():
-    """g_{date}_{time}_{hex} format must pass — existing .devboard dirs use this."""
+    """g_{date}_{time}_{hex} format must pass — existing .agentboard dirs use this."""
     assert _sanitize_id("g_20260418_014050_0ecfaa") == "g_20260418_014050_0ecfaa"
 
 
@@ -437,7 +437,7 @@ def test_phases_snapshot_matrix_per_goal(tmp_path) -> None:
     from agentboard.analytics.phases_snapshot import phases_snapshot
 
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
 
     g1 = Goal(title="G1 all done")
     g2 = Goal(title="G2 at frame")

@@ -38,7 +38,7 @@ def _seed_pile_with_diffs(tmp_path, rid: str, gid: str, tid: str) -> None:
     from agentboard.storage.file_store import FileStore
     store = FileStore(tmp_path)
     # Seed task dir for changes/ helper path
-    task_changes = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid / "changes"
+    task_changes = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid / "changes"
     task_changes.mkdir(parents=True)
     # iter 1: modifies foo.py only
     (task_changes / "iter_1.diff").write_text(_DIFF_FILE_A, encoding="utf-8")

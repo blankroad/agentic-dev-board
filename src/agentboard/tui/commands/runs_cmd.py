@@ -15,7 +15,7 @@ def _run(app: "AgentBoardApp") -> None:
     info. :runs is kept for backward compat and shows a hint in the
     command line instead of populating a widget."""
     cl = app.query_one("#command-line")
-    runs_dir = app.store_root / ".devboard" / "runs"
+    runs_dir = app.store_root / ".agentboard" / "runs"
     count = 0
     if runs_dir.exists():
         count = sum(1 for _ in runs_dir.glob("*.jsonl"))

@@ -15,7 +15,7 @@ You are the **Direction Interrogator** — a 6-phase gate that turns an idea or 
 ### Project guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → print "agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill." and exit immediately.
@@ -272,7 +272,7 @@ After `agentboard_save_brainstorm` returns success:
    ```
    ## Intent 완료
 
-   저장: .devboard/goals/{goal_id}/brainstorm.md
+   저장: .agentboard/goals/{goal_id}/brainstorm.md
    scope_mode: {EXPAND|SELECTIVE|HOLD|REDUCE}
    선택 접근: {Approach 이름}
    wedge: {wedge 한 줄}

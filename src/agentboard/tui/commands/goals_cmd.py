@@ -42,7 +42,7 @@ _STATUS_MARKER: dict[str, str] = {
 def _derive_marker(store_root: Path, goal_id: str, declared_status: str) -> str:
     """Return a one-char marker reflecting the most-progressed task for a
     goal, or the declared goal status if there are no tasks on disk."""
-    tasks_dir = store_root / ".devboard" / "goals" / goal_id / "tasks"
+    tasks_dir = store_root / ".agentboard" / "goals" / goal_id / "tasks"
     statuses: list[str] = []
     if tasks_dir.exists():
         for t_dir in tasks_dir.iterdir():

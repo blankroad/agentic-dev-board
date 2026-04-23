@@ -55,7 +55,7 @@ class ActivityTimeline(Widget):
         gid = self._session.active_goal_id
         if not gid:
             return ""
-        goal_dir = self._session.store_root / ".devboard" / "goals" / gid
+        goal_dir = self._session.store_root / ".agentboard" / "goals" / gid
         f = goal_dir / "plan.md"
         if not f.exists():
             return ""

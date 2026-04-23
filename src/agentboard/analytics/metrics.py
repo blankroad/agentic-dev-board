@@ -1,6 +1,6 @@
 """Per-session metrics collection and skill-activation diagnostics.
 
-Reads .devboard/runs/*.jsonl + decisions.jsonl across all tasks to compute:
+Reads .agentboard/runs/*.jsonl + decisions.jsonl across all tasks to compute:
   - Skill activation rate (how often each skill fires vs. how often it *should*)
   - MCP tool call frequency + error rate
   - Average iterations per goal
@@ -106,7 +106,7 @@ def collect_metrics(store: FileStore) -> SessionMetrics:
     m.total_goals = len(board.goals)
 
     # Runs
-    runs_dir = store.root / ".devboard" / "runs"
+    runs_dir = store.root / ".agentboard" / "runs"
     if runs_dir.exists():
         for rf in runs_dir.glob("*.jsonl"):
             m.total_runs += 1

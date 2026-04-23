@@ -82,7 +82,7 @@ def test_detect_traceback_through_ansi_interleave() -> None:
 def test_run_tui_smoke_returns_expected_dict_keys(tmp_path: Path) -> None:
     """# guards: unit-tests-on-primitives-dont-prove-integration
     edge: integration wiring category — must return full result shape."""
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     from agentboard.mcp_tools.tui_smoke import run_tui_smoke
 
     result = run_tui_smoke(tmp_path, timeout_s=1)

@@ -32,7 +32,7 @@ def _bootstrap_board(tmp_path: Path, *goals) -> None:
     from agentboard.storage.file_store import FileStore
 
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     board = BoardState()
     for gid, title in goals:
         board.goals.append(Goal(id=gid, title=title, status=GoalStatus.active))
@@ -45,7 +45,7 @@ async def test_colon_goals_focuses_resources_goals(tmp_path: Path) -> None:
     from agentboard.storage.file_store import FileStore
 
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     board = BoardState()
     board.goals.append(Goal(id="g_1", title="goal-one", status=GoalStatus.active))
     store.save_board(board)

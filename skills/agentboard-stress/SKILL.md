@@ -28,16 +28,16 @@ Example: at stress time you'd argue "the plan's test strategy doesn't cover conc
 ### Project guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 ### Load upstream
 
 Read and parse YAML frontmatter:
 
-- `.devboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `alternatives_considered` (chosen)
-- `.devboard/goals/<goal_id>/gauntlet/frame.md` — `riskiest_assumption`, `key_assumptions`, `non_goals`, `success_definition`
-- `.devboard/goals/<goal_id>/gauntlet/arch.md` — `critical_files`, `edge_cases`, `test_strategy`, `critical_path`, `out_of_scope_guard`, `design_review` section if `ui_surface=true`
+- `.agentboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `alternatives_considered` (chosen)
+- `.agentboard/goals/<goal_id>/gauntlet/frame.md` — `riskiest_assumption`, `key_assumptions`, `non_goals`, `success_definition`
+- `.agentboard/goals/<goal_id>/gauntlet/arch.md` — `critical_files`, `edge_cases`, `test_strategy`, `critical_path`, `out_of_scope_guard`, `design_review` section if `ui_surface=true`
 
 If `arch.md` contains a `## Design Review` section with WARN items, those are explicit hints — expand on them adversarially as failure modes.
 
@@ -96,7 +96,7 @@ If any check fails: regenerate that failure mode once. Retry cap: 1.
 
 ## Step 3 — Write challenge.md
 
-Write `.devboard/goals/<goal_id>/gauntlet/challenge.md`:
+Write `.agentboard/goals/<goal_id>/gauntlet/challenge.md`:
 
 ```yaml
 ---
@@ -179,7 +179,7 @@ After `challenge.md` written:
    ```
    ## Stress 완료
 
-   저장: .devboard/goals/{goal_id}/gauntlet/challenge.md
+   저장: .agentboard/goals/{goal_id}/gauntlet/challenge.md
    CRITICAL: {N} / HIGH: {N} / MEDIUM: {N}
    warrants_replan: {bool}
 

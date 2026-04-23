@@ -10,7 +10,7 @@ description: Use when approval Step 0 needs a dependency CVE check, or when the 
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):

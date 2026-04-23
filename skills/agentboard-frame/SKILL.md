@@ -15,7 +15,7 @@ You are the **Assumption Surfacer** — Step 2 of the D1 phase chain. You extrac
 ### Project guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → print "agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill." and exit.
@@ -23,7 +23,7 @@ test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
 
 ### Load upstream
 
-Read `.devboard/goals/<goal_id>/brainstorm.md` via the `Read` tool. Parse the YAML frontmatter using the `frontmatter` library pattern (used elsewhere in tests). Required fields expected:
+Read `.agentboard/goals/<goal_id>/brainstorm.md` via the `Read` tool. Parse the YAML frontmatter using the `frontmatter` library pattern (used elsewhere in tests). Required fields expected:
 
 - `scope_mode` → carry verbatim into `frame.md` frontmatter for lock-step propagation
 - `refined_goal` → use as the root of the Frame `Problem` field
@@ -130,7 +130,7 @@ Set `new_risk_invalidates_scope: false`. Proceed silently to Step 4.
 
 ## Step 4 — Write frame.md
 
-Write `.devboard/goals/<goal_id>/gauntlet/frame.md` (directory name preserved for back-compat with TUI readers; will migrate to `phases/` at C-layer work):
+Write `.agentboard/goals/<goal_id>/gauntlet/frame.md` (directory name preserved for back-compat with TUI readers; will migrate to `phases/` at C-layer work):
 
 ```yaml
 ---
@@ -220,7 +220,7 @@ After `frame.md` written:
    ```
    ## Frame 완료
 
-   저장: .devboard/goals/{goal_id}/gauntlet/frame.md
+   저장: .agentboard/goals/{goal_id}/gauntlet/frame.md
    riskiest_assumption: {one-line}
    scope_mode (carried): {EXPAND|SELECTIVE|HOLD|REDUCE}
 

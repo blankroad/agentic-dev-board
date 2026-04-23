@@ -116,7 +116,7 @@ async def list_tools() -> list[Tool]:
         # ── State: init & goals ────────────────────────────────────────────────
         Tool(
             name="agentboard_init",
-            description="Initialize .devboard/ scaffold at the given project root. Creates goals/, runs/, learnings/, retros/ directories and .gitignore entries. Returns the board_id.",
+            description="Initialize .agentboard/ scaffold at the given project root. Creates goals/, runs/, learnings/, retros/ directories and .gitignore entries. Returns the board_id.",
             inputSchema={
                 "type": "object",
                 "properties": {"project_root": {"type": "string"}},
@@ -176,7 +176,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_checkpoint",
-            description="Append a state-transition event to .devboard/runs/<run_id>.jsonl. Call this at EVERY major skill phase boundary (run_start, plan_complete, tdd_red_complete, tdd_green_complete, tdd_refactor_complete, verify_complete, review_complete, cso_complete, redteam_complete, iteration_complete, converged, blocked). The state dict should capture relevant context for replay/retro.",
+            description="Append a state-transition event to .agentboard/runs/<run_id>.jsonl. Call this at EVERY major skill phase boundary (run_start, plan_complete, tdd_red_complete, tdd_green_complete, tdd_refactor_complete, verify_complete, review_complete, cso_complete, redteam_complete, iteration_complete, converged, blocked). The state dict should capture relevant context for replay/retro.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -204,7 +204,7 @@ async def list_tools() -> list[Tool]:
         # ── State: plans ───────────────────────────────────────────────────────
         Tool(
             name="agentboard_lock_plan",
-            description="Compute SHA256 hash of a decide-output JSON and save as LockedPlan to .devboard/goals/<goal_id>/plan.md and plan.json. Returns {locked_hash, plan_path}. The decide_json must follow the Gauntlet's Decide step schema (problem, non_goals, scope_decision, architecture, known_failure_modes, goal_checklist, out_of_scope_guard, atomic_steps, token_ceiling, max_iterations).",
+            description="Compute SHA256 hash of a decide-output JSON and save as LockedPlan to .agentboard/goals/<goal_id>/plan.md and plan.json. Returns {locked_hash, plan_path}. The decide_json must follow the Gauntlet's Decide step schema (problem, non_goals, scope_decision, architecture, known_failure_modes, goal_checklist, out_of_scope_guard, atomic_steps, token_ceiling, max_iterations).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -243,7 +243,7 @@ async def list_tools() -> list[Tool]:
         # ── Decisions & diffs ──────────────────────────────────────────────────
         Tool(
             name="agentboard_log_decision",
-            description="Append a decision entry to .devboard/.../decisions.jsonl. Used to record why (not what) — phase is one of: plan, tdd_red, tdd_green, tdd_refactor, review, cso, redteam, reflect, iron_law, approval.",
+            description="Append a decision entry to .agentboard/.../decisions.jsonl. Used to record why (not what) — phase is one of: plan, tdd_red, tdd_green, tdd_refactor, review, cso, redteam, reflect, iron_law, approval.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -328,7 +328,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_save_iter_diff",
-            description="Save an iteration's diff to .devboard/.../changes/iter_N.diff (for squash-invariant audit).",
+            description="Save an iteration's diff to .agentboard/.../changes/iter_N.diff (for squash-invariant audit).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -464,7 +464,7 @@ async def list_tools() -> list[Tool]:
         # ── Learnings ──────────────────────────────────────────────────────────
         Tool(
             name="agentboard_save_learning",
-            description="Save a tagged learning to .devboard/learnings/<name>.md with frontmatter (tags, category, confidence 0-1, source). Categories: general, bug, pattern, constraint, style.",
+            description="Save a tagged learning to .agentboard/learnings/<name>.md with frontmatter (tags, category, confidence 0-1, source). Categories: general, bug, pattern, constraint, style.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -537,7 +537,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="agentboard_list_runs",
-            description="List all runs in .devboard/runs/ with metadata (events count, last_iteration, converged, blocked).",
+            description="List all runs in .agentboard/runs/ with metadata (events count, last_iteration, converged, blocked).",
             inputSchema={
                 "type": "object",
                 "properties": {"project_root": {"type": "string"}},
@@ -660,7 +660,7 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="agentboard_fleet_snapshot",
             description=(
-                "Return a compact summary of every goal under .devboard/goals/ "
+                "Return a compact summary of every goal under .agentboard/goals/ "
                 "(gid, title, iter_count, last_phase, last_verdict, sparkline_phases, "
                 "updated_at_iso). Sorted by updated_at descending. Agent-readable "
                 "fleet overview — skip scanning decisions.jsonl / runs manually."
@@ -721,11 +721,11 @@ async def list_tools() -> list[Tool]:
 def _append_mcp_call_log(project_root: str, entry: dict) -> None:
     """Telemetry for MCP tool calls (M1a-plumbing p_009).
 
-    Writes to .devboard/mcp_calls.jsonl. All errors swallowed — telemetry
+    Writes to .agentboard/mcp_calls.jsonl. All errors swallowed — telemetry
     MUST NOT break the primary dispatch path (p_010).
     """
     try:
-        log_path = Path(project_root).resolve() / ".devboard" / "mcp_calls.jsonl"
+        log_path = Path(project_root).resolve() / ".agentboard" / "mcp_calls.jsonl"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with open(log_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -776,7 +776,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
     # ── init & goals ──────────────────────────────────────────────────────────
     if name == "agentboard_init":
         root = Path(args["project_root"]).resolve()
-        agentboard = root / ".devboard"
+        agentboard = root / ".agentboard"
         if agentboard.exists():
             return _text({"status": "already_initialized", "root": str(root)})
         for d in [agentboard / "goals", agentboard / "runs", agentboard / "learnings", agentboard / "retros"]:
@@ -786,7 +786,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         store.save_board(board)
         # update .gitignore
         gi = root / ".gitignore"
-        entries = [".devboard/runs/", ".devboard/state.json", ".devboard/goals/"]
+        entries = [".agentboard/runs/", ".agentboard/state.json", ".agentboard/goals/"]
         existing = gi.read_text() if gi.exists() else ""
         additions = [e for e in entries if e not in existing]
         if additions:
@@ -868,7 +868,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         store.save_board(board)
 
         run_id = f"run_{uuid.uuid4().hex[:8]}"
-        run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
+        run_path = store.root / ".agentboard" / "runs" / f"{run_id}.jsonl"
         cp = Checkpointer(run_path)
         cp.save("run_start", {
             "run_id": run_id,
@@ -888,7 +888,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         run_id = args["run_id"]
         event = args["event"]
         state = args.get("state", {}) or {}
-        run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
+        run_path = store.root / ".agentboard" / "runs" / f"{run_id}.jsonl"
         if not run_path.parent.exists():
             run_path.parent.mkdir(parents=True, exist_ok=True)
         cp = Checkpointer(run_path)
@@ -981,7 +981,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
     if name == "agentboard_resume_run":
         store = _store(args["project_root"])
         run_id = args["run_id"]
-        run_path = store.root / ".devboard" / "runs" / f"{run_id}.jsonl"
+        run_path = store.root / ".agentboard" / "runs" / f"{run_id}.jsonl"
         if not run_path.exists():
             return _text({"error": f"run {run_id} not found", "can_resume": False})
         cp = Checkpointer(run_path)
@@ -1376,7 +1376,7 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
         # Need a plan to branch against — assume the source run referenced a goal
         board = store.load_board()
         # Find the goal from the run's first state
-        source_path = store.root / ".devboard" / "runs" / f"{args['source_run_id']}.jsonl"
+        source_path = store.root / ".agentboard" / "runs" / f"{args['source_run_id']}.jsonl"
         cp = Checkpointer(source_path)
         entries = cp.load_all()
         goal_id = None

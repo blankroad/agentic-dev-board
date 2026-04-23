@@ -3,9 +3,9 @@
 Orchestration (plan/run/approve/rethink) now lives in Claude Code Skills + MCP server.
 This CLI keeps only:
   - install: copy skills/hooks/mcp config to ~/.claude or ./.claude
-  - init: scaffold .devboard/ (also callable from MCP)
+  - init: scaffold .agentboard/ (also callable from MCP)
   - board: Textual TUI for live observability
-  - watch: tail .devboard/runs/*.jsonl
+  - watch: tail .agentboard/runs/*.jsonl
   - retro: standalone retrospective report (no LLM)
   - audit: self-DX checks
   - replay: time-travel CLI shortcut (same logic as MCP tool)
@@ -150,12 +150,12 @@ def install(
 def init(
     path: Path = typer.Argument(Path("."), help="Project root to initialize"),
 ) -> None:
-    """Scaffold .devboard/ in the project root."""
+    """Scaffold .agentboard/ in the project root."""
     root = path.resolve()
-    agentboard_dir = root / ".devboard"
+    agentboard_dir = root / ".agentboard"
 
     if agentboard_dir.exists():
-        console.print(f"[yellow].devboard/ already exists at {root}[/yellow]")
+        console.print(f"[yellow].agentboard/ already exists at {root}[/yellow]")
         raise typer.Exit(1)
 
     for d in [
@@ -175,9 +175,9 @@ def init(
 
     gitignore = root / ".gitignore"
     ignore_entries = [
-        ".devboard/runs/",
-        ".devboard/state.json",
-        ".devboard/goals/",
+        ".agentboard/runs/",
+        ".agentboard/state.json",
+        ".agentboard/goals/",
     ]
     existing = gitignore.read_text() if gitignore.exists() else ""
     additions = [e for e in ignore_entries if e not in existing]
@@ -309,7 +309,7 @@ def task_show(
                 console.print(f"  [{color}]{e.phase:<10}[/{color}] iter {e.iter:>2}  {e.verdict_source}")
 
     # Iter diffs
-    changes_dir = store.root / ".devboard" / "goals" / goal_id / "tasks" / tid / "changes"
+    changes_dir = store.root / ".agentboard" / "goals" / goal_id / "tasks" / tid / "changes"
     if changes_dir.exists():
         diffs = sorted(changes_dir.glob("iter_*.diff"))
         if diffs:
@@ -344,8 +344,8 @@ def board() -> None:
     from agentboard.tui.app import run_tui
 
     root = find_agentboard_root() or Path.cwd()
-    if not (root / ".devboard").exists():
-        console.print("[red]No .devboard found. Run: agentboard init[/red]")
+    if not (root / ".agentboard").exists():
+        console.print("[red]No .agentboard found. Run: agentboard init[/red]")
         raise typer.Exit(1)
     run_tui(store_root=root)
 
@@ -359,7 +359,7 @@ def watch(
     last_n: int = typer.Option(20, "--last-n", "-n"),
     all_streams: bool = typer.Option(False, "--all", "-a", help="Tail runs AND decisions together"),
 ) -> None:
-    """Tail .devboard/runs/*.jsonl and/or decisions.jsonl files live.
+    """Tail .agentboard/runs/*.jsonl and/or decisions.jsonl files live.
 
     If no runs exist yet, falls back to tailing all decisions.jsonl so you
     always see live skill activity, even before the first `agentboard_start_task`.
@@ -369,7 +369,7 @@ def watch(
     import os
 
     store = _get_store()
-    runs_dir = store.root / ".devboard" / "runs"
+    runs_dir = store.root / ".agentboard" / "runs"
 
     # Collect candidate files
     files_to_tail: list[tuple[Path, str]] = []  # (path, kind)
@@ -378,7 +378,7 @@ def watch(
         # Both runs and decisions
         if runs_dir.exists():
             files_to_tail.extend((p, "run") for p in runs_dir.glob("*.jsonl"))
-        for p in store.root.rglob(".devboard/goals/*/tasks/*/decisions.jsonl"):
+        for p in store.root.rglob(".agentboard/goals/*/tasks/*/decisions.jsonl"):
             files_to_tail.append((p, "decision"))
     elif run_id:
         rf = runs_dir / f"{run_id}.jsonl"
@@ -394,7 +394,7 @@ def watch(
             files_to_tail = [(run_files[0], "run")]
         else:
             # Fallback: all decisions across all tasks
-            for p in store.root.rglob(".devboard/goals/*/tasks/*/decisions.jsonl"):
+            for p in store.root.rglob(".agentboard/goals/*/tasks/*/decisions.jsonl"):
                 files_to_tail.append((p, "decision"))
 
     if not files_to_tail:
@@ -509,7 +509,7 @@ def status() -> None:
     import json
     store = _get_store()
     board = store.load_board()
-    runs_dir = store.root / ".devboard" / "runs"
+    runs_dir = store.root / ".agentboard" / "runs"
 
     console.print(f"\n[bold]Board[/bold]  [dim]{board.board_id}[/dim]")
 
@@ -650,7 +650,7 @@ def learnings_export(
     """Export project learnings as a zip."""
     import zipfile
     store = _get_store()
-    src = store.root / ".devboard" / "learnings"
+    src = store.root / ".agentboard" / "learnings"
     if not src.exists() or not any(src.iterdir()):
         console.print("[dim]No learnings to export.[/dim]")
         raise typer.Exit(0)
@@ -669,7 +669,7 @@ def learnings_import(
     """Import a learnings zip."""
     import zipfile
     store = _get_store()
-    target = store.root / ".devboard" / "learnings"
+    target = store.root / ".agentboard" / "learnings"
     target.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(archive, "r") as zf:
@@ -706,7 +706,7 @@ def _latest_task_id(store: FileStore, goal_id: Optional[str], explicit: Optional
 
 
 def _latest_run_path(store: FileStore, explicit: Optional[str]):
-    runs_dir = store.root / ".devboard" / "runs"
+    runs_dir = store.root / ".agentboard" / "runs"
     if not runs_dir.exists():
         return None
     if explicit:
@@ -767,7 +767,7 @@ def plan(
             console.print(f"  - {m}")
 
     if full:
-        gauntlet_dir = store.root / ".devboard" / "goals" / gid / "gauntlet"
+        gauntlet_dir = store.root / ".agentboard" / "goals" / gid / "gauntlet"
         if gauntlet_dir.exists():
             console.print(f"\n[bold]Gauntlet Artifacts[/bold]")
             for f in sorted(gauntlet_dir.glob("*.md")):
@@ -909,7 +909,7 @@ def diff(
         console.print("[red]Task's goal not found.[/red]")
         raise typer.Exit(1)
 
-    changes_dir = store.root / ".devboard" / "goals" / gid / "tasks" / tid / "changes"
+    changes_dir = store.root / ".agentboard" / "goals" / gid / "tasks" / tid / "changes"
     if not changes_dir.exists():
         console.print("[dim]No diffs saved for this task.[/dim]")
         return
@@ -951,7 +951,7 @@ def activity(
     """
     import json as _json
     store = _get_store()
-    log = store.root / ".devboard" / "activity.jsonl"
+    log = store.root / ".agentboard" / "activity.jsonl"
     if not log.exists():
         console.print("[dim]No activity log yet. The activity-log hook must be installed.[/dim]")
         console.print("[dim]Run: agentboard install  (or re-install with --overwrite)[/dim]")
@@ -1074,7 +1074,7 @@ def show_gauntlet(
         console.print("[red]No goal.[/red]")
         raise typer.Exit(1)
 
-    gauntlet_dir = store.root / ".devboard" / "goals" / gid / "gauntlet"
+    gauntlet_dir = store.root / ".agentboard" / "goals" / gid / "gauntlet"
     if not gauntlet_dir.exists():
         console.print("[dim]No Gauntlet artifacts for this goal.[/dim]")
         return
@@ -1139,7 +1139,7 @@ def export(
 ) -> None:
     """Export a goal's plan.md or report.md.
 
-    Reads .devboard/goals/<goal_id>/<source>.md and emits it:
+    Reads .agentboard/goals/<goal_id>/<source>.md and emits it:
     - source=plan (default): render plan.md in the requested format (md/html/confluence).
     - source=report: emit the AI-synthesized report.md verbatim (already Markdown,
       no format rendering).
@@ -1180,7 +1180,7 @@ def export(
             raise typer.Exit(1)
 
     if source == "report":
-        report_path = root / ".devboard" / "goals" / goal_id / "report.md"
+        report_path = root / ".agentboard" / "goals" / goal_id / "report.md"
         if not report_path.exists():
             console.print(
                 f"[red]report.md not found for goal {goal_id} at {report_path}[/red]"
@@ -1206,7 +1206,7 @@ def export(
         console.print(f"[red]unknown --source {source!r} (expected plan|report)[/red]")
         raise typer.Exit(1)
 
-    plan_path = root / ".devboard" / "goals" / goal_id / "plan.md"
+    plan_path = root / ".agentboard" / "goals" / goal_id / "plan.md"
     if not plan_path.exists():
         console.print(f"[red]no plan.md for goal {goal_id} at {plan_path}[/red]")
         raise typer.Exit(1)
@@ -1372,16 +1372,16 @@ def audit() -> None:
     from agentboard.config import find_agentboard_root
     root = find_agentboard_root()
     if root:
-        console.print(f"  [green]✓[/green] .devboard root: {root}")
+        console.print(f"  [green]✓[/green] .agentboard root: {root}")
         store = _get_store(root)
         board = store.load_board()
         console.print(f"    Goals: {len(board.goals)}")
         console.print(f"    Learnings: {len(store.list_learnings())}")
-        runs_dir = root / ".devboard" / "runs"
+        runs_dir = root / ".agentboard" / "runs"
         runs = list(runs_dir.glob("*.jsonl")) if runs_dir.exists() else []
         console.print(f"    Runs: {len(runs)}")
     else:
-        console.print("  [yellow]![/yellow] No .devboard found (run: agentboard init)")
+        console.print("  [yellow]![/yellow] No .agentboard found (run: agentboard init)")
 
     # Skills/MCP/hooks installed?
     cwd = Path.cwd()
@@ -1498,7 +1498,7 @@ def rebuild_pile(
         help="Goal ID to rebuild. Omit with --all to rebuild every goal.",
     ),
     all_goals: bool = typer.Option(
-        False, "--all", help="Rebuild every goal under .devboard/goals/"
+        False, "--all", help="Rebuild every goal under .agentboard/goals/"
     ),
     root: Optional[Path] = typer.Option(
         None, help="Project root (default: auto-detect via find_agentboard_root)"

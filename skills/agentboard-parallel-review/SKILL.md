@@ -11,7 +11,7 @@ when_to_use: Automatic after agentboard-tdd issues reviewer PASS for production-
 Before any other action, verify agentboard is initialized:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → print "agentboard is not initialized in this project. Run `agentboard init && agentboard install` first to enable this skill." and exit.

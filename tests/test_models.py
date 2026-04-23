@@ -28,7 +28,7 @@ def test_goal_parent_id_roundtrip() -> None:
 def test_goal_legacy_json_without_parent_id_loads() -> None:
     """s_003: edge — legacy JSON without parent_id key loads with default None.
 
-    Category: backward-compat. Existing .devboard/goals/*/goal.json files
+    Category: backward-compat. Existing .agentboard/goals/*/goal.json files
     predate this field and must not crash on reload.
     """
     legacy = {

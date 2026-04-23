@@ -13,12 +13,12 @@ def _bootstrap_pushed_task(tmp_path: Path) -> tuple[str, str]:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_pushed")
     board.goals.append(Goal(id="g_pushed", title="done-goal", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_pushed"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_pushed"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# plan\n")
     task_dir = goal_dir / "tasks" / "t_pushed"

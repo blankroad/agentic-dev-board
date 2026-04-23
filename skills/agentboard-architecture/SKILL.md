@@ -15,15 +15,15 @@ You are the **Design Lock** — Step 3 of the D1 phase chain. You translate the 
 ### Project guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 ### Load upstream
 
 Read via the `Read` tool and parse YAML frontmatter:
 
-- `.devboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `wedge`, `rationale`, `alternatives_considered` (chosen entry)
-- `.devboard/goals/<goal_id>/gauntlet/frame.md` — `problem`, `wedge`, `non_goals`, `success_definition`, `key_assumptions`, `riskiest_assumption`, `new_risk_invalidates_scope`
+- `.agentboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `wedge`, `rationale`, `alternatives_considered` (chosen entry)
+- `.agentboard/goals/<goal_id>/gauntlet/frame.md` — `problem`, `wedge`, `non_goals`, `success_definition`, `key_assumptions`, `riskiest_assumption`, `new_risk_invalidates_scope`
 
 If `frame.md.new_risk_invalidates_scope=true` AND the user's resolution pick at frame Step 3 was "continue" (option 1): carry the riskiest assumption into the architecture's `test_strategy.must_test` so downstream Challenge has adversarial material to work with.
 
@@ -231,7 +231,7 @@ design-review scores the arch + mockup against a 7-pass UI/UX rubric (Informatio
 
 ## Step 10 — Write arch.md
 
-Write `.devboard/goals/<goal_id>/gauntlet/arch.md`:
+Write `.agentboard/goals/<goal_id>/gauntlet/arch.md`:
 
 ```yaml
 ---

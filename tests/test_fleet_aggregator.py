@@ -9,8 +9,8 @@ from pathlib import Path
 def _seed_goal(tmp_path: Path, gid: str, title: str, iters: int,
                last_phase: str, last_verdict: str,
                sparkline: list[str]) -> None:
-    """Seed a minimal .devboard/goals/<gid>/ tree with a run + digest."""
-    gdir = tmp_path / ".devboard" / "goals" / gid
+    """Seed a minimal .agentboard/goals/<gid>/ tree with a run + digest."""
+    gdir = tmp_path / ".agentboard" / "goals" / gid
     tdir = gdir / "tasks" / f"t_{gid}"
     tdir.mkdir(parents=True)
     (gdir / "goal.json").write_text(json.dumps({
@@ -19,7 +19,7 @@ def _seed_goal(tmp_path: Path, gid: str, title: str, iters: int,
     }), encoding="utf-8")
 
     rid = f"run_{gid}"
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
     (runs_dir / f"{rid}.jsonl").write_text(
         json.dumps({"event": "run_start", "task_id": f"t_{gid}",
@@ -28,7 +28,7 @@ def _seed_goal(tmp_path: Path, gid: str, title: str, iters: int,
     )
 
     # Pile digest.json
-    pile_dir = tmp_path / ".devboard" / "runs" / rid
+    pile_dir = tmp_path / ".agentboard" / "runs" / rid
     pile_dir.mkdir(parents=True, exist_ok=True)
     (pile_dir / "digest.json").write_text(json.dumps({
         "schema_version": 1,
@@ -89,12 +89,12 @@ def test_load_fleet_returns_sorted_summaries(tmp_path) -> None:
 
 
 def test_load_fleet_empty_when_no_goals(tmp_path) -> None:
-    """f_003: empty .devboard/goals/ returns empty list, no crash."""
+    """f_003: empty .agentboard/goals/ returns empty list, no crash."""
     from agentboard.analytics.fleet_aggregator import load_fleet
     from agentboard.storage.file_store import FileStore
 
-    # Ensure .devboard/goals/ exists but is empty
-    (tmp_path / ".devboard" / "goals").mkdir(parents=True)
+    # Ensure .agentboard/goals/ exists but is empty
+    (tmp_path / ".agentboard" / "goals").mkdir(parents=True)
 
     store = FileStore(tmp_path)
     summaries = load_fleet(store)

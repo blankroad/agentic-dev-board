@@ -6,7 +6,7 @@
 # 1. If file IS a test file → silently OK.
 # 2. If file is production code:
 #    a. Look for matching test file (same base, common test suffixes)
-#    b. Check session-local tool-call history (.devboard/.iron-law-history.jsonl)
+#    b. Check session-local tool-call history (.agentboard/.iron-law-history.jsonl)
 #       for a preceding test write in the same session
 #    c. If neither → systemMessage reminder
 
@@ -19,12 +19,12 @@ session_id=$(echo "$input" | jq -r '.session_id // "unknown"')
 
 [ -z "$file_path" ] && exit 0
 
-# Resolve project root (nearest .devboard ancestor from file_path's dir)
+# Resolve project root (nearest .agentboard ancestor from file_path's dir)
 resolve_root() {
     local dir
     if [ -d "$1" ]; then dir="$1"; else dir=$(dirname "$1"); fi
     while [ "$dir" != "/" ]; do
-        [ -d "$dir/.devboard" ] && { echo "$dir"; return 0; }
+        [ -d "$dir/.agentboard" ] && { echo "$dir"; return 0; }
         dir=$(dirname "$dir")
     done
     echo "."
@@ -54,7 +54,7 @@ is_prod_code() {
 # Record test writes in session history (so subsequent impl writes count them)
 if is_test_path "$file_path"; then
     root=$(resolve_root "$file_path")
-    hist="$root/.devboard/.iron-law-history.jsonl"
+    hist="$root/.agentboard/.iron-law-history.jsonl"
     mkdir -p "$(dirname "$hist")"
     echo "{\"session_id\":\"$session_id\",\"kind\":\"test_write\",\"path\":\"$file_path\"}" >> "$hist"
     exit 0
@@ -81,7 +81,7 @@ fi
 
 # 2. Check session history for a recent test write in same session
 root=$(resolve_root "$file_path")
-hist="$root/.devboard/.iron-law-history.jsonl"
+hist="$root/.agentboard/.iron-law-history.jsonl"
 
 if [ -f "$hist" ]; then
     # Look for any test_write in the last 20 entries for this session

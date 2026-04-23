@@ -32,7 +32,10 @@ def _strip_ansi(text: str) -> str:
 _RESERVED_SAVE_PREFIXES: frozenset[str] = frozenset(
     p.casefold()
     for p in {
-        # Devboard + VCS + project metadata
+        # agentboard state root + legacy name (T4 rename 2026-04-23:
+        # ``.devboard/`` → ``.agentboard/``; both kept in the denylist
+        # so pre-migration repos still get the clobber protection).
+        ".agentboard",
         ".devboard",
         ".git",
         ".github",
@@ -57,13 +60,13 @@ def _resolve_save_path(root: Path, save_to: object) -> Path:
     Rejects:
     - Non-string / empty save_to (MCP JSON may pass null, lists, etc.)
     - Absolute paths outside project_root, and `../` traversal
-    - In-root reserved prefixes (.devboard/, .git/, .mcp.json, ...)
+    - In-root reserved prefixes (.agentboard/, .git/, .mcp.json, ...)
     - Target equal to project_root, or an existing directory
 
     This is the only write path the MCP tool exposes — without
     containment, a prompt-injected skill body or malicious MCP client
     could write anywhere the process has access, and overwriting
-    `.devboard/state.json` alone would brick the board.
+    `.agentboard/state.json` alone would brick the board.
     """
     if not isinstance(save_to, str) or not save_to:
         raise ValueError(
@@ -90,7 +93,7 @@ def _resolve_save_path(root: Path, save_to: object) -> Path:
             f"(prefix {rel.parts[0]!r}); move snapshots under e.g. "
             f"'tui_snapshots/'. Case-insensitive match — "
             f"macOS APFS collapses case so e.g. '.DEVBOARD' clobbers "
-            f"'.devboard'."
+            f"'.agentboard'."
         )
     return resolved
 

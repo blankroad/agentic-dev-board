@@ -21,7 +21,7 @@ def _seed_pile(tmp_path, rid: str, gid: str, tid: str) -> None:
 -old
 +new
 """
-    task_changes = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid / "changes"
+    task_changes = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid / "changes"
     task_changes.mkdir(parents=True)
     (task_changes / "iter_1.diff").write_text(diff_text, encoding="utf-8")
     store.write_iter_artifact(rid, 1, {

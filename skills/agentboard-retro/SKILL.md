@@ -11,7 +11,7 @@ when_to_use: User explicitly asks for retro / retrospective / weekly review / sp
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
@@ -76,7 +76,7 @@ Write a markdown report including:
 - {concrete changes to skills/plans/process for next period}
 ```
 
-Save to `.devboard/retros/retro_<timestamp>.md` via the MCP tool (or ask user to confirm).
+Save to `.agentboard/retros/retro_<timestamp>.md` via the MCP tool (or ask user to confirm).
 
 ## Step 4.1 — Write Lessons section to each goal's plan.md (MANDATORY)
 
@@ -108,7 +108,7 @@ for goal_id in goals_covered:
     if next_apply:
         body_parts.append(f"\n**Next apply:** {next_apply}")
 
-    plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
+    plan_path = Path(project_root) / ".agentboard" / "goals" / goal_id / "plan.md"
     upsert_plan_section(plan_path, PlanSection.LESSONS, "\n".join(body_parts))
 ```
 
@@ -116,7 +116,7 @@ Notes:
 - Per-goal iteration: retro can cover multiple goals at once — for each goal in `goals_covered`, call `upsert_plan_section` once.
 - The helper is idempotent — re-running retro replaces the Lessons block, no stacking.
 - Empty input guard: goals with zero lessons AND zero retro narrative are skipped entirely (no empty Lessons block is written). A future retro with content will correctly upsert into the same plan.md.
-- Source of lessons: filter `.devboard/learnings/` entries by learning's `goal_id` tag or by name match against the goal's checklist items.
+- Source of lessons: filter `.agentboard/learnings/` entries by learning's `goal_id` tag or by name match against the goal's checklist items.
 
 For each goal processed, note it in the retro output as `Lessons written → <goal_id>` so the user can see which plans were updated.
 
@@ -143,7 +143,7 @@ Manual promotion is still allowed — if the AI detects a pattern outside the pr
 
 | When | Tool |
 |---|---|
-| Data gathering | `agentboard_generate_retro(project_root, goal_id=None, last_n_goals=5, save=True)` — primary tool; returns markdown + saves to `.devboard/retros/` |
+| Data gathering | `agentboard_generate_retro(project_root, goal_id=None, last_n_goals=5, save=True)` — primary tool; returns markdown + saves to `.agentboard/retros/` |
 | Context | `agentboard_list_goals(project_root)` + `agentboard_list_runs(project_root)` — if you need more than the aggregate |
 | On pattern detection | `agentboard_save_learning(project_root, name, content, tags=["retrospective", <topic>], category="pattern", confidence=0.7)` |
 

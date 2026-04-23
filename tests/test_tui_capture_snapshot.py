@@ -20,11 +20,11 @@ import pytest
 
 
 def _bootstrap_goal(tmp_path: Path, gid: str = "g1") -> None:
-    """Minimum .devboard/ state so AgentBoardApp can mount against tmp_path."""
+    """Minimum .agentboard/ state so AgentBoardApp can mount against tmp_path."""
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir(exist_ok=True)
+    (tmp_path / ".agentboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
     try:
         board = store.load_board()
@@ -32,7 +32,7 @@ def _bootstrap_goal(tmp_path: Path, gid: str = "g1") -> None:
         board = BoardState()
     board.goals.append(Goal(id=gid, title=gid, status=GoalStatus.active))
     store.save_board(board)
-    gdir = tmp_path / ".devboard" / "goals" / gid
+    gdir = tmp_path / ".agentboard" / "goals" / gid
     gdir.mkdir(parents=True, exist_ok=True)
     (gdir / "plan.md").write_text("# plan\n", encoding="utf-8")
 
@@ -338,14 +338,14 @@ def test_text_from_svg_handles_tspan_children_and_entities() -> None:
 def test_save_to_rejects_reserved_case_variants(tmp_path: Path, reserved: str) -> None:
     """s_025 CRITICAL: case-variant reserved paths must be refused even
     when the frozenset is lowercase — macOS APFS collapses '.DEVBOARD'
-    to '.devboard' and clobbers board state.
+    to '.agentboard' and clobbers board state.
 
     # guards: reserved-path-denylist, case-insensitive-fs
     """
     from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
-    state_json = tmp_path / ".devboard" / "state.json"
+    state_json = tmp_path / ".agentboard" / "state.json"
     before = state_json.read_bytes() if state_json.exists() else b""
     result = run(
         project_root=tmp_path,
@@ -397,7 +397,7 @@ def test_fixture_goal_id_dict_type_returns_structured_crash(tmp_path: Path) -> N
 
 
 def test_save_to_rejects_reserved_in_root_paths(tmp_path: Path) -> None:
-    """s_021 CRITICAL: in-root reserved files (.devboard/state.json,
+    """s_021 CRITICAL: in-root reserved files (.agentboard/state.json,
     .mcp.json, .git/**) must NOT be overwritten via save_to even though
     they technically live under project_root.
 
@@ -406,14 +406,14 @@ def test_save_to_rejects_reserved_in_root_paths(tmp_path: Path) -> None:
     from agentboard.mcp_tools.tui_capture import run
 
     _bootstrap_goal(tmp_path)
-    state_json = tmp_path / ".devboard" / "state.json"
+    state_json = tmp_path / ".agentboard" / "state.json"
     before = state_json.read_bytes() if state_json.exists() else b""
     assert before, "precondition: state.json must exist after bootstrap"
 
     result = run(
         project_root=tmp_path,
         scene_id="reserved_clobber",
-        save_to=".devboard/state.json",
+        save_to=".agentboard/state.json",
     )
     assert result["crashed"] is True, (
         "save_to hitting a reserved in-root path must crash; "

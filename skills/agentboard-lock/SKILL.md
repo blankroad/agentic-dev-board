@@ -17,17 +17,17 @@ You are the **Lock Gate** — the final mechanical step of the D1 planning chain
 ### Project guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 ### Load upstream (all 4 phases required)
 
 Read and parse YAML frontmatter:
 
-- `.devboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `req_list`, `rationale`, `alternatives_considered`
-- `.devboard/goals/<goal_id>/gauntlet/frame.md` — `problem`, `wedge`, `non_goals`, `success_definition`, `key_assumptions`, `riskiest_assumption`
-- `.devboard/goals/<goal_id>/gauntlet/arch.md` — `architecture_overview`, `critical_files`, `edge_cases`, `test_strategy`, `critical_path`, `out_of_scope_guard`, `complexity`, `ui_surface`, `design_review` (if present)
-- `.devboard/goals/<goal_id>/gauntlet/challenge.md` — failure modes list with severities, `warrants_replan` (should be `false` by the time you get here; if `true`, stress mis-handled the routing — `AskUserQuestion` and route back)
+- `.agentboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `req_list`, `rationale`, `alternatives_considered`
+- `.agentboard/goals/<goal_id>/gauntlet/frame.md` — `problem`, `wedge`, `non_goals`, `success_definition`, `key_assumptions`, `riskiest_assumption`
+- `.agentboard/goals/<goal_id>/gauntlet/arch.md` — `architecture_overview`, `critical_files`, `edge_cases`, `test_strategy`, `critical_path`, `out_of_scope_guard`, `complexity`, `ui_surface`, `design_review` (if present)
+- `.agentboard/goals/<goal_id>/gauntlet/challenge.md` — failure modes list with severities, `warrants_replan` (should be `false` by the time you get here; if `true`, stress mis-handled the routing — `AskUserQuestion` and route back)
 
 ### Legacy fallback for missing frontmatter
 
@@ -327,7 +327,7 @@ Pass `{task_id, run_id, locked_hash, goal_id}` through the `args` payload of the
 ## D1 Lock 완료
 
 locked_hash: {hash}
-plan.md: .devboard/goals/{goal_id}/plan.md
+plan.md: .agentboard/goals/{goal_id}/plan.md
 atomic_steps: {N}
 task_id: {id}
 run_id: {id}

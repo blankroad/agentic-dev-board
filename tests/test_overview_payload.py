@@ -6,7 +6,7 @@ from agentboard.analytics.overview_payload import build_overview_payload
 
 
 def _fresh_goal(tmp_path: Path, gid: str = "g_test") -> Path:
-    goal_dir = tmp_path / ".devboard" / "goals" / gid
+    goal_dir = tmp_path / ".agentboard" / "goals" / gid
     goal_dir.mkdir(parents=True)
     return goal_dir
 

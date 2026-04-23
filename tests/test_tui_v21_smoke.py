@@ -10,15 +10,15 @@ def _bootstrap(tmp_path: Path, *goals: tuple[str, str], active: str | None = Non
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id=active)
     for gid, title in goals:
         board.goals.append(Goal(id=gid, title=title, status=GoalStatus.active))
     store.save_board(board)
     for gid, _ in goals:
-        (tmp_path / ".devboard" / "goals" / gid).mkdir(parents=True, exist_ok=True)
-        (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text("# p\n")
+        (tmp_path / ".agentboard" / "goals" / gid).mkdir(parents=True, exist_ok=True)
+        (tmp_path / ".agentboard" / "goals" / gid / "plan.md").write_text("# p\n")
 
 
 @pytest.mark.asyncio
@@ -95,7 +95,7 @@ async def test_live_status_line_shows_latest_event_at_bottom(tmp_path: Path) -> 
     from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
     run_file = runs_dir / "run_live.jsonl"
     run_file.write_text("")
@@ -136,7 +136,7 @@ async def test_all_v20_commands_dispatch_without_crash(tmp_path: Path) -> None:
     from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "one"), active="g_1")
-    task_dir = tmp_path / ".devboard" / "goals" / "g_1" / "tasks" / "t_1"
+    task_dir = tmp_path / ".agentboard" / "goals" / "g_1" / "tasks" / "t_1"
     changes = task_dir / "changes"
     changes.mkdir(parents=True)
     (task_dir / "task.json").write_text(json.dumps({"id": "t_1", "status": "in_progress"}))
@@ -166,19 +166,19 @@ async def test_goto_refreshes_plan_markdown_to_new_goal(tmp_path: Path) -> None:
     from agentboard.storage.file_store import FileStore
     from agentboard.tui.app import AgentBoardApp
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_alpha")
     board.goals.append(Goal(id="g_alpha", title="alpha-goal", status=GoalStatus.active))
     board.goals.append(Goal(id="g_beta", title="beta-goal", status=GoalStatus.active))
     store.save_board(board)
     for gid, plan in [("g_alpha", "# ALPHA_PLAN\n"), ("g_beta", "# BETA_PLAN\n")]:
-        d = tmp_path / ".devboard" / "goals" / gid
+        d = tmp_path / ".agentboard" / "goals" / gid
         d.mkdir(parents=True)
         (d / "plan.md").write_text(plan)
     # Make alpha's plan older so beta is auto-active on mount.
     old = time.time() - 1000
-    os.utime(tmp_path / ".devboard" / "goals" / "g_alpha" / "plan.md", (old, old))
+    os.utime(tmp_path / ".agentboard" / "goals" / "g_alpha" / "plan.md", (old, old))
 
     app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
@@ -203,7 +203,7 @@ async def test_decisions_cmd_refreshes_phase_flow(tmp_path: Path) -> None:
     from agentboard.tui.app import AgentBoardApp
 
     _bootstrap(tmp_path, ("g_1", "g"), active="g_1")
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_1"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_1"
     # Use dev-phase names so they route into the Dev tab body. (Review
     # phases would land in Review tab instead.)
     for tid, phases in [
@@ -264,7 +264,7 @@ async def test_goto_ambiguous_does_not_desync_sidebar_click_mapping(tmp_path: Pa
         active="g_alpha",
     )
     for gid in ("g_alpha", "g_bravo", "g_charlie"):
-        (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text(f"# {gid}\n")
+        (tmp_path / ".agentboard" / "goals" / gid / "plan.md").write_text(f"# {gid}\n")
 
     app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:
@@ -312,7 +312,7 @@ async def test_clicking_goal_sidebar_entry_switches_goal(tmp_path: Path) -> None
 
     _bootstrap(tmp_path, ("g_first", "first"), ("g_second", "second"), active="g_first")
     for gid in ("g_first", "g_second"):
-        (tmp_path / ".devboard" / "goals" / gid / "plan.md").write_text(f"# PLAN_{gid}\n")
+        (tmp_path / ".agentboard" / "goals" / gid / "plan.md").write_text(f"# PLAN_{gid}\n")
 
     app = AgentBoardApp(store_root=tmp_path)
     async with app.run_test(size=(140, 42)) as pilot:

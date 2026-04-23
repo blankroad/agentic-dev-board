@@ -1,6 +1,6 @@
 # agentic-dev-board — 5분 Quickstart
 
-> 목표: 5분 안에 agentboard 설치 → Claude Code로 첫 기능 구현 → `.devboard/`에 쌓인 이력 확인.
+> 목표: 5분 안에 agentboard 설치 → Claude Code로 첫 기능 구현 → `.agentboard/`에 쌓인 이력 확인.
 
 ## 필요한 것
 
@@ -29,7 +29,7 @@ agentboard --help
 ```bash
 mkdir ~/my-first-agentboard-project && cd ~/my-first-agentboard-project
 
-agentboard init            # .devboard/ 스캐폴드
+agentboard init            # .agentboard/ 스캐폴드
 agentboard install         # skills + hooks + .mcp.json — Python 경로 자동 감지
 agentboard audit           # 준비 상태 확인 — 모두 초록불이어야 함
 ```
@@ -63,7 +63,7 @@ build this goal using agentboard skills — gauntlet → tdd → approval.
 **기대 동작**:
 - `agentboard-gauntlet` 스킬 auto-invoke → 5-step planning → `plan.md` + SHA256 hash 생성
 - `agentboard-tdd` 스킬 auto-invoke → 각 atomic_step마다 RED → GREEN → REFACTOR
-- 각 단계 `.devboard/runs/<run_id>.jsonl` + `decisions.jsonl`에 기록
+- 각 단계 `.agentboard/runs/<run_id>.jsonl` + `decisions.jsonl`에 기록
 - 수렴 후 `agentboard-approval` 이 squash 정책 묻고 PR 생성
 
 ## 4. 실시간 관찰 (다른 터미널)
@@ -84,8 +84,8 @@ agentboard board               # Textual TUI
 ```bash
 agentboard retro --save        # 이번 세션 stats 저장
 agentboard learnings list      # 이 프로젝트의 확보된 learnings
-cat .devboard/goals/*/plan.md  # 고정된 plan
-cat .devboard/runs/*.jsonl     # state transition 이력
+cat .agentboard/goals/*/plan.md  # 고정된 plan
+cat .agentboard/runs/*.jsonl     # state transition 이력
 ```
 
 ---

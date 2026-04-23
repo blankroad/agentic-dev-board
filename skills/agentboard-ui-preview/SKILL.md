@@ -9,7 +9,7 @@ when_to_use: Automatic after gauntlet arch.md on ui_surface=True (Layer 0). Auto
 ## Preamble — Project Guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → exit with init hint.
@@ -39,7 +39,7 @@ You are the **UI Preview Orchestrator**. Your job: make the TUI visible at every
 
 **When**: in `agentboard-tdd`, right after the first atomic_step that mounts a widget visible to the user turns GREEN and `task.metadata.ui_surface == True`. Also re-run after each subsequent step that mutates visible UI state.
 
-**What**: call the MCP tool to get a plain-text frame and stash it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`.
+**What**: call the MCP tool to get a plain-text frame and stash it under `.agentboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`.
 
 **MCP invocation**:
 
@@ -82,12 +82,12 @@ The SVG is embedded in `plan.md`'s `## Screenshots / Diagrams` section and linke
 
 ## Layer 3 — Scene Gallery (scenes.yaml iteration)
 
-**When**: if `.devboard/goals/<goal_id>/scenes.yaml` exists, run the gallery sweep at Layer 2 time (approval) to cover every declared scene before push. Optional for small features; recommended once a goal has more than three visible states.
+**When**: if `.agentboard/goals/<goal_id>/scenes.yaml` exists, run the gallery sweep at Layer 2 time (approval) to cover every declared scene before push. Optional for small features; recommended once a goal has more than three visible states.
 
 **scenes.yaml inline schema**:
 
 ```yaml
-# .devboard/goals/<goal_id>/scenes.yaml
+# .agentboard/goals/<goal_id>/scenes.yaml
 scenes:
   - scene_id: plan_tab_default
     description: "Plan tab on boot, no plan_summary.md"

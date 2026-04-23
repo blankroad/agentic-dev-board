@@ -17,7 +17,7 @@ def _mk_goal(
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir(exist_ok=True)
+    (tmp_path / ".agentboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
     try:
         board = store.load_board()
@@ -27,7 +27,7 @@ def _mk_goal(
         Goal(id=gid, title=title, status=GoalStatus(status), parent_id=parent_id)
     )
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / gid
+    goal_dir = tmp_path / ".agentboard" / "goals" / gid
     goal_dir.mkdir(parents=True, exist_ok=True)
     (goal_dir / "plan.md").write_text("# p\n")
     if task_status:

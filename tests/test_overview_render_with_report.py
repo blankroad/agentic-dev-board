@@ -16,12 +16,12 @@ def _bootstrap(tmp_path: Path, task_id: str | None = "t_r") -> str:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState(active_goal_id="g_rep")
     board.goals.append(Goal(id="g_rep", title="report-fixture", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_rep"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_rep"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# plan\n")
     if task_id:
@@ -125,7 +125,7 @@ def test_render_prepends_report_md_when_present() -> None:
 
 
 def test_payload_report_md_reads_file_contents(tmp_path: Path) -> None:
-    """s_002 — when .devboard/goals/<gid>/report.md exists, its content
+    """s_002 — when .agentboard/goals/<gid>/report.md exists, its content
     must land verbatim in payload.report_md."""
     from agentboard.analytics.overview_payload import build_overview_payload
 
@@ -138,7 +138,7 @@ def test_payload_report_md_reads_file_contents(tmp_path: Path) -> None:
         "| --- | --- | --- |\n"
         "| 예시 | 이전 | 이후 |\n"
     )
-    (tmp_path / ".devboard" / "goals" / goal_id / "report.md").write_text(
+    (tmp_path / ".agentboard" / "goals" / goal_id / "report.md").write_text(
         report_body, encoding="utf-8"
     )
     payload = build_overview_payload(tmp_path, goal_id, task_id="t_r")
@@ -150,7 +150,7 @@ def test_payload_report_md_reads_file_contents(tmp_path: Path) -> None:
 
 def test_payload_includes_empty_report_md_when_file_absent(tmp_path: Path) -> None:
     """s_001 — payload must always carry a 'report_md' key; defaults to ''
-    when .devboard/goals/<gid>/report.md does not exist."""
+    when .agentboard/goals/<gid>/report.md does not exist."""
     from agentboard.analytics.overview_payload import build_overview_payload
 
     goal_id = _bootstrap(tmp_path)

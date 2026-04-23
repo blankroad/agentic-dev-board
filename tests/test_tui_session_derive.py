@@ -10,7 +10,7 @@ def _write_goal(root: Path, gid: str, title: str = "", plan_text: str | None = N
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    agentboard = root / ".devboard"
+    agentboard = root / ".agentboard"
     agentboard.mkdir(exist_ok=True)
     store = FileStore(root)
     try:
@@ -43,7 +43,7 @@ def test_active_goal_picks_latest_plan_mtime(tmp_path: Path) -> None:
 def test_no_goals_returns_none_active(tmp_path: Path) -> None:
     from agentboard.tui.session_derive import SessionContext
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     ctx = SessionContext(tmp_path)
     assert ctx.active_goal_id is None
 
@@ -76,8 +76,8 @@ def test_diff_parser_strips_crlf_trailing_r(tmp_path: Path) -> None:
     returned file paths (regex \\r-aware)."""
     from agentboard.tui.session_derive import SessionContext
 
-    (tmp_path / ".devboard").mkdir()
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_crlf"
+    (tmp_path / ".agentboard").mkdir()
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_crlf"
     (goal_dir / "tasks" / "t_c" / "changes").mkdir(parents=True)
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore

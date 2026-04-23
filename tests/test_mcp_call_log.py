@@ -7,7 +7,7 @@ from pathlib import Path
 
 async def test_mcp_calls_logged_per_dispatch(tmp_path: Path) -> None:
     """p_009: every call_tool dispatch appends a jsonl entry to
-    .devboard/mcp_calls.jsonl with {tool, ts, duration_ms, bytes_returned}.
+    .agentboard/mcp_calls.jsonl with {tool, ts, duration_ms, bytes_returned}.
     """
     from agentboard.mcp_server import call_tool
 
@@ -29,7 +29,7 @@ async def test_mcp_calls_logged_per_dispatch(tmp_path: Path) -> None:
     await call_tool("agentboard_get_chapter", {"project_root": str(tmp_path), "rid": rid, "chapter": "labor"})
     await call_tool("agentboard_get_session", {"project_root": str(tmp_path), "rid": rid})
 
-    log_path = tmp_path / ".devboard" / "mcp_calls.jsonl"
+    log_path = tmp_path / ".agentboard" / "mcp_calls.jsonl"
     assert log_path.exists(), "mcp_calls.jsonl not created"
     lines = [ln for ln in log_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert len(lines) == 3, f"expected 3 log entries, got {len(lines)}"
@@ -65,7 +65,7 @@ async def test_telemetry_failure_swallowed(tmp_path: Path, monkeypatch) -> None:
 
     # Make mcp_calls.jsonl unwritable: create as a directory with that name,
     # which causes open(..., 'a') to fail with IsADirectoryError.
-    agentboard = tmp_path / ".devboard"
+    agentboard = tmp_path / ".agentboard"
     agentboard.mkdir(parents=True, exist_ok=True)
     bad_log = agentboard / "mcp_calls.jsonl"
     bad_log.mkdir()  # directory instead of file → append will fail

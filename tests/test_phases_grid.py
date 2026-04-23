@@ -86,6 +86,6 @@ def test_phases_grid_widget_update_snapshot_rerenders() -> None:
 
 def test_phases_grid_from_project_returns_string(tmp_path) -> None:
     # No goals dir → "No goals on the board" fallback
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     out = phases_grid_from_project(tmp_path)
     assert "No goals" in out

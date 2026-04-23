@@ -1,6 +1,6 @@
 """End-to-end integration test — simulates the exact sequence of MCP tool
 calls that a well-behaved Claude Code session running the agentboard skills
-would produce. Asserts the resulting .devboard/ state is well-formed and
+would produce. Asserts the resulting .agentboard/ state is well-formed and
 complete (no missing phases, all required files present, correct hashes).
 
 This is what Phase I-3 guarantees: even before testing with real Claude Code,
@@ -73,7 +73,7 @@ def test_e2e_full_flow(tmp_path: Path):
     # Step 1 — init
     r = _mcp("agentboard_init", project_root=root)
     assert r["status"] == "initialized"
-    assert (tmp_path / ".devboard").exists()
+    assert (tmp_path / ".agentboard").exists()
 
     # Step 2 — add goal
     r = _mcp("agentboard_add_goal", project_root=root,
@@ -95,7 +95,7 @@ def test_e2e_full_flow(tmp_path: Path):
     task_id = r["task_id"]
     run_id = r["run_id"]
     assert task_id and run_id
-    run_file = tmp_path / ".devboard" / "runs" / f"{run_id}.jsonl"
+    run_file = tmp_path / ".agentboard" / "runs" / f"{run_id}.jsonl"
     assert run_file.exists()
 
     # Step 5 — checkpoint gauntlet complete
@@ -157,7 +157,7 @@ def test_e2e_full_flow(tmp_path: Path):
     # ── Assertions ──────────────────────────────────────────────────────────
 
     # Plan files exist
-    plan_dir = tmp_path / ".devboard" / "goals" / goal_id
+    plan_dir = tmp_path / ".agentboard" / "goals" / goal_id
     assert (plan_dir / "plan.md").exists()
     assert (plan_dir / "plan.json").exists()
 
@@ -221,11 +221,11 @@ def test_e2e_replay_flow(tmp_path: Path):
              source_run_id=run_id, from_iteration=1, variant_note="try iterative instead")
     assert "new_run_id" in r
     assert r["new_run_id"].startswith("replay_")
-    new_run_path = tmp_path / ".devboard" / "runs" / f"{r['new_run_id']}.jsonl"
+    new_run_path = tmp_path / ".agentboard" / "runs" / f"{r['new_run_id']}.jsonl"
     assert new_run_path.exists()
 
     # Source run untouched
-    source_path = tmp_path / ".devboard" / "runs" / f"{run_id}.jsonl"
+    source_path = tmp_path / ".agentboard" / "runs" / f"{run_id}.jsonl"
     assert source_path.exists()
 
 

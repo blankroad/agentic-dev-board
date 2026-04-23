@@ -10,12 +10,12 @@ def _mk_decisions(tmp_path: Path) -> tuple[str, str]:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     board = BoardState()
     board.goals.append(Goal(id="g_1", title="g", status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_1"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_1"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# p\n")
     task_dir = goal_dir / "tasks" / "t_1"

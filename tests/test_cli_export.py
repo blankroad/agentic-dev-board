@@ -13,7 +13,7 @@ def test_cli_export_md_to_stdout(tmp_path: Path) -> None:
     """# guards: edge-case-red-rule
     edge: integration wiring — CLI must dispatch to the render() pipeline."""
     # Set up a plan.md fixture
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_cli"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_cli"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("# Hello\n\n## Section\n\nbody\n")
 
@@ -28,7 +28,7 @@ def test_cli_export_md_to_stdout(tmp_path: Path) -> None:
 
 
 def test_cli_export_confluence_to_file(tmp_path: Path) -> None:
-    goal_dir = tmp_path / ".devboard" / "goals" / "g_cli2"
+    goal_dir = tmp_path / ".agentboard" / "goals" / "g_cli2"
     goal_dir.mkdir(parents=True)
     (goal_dir / "plan.md").write_text("## Outcome\n\nbody\n")
 
@@ -49,7 +49,7 @@ def test_cli_export_confluence_to_file(tmp_path: Path) -> None:
 
 
 def test_cli_export_unknown_goal_exits_nonzero(tmp_path: Path) -> None:
-    (tmp_path / ".devboard" / "goals").mkdir(parents=True)
+    (tmp_path / ".agentboard" / "goals").mkdir(parents=True)
     runner = CliRunner()
     result = runner.invoke(
         app, ["export", "g_missing", "--project-root", str(tmp_path)]
@@ -66,7 +66,7 @@ def test_cli_export_unknown_goal_exits_nonzero(tmp_path: Path) -> None:
 
 
 def _bootstrap_with_report(tmp_path: Path, body: str, goal_id: str = "g_rep") -> None:
-    gdir = tmp_path / ".devboard" / "goals" / goal_id
+    gdir = tmp_path / ".agentboard" / "goals" / goal_id
     gdir.mkdir(parents=True)
     (gdir / "plan.md").write_text("# plan\n")
     (gdir / "report.md").write_text(body, encoding="utf-8")
@@ -160,8 +160,8 @@ def test_export_rejects_goal_id_with_path_traversal(tmp_path: Path) -> None:
     """redteam FM#1 — goal_id must be validated before being joined into
     the path. Reject anything that doesn't match the standard goal id
     shape (`g_YYYYMMDD_HHMMSS_<hex6>`) so `--goal-id ../../etc/passwd`
-    and friends can't read or write outside the .devboard tree."""
-    (tmp_path / ".devboard" / "goals").mkdir(parents=True)
+    and friends can't read or write outside the .agentboard tree."""
+    (tmp_path / ".agentboard" / "goals").mkdir(parents=True)
     runner = CliRunner()
     for evil in ("../../etc/passwd", "..", "/etc/hosts", "g_ok/../../etc"):
         result = runner.invoke(
@@ -206,7 +206,7 @@ def test_export_missing_report_exits_with_error(tmp_path: Path) -> None:
     """s_007 — `--source report` when report.md is absent must exit non-zero
     with a user-friendly hint on stderr/stdout."""
     # Create goal dir with plan.md but NO report.md.
-    gdir = tmp_path / ".devboard" / "goals" / "g_no_report"
+    gdir = tmp_path / ".agentboard" / "goals" / "g_no_report"
     gdir.mkdir(parents=True)
     (gdir / "plan.md").write_text("# plan\n")
     runner = CliRunner()

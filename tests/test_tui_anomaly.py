@@ -10,7 +10,7 @@ def test_classifier_handles_real_run_event_shape() -> None:
     """Base case: classifier parses every line of a real run file without
     raising. Non-anomaly events return None."""
     root = Path(__file__).resolve().parent.parent
-    runs = sorted((root / ".devboard" / "runs").glob("*.jsonl"))
+    runs = sorted((root / ".agentboard" / "runs").glob("*.jsonl"))
     assert runs, "no runs/*.jsonl fixture available for schema spike"
 
     clf = AnomalyClassifier()

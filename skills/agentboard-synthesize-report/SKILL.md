@@ -1,6 +1,6 @@
 ---
 name: agentboard-synthesize-report
-description: LLM-based Overview-tab release-notes synthesis. Reads plan.md + challenge.md + brainstorm.md + decisions.jsonl + git numstat for a target goal, dispatches the Claude Code Agent tool with a structured prompt, and writes a publishable Markdown file to `.devboard/goals/<gid>/report.md`. Output format is CodeRabbit-style release notes (type-tagged Summary + Why + What shipped + Follow-ups), NOT a TDD journey recap. Non-blocking — any failure logs a NARRATIVE_SKIPPED decision and returns. Consumed by TUI Overview tab (report_md prepend) and `agentboard export <gid> --source report`.
+description: LLM-based Overview-tab release-notes synthesis. Reads plan.md + challenge.md + brainstorm.md + decisions.jsonl + git numstat for a target goal, dispatches the Claude Code Agent tool with a structured prompt, and writes a publishable Markdown file to `.agentboard/goals/<gid>/report.md`. Output format is CodeRabbit-style release notes (type-tagged Summary + Why + What shipped + Follow-ups), NOT a TDD journey recap. Non-blocking — any failure logs a NARRATIVE_SKIPPED decision and returns. Consumed by TUI Overview tab (report_md prepend) and `agentboard export <gid> --source report`.
 when_to_use: (a) auto — invoked by `agentboard-approval` Step 4.5a after a successful push so shipped goals ship with release notes; (b) auto — invoked by `agentboard-gauntlet` after plan lock so even in-flight goals render a provisional Overview; (c) manual — user regenerates a stale report ("re-synthesize", "regenerate overview", "refresh release notes"). Do NOT invoke from inside TDD cycles — this skill is for goals that are at least plan-locked.
 ---
 
@@ -9,7 +9,7 @@ when_to_use: (a) auto — invoked by `agentboard-approval` Step 4.5a after a suc
 ## Preamble — Project Guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → print "agentboard is not initialized. Run `agentboard init && agentboard install` first." and exit immediately.
@@ -31,7 +31,7 @@ Optional:
 
 ## Step 1 — Harvest artifacts
 
-1. `plan.md` — read full contents from `.devboard/goals/<goal_id>/plan.md`
+1. `plan.md` — read full contents from `.agentboard/goals/<goal_id>/plan.md`
 2. `challenge.md` — read from `.../gauntlet/challenge.md` (empty string if missing)
 3. `brainstorm.md` — read from `.../brainstorm.md` (empty string if missing)
 4. `decisions.jsonl` — read from `.../tasks/<latest_task>/decisions.jsonl`. Compute:
@@ -144,7 +144,7 @@ The Agent's response `text` must satisfy ALL of these checks before save:
 5. Does NOT contain `(미기재)` more than 1 time
 6. Does NOT contain forbidden journey vocabulary in prose (outside of the "Hardening" bullet): count occurrences of `iter 1` / `iter 2` / `iter 3` / `round 1` / `round 2` — if combined count > 1, fail
 
-Failure of any check → write the response to `.devboard/goals/<goal_id>/report_draft.md` for debug, skip main save, log `NARRATIVE_SKIPPED` decision with `reason=<failed rule>`, return `{status: "skipped"}`.
+Failure of any check → write the response to `.agentboard/goals/<goal_id>/report_draft.md` for debug, skip main save, log `NARRATIVE_SKIPPED` decision with `reason=<failed rule>`, return `{status: "skipped"}`.
 
 ## Step 4 — Save
 
@@ -156,7 +156,7 @@ _Auto-generated {utcnow_iso} by agentboard-synthesize-report — manual edits wi
 {text}
 ```
 
-Target: `.devboard/goals/<goal_id>/report.md` (UTF-8, overwrite). Use `FileStore.atomic_write` or `Path.write_text`.
+Target: `.agentboard/goals/<goal_id>/report.md` (UTF-8, overwrite). Use `FileStore.atomic_write` or `Path.write_text`.
 
 ## Step 5 — Log decision
 
@@ -172,7 +172,7 @@ agentboard_log_decision(
 
 ## Handoff
 
-- Success: `{status: "generated", path: ".devboard/goals/<goal_id>/report.md"}`
+- Success: `{status: "generated", path: ".agentboard/goals/<goal_id>/report.md"}`
 - Skip: `{status: "skipped", reason: "..."}` — caller continues unchanged. Overview tab falls back to legacy `plan_digest` layout; `agentboard export <gid> --source report` exits 1 with a synthesize hint.
 
 ## Trigger coverage (reminder)

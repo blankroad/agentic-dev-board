@@ -44,7 +44,7 @@ def _seed_project(tmp_path: Path) -> tuple[FileStore, str, str]:
 
 def test_metrics_empty_project(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store.save_board(BoardState())
     m = collect_metrics(store)
     assert m.total_goals == 0
@@ -121,7 +121,7 @@ def test_metrics_dict_structure(tmp_path: Path):
 
 def test_diagnose_empty_project_suggests_action(tmp_path: Path):
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store.save_board(BoardState())
     r = diagnose_activations(store)
     assert r.skill_activation_score == 0.0

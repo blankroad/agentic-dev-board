@@ -15,7 +15,7 @@ def _seed_pile_with_scrubber(tmp_path: Path, rid: str, tid: str, gid: str) -> No
     from agentboard.storage.pile_digest import DigestWriter
 
     store = FileStore(tmp_path)
-    task_changes = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid / "changes"
+    task_changes = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid / "changes"
     task_changes.mkdir(parents=True)
 
     diff1 = """diff --git a/src/foo.py b/src/foo.py
@@ -41,7 +41,7 @@ def _seed_pile_with_scrubber(tmp_path: Path, rid: str, tid: str, gid: str) -> No
     DigestWriter(store).update(rid)
 
     # Also seed the run jsonl so _resolve_rid works
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     runs_dir.mkdir(parents=True, exist_ok=True)
     (runs_dir / f"{rid}.jsonl").write_text(
         json.dumps({"event": "run_start", "task_id": tid}) + "\n",

@@ -1,6 +1,6 @@
 ---
 name: agentboard-synthesize-dev-review
-description: LLM-based Dev-tab PR-review synthesis (CodeRabbit-style). Reads the goal's unified diff + plan.md + challenge.md + decisions.jsonl phase totals (NOT raw iter reasoning), dispatches the Claude Code Agent tool with a structured prompt, and writes `.devboard/goals/<gid>/dev_review.md`. Output shape = Summary (type-tagged) + Walkthrough (2-3 prose paragraphs) + Changes (per-file table) + Sequence diagram (optional, multi-component only) + Risk notes. Journey vocabulary (iter / round / atomic_step) is banned except inside a single "Hardening" summary bullet. Non-blocking — any failure logs `NARRATIVE_SKIPPED` and returns. Consumed by TUI Dev tab (dev_review_md prepend) and standalone PR-review reads.
+description: LLM-based Dev-tab PR-review synthesis (CodeRabbit-style). Reads the goal's unified diff + plan.md + challenge.md + decisions.jsonl phase totals (NOT raw iter reasoning), dispatches the Claude Code Agent tool with a structured prompt, and writes `.agentboard/goals/<gid>/dev_review.md`. Output shape = Summary (type-tagged) + Walkthrough (2-3 prose paragraphs) + Changes (per-file table) + Sequence diagram (optional, multi-component only) + Risk notes. Journey vocabulary (iter / round / atomic_step) is banned except inside a single "Hardening" summary bullet. Non-blocking — any failure logs `NARRATIVE_SKIPPED` and returns. Consumed by TUI Dev tab (dev_review_md prepend) and standalone PR-review reads.
 when_to_use: (a) auto — invoked by `agentboard-approval` after the diff reaches its final state so shipped goals ship with a code-review page; (b) manual — user says "re-synthesize dev review", "regenerate PR view", "update dev_review". Do NOT invoke pre-TDD — this skill requires an actual diff, and an empty diff produces nothing useful.
 ---
 
@@ -9,7 +9,7 @@ when_to_use: (a) auto — invoked by `agentboard-approval` after the diff reache
 ## Preamble — Project Guard (MANDATORY first check)
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - `MISSING` → print "agentboard is not initialized. Run `agentboard init && agentboard install` first." and exit immediately.
@@ -35,8 +35,8 @@ Optional:
 
 1. `git diff <base_sha>..<head_sha>` — full unified diff
 2. `git diff --numstat <base_sha>..<head_sha>` — per-file adds/dels
-3. `plan.md` — read from `.devboard/goals/<goal_id>/plan.md` (empty string if missing)
-4. `challenge.md` — read from `.devboard/goals/<goal_id>/gauntlet/challenge.md` (empty string if missing)
+3. `plan.md` — read from `.agentboard/goals/<goal_id>/plan.md` (empty string if missing)
+4. `challenge.md` — read from `.agentboard/goals/<goal_id>/gauntlet/challenge.md` (empty string if missing)
 5. `decisions.jsonl` — load. Compute:
    - `phase_counts` — dict phase → count (used for type-tag inference: `tdd_green` → New/Refactor, `redteam` → Hardening, etc.)
    - `redteam_findings` — extract final `HIGH` / `CRITICAL` items mentioned in reasoning text (best-effort regex)
@@ -170,7 +170,7 @@ The Agent's response must satisfy ALL of:
 5. Does NOT contain `(미기재)` at all
 6. Banned journey vocabulary check: count occurrences of `iter 1` / `iter 2` / `iter 3` / `iter 4` / `iter 5` / `round 1` / `round 2` / `atomic_step` / `tdd_green` — **combined count must be ≤ 1** (the single Hardening bullet is the only allowed location).
 
-Failure of any check → write the response to `.devboard/goals/<goal_id>/dev_review_draft.md` for debug, skip main save, log `NARRATIVE_SKIPPED` with `reason=<failed rule>`, return `{status: "skipped"}`.
+Failure of any check → write the response to `.agentboard/goals/<goal_id>/dev_review_draft.md` for debug, skip main save, log `NARRATIVE_SKIPPED` with `reason=<failed rule>`, return `{status: "skipped"}`.
 
 ## Step 4 — Save
 
@@ -182,7 +182,7 @@ _Auto-generated {utcnow_iso} by agentboard-synthesize-dev-review — manual edit
 {text}
 ```
 
-Target: `.devboard/goals/<goal_id>/dev_review.md` (UTF-8, overwrite).
+Target: `.agentboard/goals/<goal_id>/dev_review.md` (UTF-8, overwrite).
 
 ## Step 5 — Log decision
 
@@ -198,7 +198,7 @@ agentboard_log_decision(
 
 ## Handoff
 
-- Success: `{status: "generated", path: ".devboard/goals/<goal_id>/dev_review.md"}`
+- Success: `{status: "generated", path: ".agentboard/goals/<goal_id>/dev_review.md"}`
 - Skip: `{status: "skipped", reason: "..."}` — Dev tab falls back to the existing file tree + diff viewer + per-iter cards layout.
 
 ## Common bypass attempts — NEVER allow

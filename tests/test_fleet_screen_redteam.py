@@ -20,7 +20,7 @@ import pytest
 
 @pytest.fixture()
 def tmp_project(tmp_path: Path) -> Path:
-    dev = tmp_path / ".devboard"
+    dev = tmp_path / ".agentboard"
     (dev / "goals" / "g_alpha" / "tasks" / "t_a").mkdir(parents=True)
     (dev / "goals" / "g_beta" / "tasks" / "t_b").mkdir(parents=True)
     (dev / "runs").mkdir(parents=True)

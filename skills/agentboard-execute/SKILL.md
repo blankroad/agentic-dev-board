@@ -13,7 +13,7 @@ when_to_use: Invoked automatically by agentboard-lock after the LockedPlan is wr
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
@@ -122,7 +122,7 @@ Print that one line, skip the checklist, and proceed to the normal RED-GREEN-REF
 
 ### Why this exists
 
-Past observation (TUI v2.0 = 4 red-team rounds, v2.1 = 3 red-team rounds) showed Claude reliably reinventing the same crash categories: binary input, compose-once staleness, real-TTY vs Pilot divergence, cached stale state. These categories are already captured in `.devboard/learnings/*.md`. The Preamble makes sure they show up on the next RED, not on the next BROKEN.
+Past observation (TUI v2.0 = 4 red-team rounds, v2.1 = 3 red-team rounds) showed Claude reliably reinventing the same crash categories: binary input, compose-once staleness, real-TTY vs Pilot divergence, cached stale state. These categories are already captured in `.agentboard/learnings/*.md`. The Preamble makes sure they show up on the next RED, not on the next BROKEN.
 
 ## The Iron Law
 
@@ -173,7 +173,7 @@ def test_plan_markdown_tolerates_binary_plan_md(tmp_path):
 
 **Naming convention (externally observable proof)**: when an edge test maps to a category, encode the category in the **test function name** (e.g. `_with_empty_input`, `_tolerates_binary_*`, `_stale_cache_*`, `_real_tty_*`) OR in the test **docstring** (first line names the category). This lets a reviewer — or the red-team skill — grep the suite for edge coverage without running anything.
 
-**YAGNI — is this speculative testing?** No. YAGNI forbids defending against *hypothetical future* failure modes. These categories are *already documented* in `.devboard/learnings/*.md` as **known-risk** attack vectors that red-team has shipped multiple times. A test that defends a known-risk category is not speculation — it's regression guarding a recurring class of bug.
+**YAGNI — is this speculative testing?** No. YAGNI forbids defending against *hypothetical future* failure modes. These categories are *already documented* in `.agentboard/learnings/*.md` as **known-risk** attack vectors that red-team has shipped multiple times. A test that defends a known-risk category is not speculation — it's regression guarding a recurring class of bug.
 
 If the current `atomic_step` behavior has no matching category in the checklist (or the checklist is empty for a new project), the standard single-assertion RED is fine — do NOT invent categories to pad the test. Matching is intentional, not obligatory.
 
@@ -289,7 +289,7 @@ Hand off to `agentboard-parallel-review` (preferred — dispatches CSO + redteam
 
 ## UI Preview integration (when ui_surface=True)
 
-After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `agentboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `agentboard_tui_capture_snapshot`, saves it under `.devboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
+After the FIRST atomic_step that mounts a user-visible widget turns GREEN — AND `task.metadata.ui_surface == True` — invoke `agentboard-ui-preview` via the Skill tool with `layer=1`. The skill captures a Layer 1 plain-text snapshot via `agentboard_tui_capture_snapshot`, saves it under `.agentboard/tui_snapshots/<goal_id>/layer1/<scene_id>.txt`, and diffs against the Layer 0 mockup recorded in arch.md.
 
 - Drift detected → surface diff to user and ask whether to continue execute or branch to `agentboard-rca`.
 - No drift → resume the Red-Green-Refactor loop with the next atomic_step.

@@ -19,7 +19,7 @@ when_to_use: |
 Before any other action, verify agentboard is initialized in this project:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print init hint and exit.
@@ -56,9 +56,9 @@ will proceed as if design-review did not run.
 ## Phase 1 — Context Harvest
 
 Read the inputs that exist (skip silently if a file is missing):
-- `.devboard/goals/<goal_id>/gauntlet/arch.md` — required
-- `.devboard/goals/<goal_id>/brainstorm.md` — helpful for user journey
-- `.devboard/goals/<goal_id>/gauntlet/arch_mockup.md` or the Layer 0
+- `.agentboard/goals/<goal_id>/gauntlet/arch.md` — required
+- `.agentboard/goals/<goal_id>/brainstorm.md` — helpful for user journey
+- `.agentboard/goals/<goal_id>/gauntlet/arch_mockup.md` or the Layer 0
   block inside arch.md — text mockup of intended layout
 
 ## Phase 2 — Seven Rubric Passes
@@ -142,7 +142,7 @@ The retry 1 + override + sentinel pattern is the same one used by
 ## Phase 4 — Upsert into arch.md (idempotent)
 
 Write the verdict + per-pass scores + fix proposals to
-`.devboard/goals/<goal_id>/gauntlet/arch.md` under a dedicated
+`.agentboard/goals/<goal_id>/gauntlet/arch.md` under a dedicated
 `## Design Review` section. Upsert rule: **idempotent replace, not append** —
 if a prior `## Design Review` heading is already present in arch.md, locate
 its block (from that heading up to the next top-level `##` heading or EOF)

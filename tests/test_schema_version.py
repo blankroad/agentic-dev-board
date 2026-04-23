@@ -14,7 +14,7 @@ def test_iter_json_has_schema_version_v1(tmp_path) -> None:
 
     store = FileStore(tmp_path)
     store.write_iter_artifact("run_v", 1, {"phase": "tdd_red", "iter_n": 1}, gid="g", tid="t")
-    path = tmp_path / ".devboard" / "runs" / "run_v" / "iters" / "iter-001.json"
+    path = tmp_path / ".agentboard" / "runs" / "run_v" / "iters" / "iter-001.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data.get("schema_version") == 1, f"iter.json missing schema_version: {data}"
 
@@ -27,7 +27,7 @@ def test_digest_has_schema_version_and_idempotent(tmp_path) -> None:
     store.write_iter_artifact("run_d", 1, {"phase": "tdd_red", "iter_n": 1}, gid="g", tid="t")
     writer = DigestWriter(store)
     writer.update("run_d")
-    path = tmp_path / ".devboard" / "runs" / "run_d" / "digest.json"
+    path = tmp_path / ".agentboard" / "runs" / "run_d" / "digest.json"
     first = path.read_bytes()
     data = json.loads(first)
     assert data.get("schema_version") == 1
@@ -46,7 +46,7 @@ def test_session_md_frontmatter_schema_version(tmp_path) -> None:
         "run_s", goal_title="Test", current_phase="tdd_red",
         total_steps=5, last_verdict="RED",
     )
-    content = (tmp_path / ".devboard" / "runs" / "run_s" / "session.md").read_text(encoding="utf-8")
+    content = (tmp_path / ".agentboard" / "runs" / "run_s" / "session.md").read_text(encoding="utf-8")
     # Frontmatter or dedicated line — accept either `---\nschema_version: 1\n---`
     # or an inline marker at the top. Test just asserts the presence.
     assert re.search(r"schema_version:\s*1", content), (

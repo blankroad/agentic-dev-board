@@ -11,7 +11,7 @@ when_to_use: User signals readiness to push/merge/ship. Automatic after agentboa
 Before any other action, verify agentboard is initialized in this project. Run this Bash command:
 
 ```bash
-test -d .devboard && test -f .mcp.json && echo OK || echo MISSING
+test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 ```
 
 - Output `MISSING` → print this message to the user and **exit the skill immediately** (do NOT call any MCP tools, do NOT proceed with any steps below):
@@ -113,7 +113,7 @@ After `agentboard_push_pr` returns success (or a direct-push equivalent complete
 
 ### Step 4.5a — Auto-invoke `agentboard-synthesize-report` (ALL goals)
 
-Invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.devboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `agentboard export <gid> --source report`).
+Invoke the `agentboard-synthesize-report` skill via the `Skill` tool so the goal ships with a publishable `.agentboard/goals/<goal_id>/report.md` (As-Is → To-Be summary, consumed by TUI Overview tab + `agentboard export <gid> --source report`).
 
 _Note: the legacy `agentboard_generate_narrative` MCP tool (and its `plan_summary.md` output) was removed in the Plan-tab redesign. The Plan tab now renders `plan.md` directly with structured tables for atomic_steps / failure_modes / non_goals. `synthesize-report` remains the source for the Overview tab's release-notes layer._
 
@@ -161,7 +161,7 @@ Rationale: the Dev tab's primary view is the PR-review page (Summary + Walkthrou
 
 ### Step 4.5a.3 — Auto-invoke `agentboard-synthesize-session` (ALL goals)
 
-After the Dev-review hook, invoke `agentboard-synthesize-session` so the Review tab ships with future-agent lessons + the goal's learnings are promoted into `.devboard/learnings/*.md` for `agentboard_search_learnings` retrieval by future `frame` steps. Same non-blocking contract.
+After the Dev-review hook, invoke `agentboard-synthesize-session` so the Review tab ships with future-agent lessons + the goal's learnings are promoted into `.agentboard/learnings/*.md` for `agentboard_search_learnings` retrieval by future `frame` steps. Same non-blocking contract.
 
 ```
 try:
@@ -188,7 +188,7 @@ Rationale: the Review tab's primary view should be "what did this session teach 
 from agentboard.docs.plan_sections import PlanSection, upsert_plan_section
 from pathlib import Path
 
-plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
+plan_path = Path(project_root) / ".agentboard" / "goals" / goal_id / "plan.md"
 outcome = (
     f"- Status: pushed\n"
     f"- Final commit: {final_commit_sha}\n"
@@ -235,7 +235,7 @@ if task_meta.get("ui_surface", False):
             f"captured_bytes={result.get('captured_bytes')}, "
             f"duration_s={result.get('duration_s')}"
         )
-        plan_path = Path(project_root) / ".devboard" / "goals" / goal_id / "plan.md"
+        plan_path = Path(project_root) / ".agentboard" / "goals" / goal_id / "plan.md"
         upsert_plan_section(plan_path, PlanSection.SCREENSHOTS, screenshots_body)
 ```
 
@@ -275,7 +275,7 @@ For non-UI tasks (`ui_surface` missing or `False`), this step is a no-op — use
 
 ## UI Preview integration (when ui_surface=True)
 
-Before `git push` and BEFORE PR body assembly, if `task.metadata.ui_surface == True`, invoke `agentboard-ui-preview` via the Skill tool with `layer=2`. That skill calls `agentboard_tui_capture_snapshot` with `include_svg=True` and writes both text + SVG frames under `.devboard/tui_snapshots/<goal_id>/layer2/`. The resulting paths are stamped into plan.md's `## Screenshots / Diagrams` section and referenced from the PR body so reviewers see the visual change before merging.
+Before `git push` and BEFORE PR body assembly, if `task.metadata.ui_surface == True`, invoke `agentboard-ui-preview` via the Skill tool with `layer=2`. That skill calls `agentboard_tui_capture_snapshot` with `include_svg=True` and writes both text + SVG frames under `.agentboard/tui_snapshots/<goal_id>/layer2/`. The resulting paths are stamped into plan.md's `## Screenshots / Diagrams` section and referenced from the PR body so reviewers see the visual change before merging.
 
 If the goal's directory contains `scenes.yaml`, run Layer 3: iterate every declared scene (`scene_id`, `keys`, `description`, `tags`) and capture one SVG per entry. Link every scene's SVG in the PR body with the scene description as caption.
 

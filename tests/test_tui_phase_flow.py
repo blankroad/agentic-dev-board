@@ -36,7 +36,7 @@ def _mk_goal(
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir(exist_ok=True)
+    (tmp_path / ".agentboard").mkdir(exist_ok=True)
     store = FileStore(tmp_path)
     try:
         board = store.load_board()
@@ -44,7 +44,7 @@ def _mk_goal(
         board = BoardState()
     board.goals.append(Goal(id=gid, title=gid, status=GoalStatus.active))
     store.save_board(board)
-    goal_dir = tmp_path / ".devboard" / "goals" / gid
+    goal_dir = tmp_path / ".agentboard" / "goals" / gid
     goal_dir.mkdir(parents=True, exist_ok=True)
     if plan_md is not None:
         (goal_dir / "plan.md").write_text(plan_md, encoding="utf-8")
@@ -118,7 +118,7 @@ async def test_plan_tab_renders_plan_md(tmp_path: Path) -> None:
 def _write_decisions(
     tmp_path: Path, gid: str, task_id: str, rows: list[dict]
 ) -> None:
-    tdir = tmp_path / ".devboard" / "goals" / gid / "tasks" / task_id
+    tdir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / task_id
     tdir.mkdir(parents=True, exist_ok=True)
     with (tdir / "decisions.jsonl").open("w", encoding="utf-8") as fh:
         for r in rows:
@@ -689,7 +689,7 @@ async def test_handle_tick_dispatches_newly_appended_row_not_max_iter(
         # Append a LOWER-iter dev row, as agentboard-replay would.
         decisions_path = (
             tmp_path
-            / ".devboard"
+            / ".agentboard"
             / "goals"
             / "g1"
             / "tasks"
@@ -732,7 +732,7 @@ async def test_plan_tab_empty_state_when_no_plan_files(tmp_path: Path) -> None:
     from agentboard.models import BoardState, Goal, GoalStatus
     from agentboard.storage.file_store import FileStore
 
-    (tmp_path / ".devboard").mkdir()
+    (tmp_path / ".agentboard").mkdir()
     store = FileStore(tmp_path)
     try:
         board = store.load_board()
@@ -740,7 +740,7 @@ async def test_plan_tab_empty_state_when_no_plan_files(tmp_path: Path) -> None:
         board = BoardState()
     board.goals.append(Goal(id="g_empty", title="g_empty", status=GoalStatus.active))
     store.save_board(board)
-    (tmp_path / ".devboard" / "goals" / "g_empty").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentboard" / "goals" / "g_empty").mkdir(parents=True, exist_ok=True)
 
     app = await _mount(tmp_path)
     async with app.run_test(size=(120, 30)) as pilot:

@@ -75,9 +75,29 @@ def file_lock(path: Path, mode: str = "a+"):
 
 
 class FileStore(Repository):
+    #: Canonical on-disk state root. T4 rename (2026-04-23):
+    #: legacy ``.devboard/`` → new ``.agentboard/``. Legacy path
+    #: auto-migrated on first FileStore construction if present.
+    STATE_DIR_NAME = ".agentboard"
+    LEGACY_STATE_DIR_NAME = ".devboard"
+
     def __init__(self, root: Path) -> None:
         self.root = root
-        self._agentboard = root / ".devboard"
+        new_path = root / self.STATE_DIR_NAME
+        legacy_path = root / self.LEGACY_STATE_DIR_NAME
+        # One-shot migration: if legacy ``.devboard/`` exists and new
+        # ``.agentboard/`` does not, atomically rename. Filesystem
+        # rename preserves all goal / task / run / learning artifacts.
+        if legacy_path.exists() and not new_path.exists():
+            try:
+                legacy_path.rename(new_path)
+            except OSError:
+                # Cross-device or permission issue — fall back to
+                # silently using the legacy path so the user isn't
+                # locked out. Full migration can be retried manually.
+                self._agentboard = legacy_path
+                return
+        self._agentboard = new_path
 
     def _goals_dir(self, goal_id: str) -> Path:
         return self._agentboard / "goals" / _sanitize_id(goal_id)
@@ -180,7 +200,7 @@ class FileStore(Repository):
             # Orphan index: dir missing. Signal self-heal.
             return None
         # Defense-in-depth: symlink / tampered-index attacks may make a
-        # path resolve outside .devboard even after _sanitize_id passes.
+        # path resolve outside .agentboard even after _sanitize_id passes.
         # Reject any resolved path that escapes the agentboard root.
         try:
             resolved = pile_dir.resolve()
@@ -618,7 +638,7 @@ max_iterations: {plan.max_iterations}
         Per-cycle TDD entries (RED_CONFIRMED, GREEN_CONFIRMED, etc.) are
         filtered out — they're iter-level, not phase-level.
 
-        Uses filesystem-based task discovery (`.devboard/goals/<gid>/tasks/*`)
+        Uses filesystem-based task discovery (`.agentboard/goals/<gid>/tasks/*`)
         rather than board.state.json traversal so it works even when the
         board index is out of sync with on-disk state.
         """

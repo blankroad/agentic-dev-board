@@ -28,7 +28,7 @@ def test_throttle_monotonic_decision(tmp_path) -> None:
     sentinel = ThrottleSentinel(store)
     rid = "run_throttle"
     # Ensure pile dir exists (normally via write_iter_artifact)
-    (tmp_path / ".devboard" / "runs" / rid).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentboard" / "runs" / rid).mkdir(parents=True, exist_ok=True)
 
     # First ever: True
     assert sentinel.decide_and_commit(rid, 1, "tdd") is True
@@ -56,7 +56,7 @@ def test_throttle_threaded_10x10_matches_replay(tmp_path) -> None:
     store = FileStore(tmp_path)
     sentinel = ThrottleSentinel(store)
     rid = "run_threaded"
-    (tmp_path / ".devboard" / "runs" / rid).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentboard" / "runs" / rid).mkdir(parents=True, exist_ok=True)
 
     # 10 threads × 10 iter_n values each (1..100 total, non-overlapping
     # to make each call meaningfully distinct).
@@ -86,7 +86,7 @@ def test_throttle_threaded_10x10_matches_replay(tmp_path) -> None:
     # Sentinel must be parseable JSON — no torn writes. Content need not
     # match any specific replay (concurrent interleaving is non-det), but
     # last_synth_iter must be >0 and last_phase must be one of the 3.
-    raw = (tmp_path / ".devboard" / "runs" / rid / ".throttle").read_text(encoding="utf-8")
+    raw = (tmp_path / ".agentboard" / "runs" / rid / ".throttle").read_text(encoding="utf-8")
     state = json.loads(raw)  # raises if torn
     assert isinstance(state, dict)
     assert state.get("last_synth_iter", 0) >= 1
@@ -107,7 +107,7 @@ def test_throttle_multiprocess_subprocess(tmp_path) -> None:
     rid = "run_multiproc"
     # Seed the pile dir so subprocess workers can locate sentinel path
     store = FileStore(tmp_path)
-    (tmp_path / ".devboard" / "runs" / rid).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".agentboard" / "runs" / rid).mkdir(parents=True, exist_ok=True)
 
     worker_src = '''
 import sys, json
@@ -150,7 +150,7 @@ print("OK")
         assert b"OK" in out
 
     # Sentinel still parses cleanly (no torn writes across processes)
-    sentinel_path = tmp_path / ".devboard" / "runs" / rid / ".throttle"
+    sentinel_path = tmp_path / ".agentboard" / "runs" / rid / ".throttle"
     raw = sentinel_path.read_text(encoding="utf-8")
     state = json.loads(raw)
     assert isinstance(state, dict)

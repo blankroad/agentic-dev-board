@@ -51,7 +51,7 @@ def test_rebuild_pile_produces_valid_pile(tmp_path) -> None:
     store = FileStore(tmp_path)
     gid = "g_rb"
     tid = "t_rb"
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
     with open(task_dir / "decisions.jsonl", "w") as f:
         for n, phase in enumerate(
@@ -73,7 +73,7 @@ def test_rebuild_pile_produces_valid_pile(tmp_path) -> None:
 
     # Verify pile artifacts
     rid = summary["rids"][0]
-    pile = tmp_path / ".devboard" / "runs" / rid
+    pile = tmp_path / ".agentboard" / "runs" / rid
     assert (pile / "iters" / "iter-001.json").exists()
     assert (pile / "iters" / "iter-005.json").exists()
     assert (pile / "digest.json").exists()
@@ -89,7 +89,7 @@ def test_rebuild_pile_idempotent(tmp_path) -> None:
     store = FileStore(tmp_path)
     gid = "g_idem"
     tid = "t_idem"
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
     with open(task_dir / "decisions.jsonl", "w") as f:
         for n in range(1, 4):
@@ -101,10 +101,10 @@ def test_rebuild_pile_idempotent(tmp_path) -> None:
 
     s1 = rebuild_pile_for_goal(store, gid)
     rid = s1["rids"][0]
-    digest1 = (tmp_path / ".devboard" / "runs" / rid / "digest.json").read_bytes()
+    digest1 = (tmp_path / ".agentboard" / "runs" / rid / "digest.json").read_bytes()
 
     s2 = rebuild_pile_for_goal(store, gid)
-    digest2 = (tmp_path / ".devboard" / "runs" / rid / "digest.json").read_bytes()
+    digest2 = (tmp_path / ".agentboard" / "runs" / rid / "digest.json").read_bytes()
     assert digest1 == digest2, "rebuild_pile drift on 2nd run"
 
 
@@ -119,7 +119,7 @@ def test_cli_rebuild_pile_single_gid(tmp_path) -> None:
     store = FileStore(tmp_path)
     gid = "g_cli"
     tid = "t_cli"
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
     (task_dir / "decisions.jsonl").write_text(
         json.dumps({
@@ -136,9 +136,9 @@ def test_cli_rebuild_pile_single_gid(tmp_path) -> None:
         ["rebuild-pile", gid, "--root", str(tmp_path)],
     )
     assert result.exit_code == 0, f"CLI failed: {result.output}"
-    assert (tmp_path / ".devboard" / "runs").exists()
+    assert (tmp_path / ".agentboard" / "runs").exists()
     # At least one run dir created under runs/
-    runs = list((tmp_path / ".devboard" / "runs").iterdir())
+    runs = list((tmp_path / ".agentboard" / "runs").iterdir())
     assert any(r.is_dir() for r in runs), "no run dir produced"
 
 
@@ -150,7 +150,7 @@ def test_cli_rebuild_pile_all(tmp_path) -> None:
 
     # Seed 2 goals
     for gid in ("g_all_1", "g_all_2"):
-        task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / f"t_{gid}"
+        task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / f"t_{gid}"
         task_dir.mkdir(parents=True)
         (task_dir / "decisions.jsonl").write_text(
             json.dumps({
@@ -183,7 +183,7 @@ def test_integration_rebuild_then_get_session(tmp_path) -> None:
     store = FileStore(tmp_path)
     gid = "g_e2e_rb"
     tid = "t_e2e_rb"
-    task_dir = tmp_path / ".devboard" / "goals" / gid / "tasks" / tid
+    task_dir = tmp_path / ".agentboard" / "goals" / gid / "tasks" / tid
     task_dir.mkdir(parents=True)
     with open(task_dir / "decisions.jsonl", "w") as f:
         for n in range(1, 4):

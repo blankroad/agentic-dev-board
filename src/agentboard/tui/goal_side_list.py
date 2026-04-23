@@ -110,7 +110,7 @@ class GoalSideList(Widget):
         )
         for goal, depth in rows:
             goal_dir = (
-                self._session.store_root / ".devboard" / "goals" / goal["id"]
+                self._session.store_root / ".agentboard" / "goals" / goal["id"]
             )
             marker, status_key = _derive_marker_and_status(
                 goal_dir, goal.get("status", "active")

@@ -45,7 +45,7 @@ Then:
 source ~/.zshrc    # or open a new terminal
 
 cd ~/my-project
-agentboard init          # .devboard/ scaffold
+agentboard init          # .agentboard/ scaffold
 agentboard install       # writes .claude/{hooks,settings.json} + .mcp.json (Python auto-detected)
 
 claude                   # open Claude Code — skills + MCP tools auto-load
@@ -173,7 +173,7 @@ agentboard-retro         ← periodic; auto-proposes learnings from recurring mo
 ### State — init, goals, plans
 | Tool | Purpose |
 |---|---|
-| `agentboard_init` | Scaffold `.devboard/`, update `.gitignore` |
+| `agentboard_init` | Scaffold `.agentboard/`, update `.gitignore` |
 | `agentboard_add_goal` | Register a goal on the board |
 | `agentboard_list_goals` | List all goals with status |
 | `agentboard_save_brainstorm` | Save brainstorm output (latest alias + versioned copy) |
@@ -226,7 +226,7 @@ agentboard-retro         ← periodic; auto-proposes learnings from recurring mo
 | `agentboard_list_runs` | List all runs with status |
 | `agentboard_replay` | Branch run from iteration N with variant note |
 
-All tools are **stateless** (read/write `.devboard/` directly) and **LLM-free** (Claude Code does the reasoning).
+All tools are **stateless** (read/write `.agentboard/` directly) and **LLM-free** (Claude Code does the reasoning).
 
 ---
 
@@ -236,7 +236,7 @@ All tools are **stateless** (read/write `.devboard/` directly) and **LLM-free** 
 |---|---|---|
 | `danger-guard.sh` | `PreToolUse` on `Bash` | `rm -rf /` / fork bomb / `dd of=/dev/*` → **deny**. `git push --force` / `DROP TABLE` / `curl \| sh` → **ask** |
 | `iron-law-check.sh` | `PostToolUse` on `Write\|Edit` | Production file written with no matching test file → emits TDD reminder via `systemMessage` |
-| `activity-log.py` | `PostToolUse` on all tools | Appends every tool call + result to `.devboard/activity.jsonl` for trial-and-error review |
+| `activity-log.py` | `PostToolUse` on all tools | Appends every tool call + result to `.agentboard/activity.jsonl` for trial-and-error review |
 
 Hooks work **independently of skills** — even if `agentboard-tdd` isn't loaded, you get Iron Law reminders and DangerGuard blocks.
 
@@ -244,7 +244,7 @@ Hooks work **independently of skills** — even if `agentboard-tdd` isn't loaded
 
 ## Analytics outputs
 
-The `agentboard.analytics` module produces human-readable artifacts from `.devboard/` state — no extra LLM calls.
+The `agentboard.analytics` module produces human-readable artifacts from `.agentboard/` state — no extra LLM calls.
 
 ### Kanban board
 
@@ -307,7 +307,7 @@ Verdicts: GREEN_CONFIRMED ×4, RED_CONFIRMED ×3, RETRY ×2
 ## CLI
 
 ```bash
-agentboard init              # scaffold .devboard/
+agentboard init              # scaffold .agentboard/
 agentboard install           # install skills + hooks + .mcp.json
   --scope global             #   → ~/.claude/skills/ (no hooks/mcp, those are per-project)
   --no-hooks --no-mcp        #   pick & choose
@@ -318,10 +318,10 @@ agentboard goal list         # Kanban-style goal table
 agentboard task show <id>    # task detail with decision timeline
 
 agentboard board             # Textual TUI
-agentboard watch [--run ID]  # tail .devboard/runs/*.jsonl live
+agentboard watch [--run ID]  # tail .agentboard/runs/*.jsonl live
 agentboard retro             # markdown retro report
   --goal ID | --last-n N
-  --save                     # → .devboard/retros/retro_<ts>.md
+  --save                     # → .agentboard/retros/retro_<ts>.md
 agentboard audit             # self-DX check (install state, tool versions, API key)
 
 agentboard replay <run_id> --from <N> --variant "..."   # time-travel branch
@@ -375,8 +375,8 @@ Claude auto-loads agentboard-approval:
 
 All of this is observable in:
 - Claude Code's UI (tool calls, outputs)
-- `.devboard/runs/<run_id>.jsonl` (every state transition)
-- `.devboard/goals/<goal_id>/tasks/.../decisions.jsonl` (every *why*)
+- `.agentboard/runs/<run_id>.jsonl` (every state transition)
+- `.agentboard/goals/<goal_id>/tasks/.../decisions.jsonl` (every *why*)
 - `agentboard watch` (live tail)
 - `agentboard retro` / `agentboard metrics` (aggregation)
 - `agentboard.analytics` Confluence/JIRA doc (full development arc)
@@ -386,7 +386,7 @@ All of this is observable in:
 ## Storage layout
 
 ```
-.devboard/
+.agentboard/
 ├── state.json                       # board index (goals, active_goal)
 ├── activity.jsonl                   # every tool call (from activity-log hook)
 ├── goals/<goal_id>/
@@ -407,7 +407,7 @@ All of this is observable in:
 └── retros/retro_<ts>.md
 ```
 
-`.gitignore` auto-adds `.devboard/runs/`, `.devboard/state.json`, `.devboard/goals/`. `learnings/` and `retros/` are worth committing if shared with a team.
+`.gitignore` auto-adds `.agentboard/runs/`, `.agentboard/state.json`, `.agentboard/goals/`. `learnings/` and `retros/` are worth committing if shared with a team.
 
 ---
 
@@ -470,7 +470,7 @@ src/agentboard/
 ├── models.py                 # Pydantic: Goal, Task, LockedPlan, AtomicStep, DecisionEntry
 ├── gauntlet/lock.py          # build_locked_plan + SHA256 hashing
 ├── storage/
-│   ├── file_store.py         # .devboard/ I/O — atomic_write, file_lock, _sanitize_id
+│   ├── file_store.py         # .agentboard/ I/O — atomic_write, file_lock, _sanitize_id
 │   └── base.py               # Repository ABC
 ├── analytics/
 │   ├── kanban.py             # Kanban board (terminal/markdown/JIRA) — task-status-aware columns
@@ -514,7 +514,7 @@ migration to populate the canonical pile:
 
 ```bash
 agentboard rebuild-pile <gid>      # single goal
-agentboard rebuild-pile --all      # every goal under .devboard/goals/
+agentboard rebuild-pile --all      # every goal under .agentboard/goals/
 ```
 
 The rebuilt pile is readable by the new MCP tools immediately.

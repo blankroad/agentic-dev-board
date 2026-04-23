@@ -28,7 +28,7 @@ def test_write_iter_artifact_atomic(tmp_path) -> None:
 
     store.write_iter_artifact(rid, 1, data)
 
-    path = tmp_path / ".devboard" / "runs" / rid / "iters" / "iter-001.json"
+    path = tmp_path / ".agentboard" / "runs" / rid / "iters" / "iter-001.json"
     assert path.exists()
     loaded = json.loads(path.read_text(encoding="utf-8"))
     # M1a-plumbing adds schema_version: 1 alongside caller payload.
@@ -54,7 +54,7 @@ def test_rid_index_dir_first_and_self_heal(tmp_path) -> None:
     store.write_iter_artifact(rid, 1, {"phase": "tdd_red", "iter_n": 1}, gid=gid, tid=tid)
 
     # Index should exist with our rid
-    idx_path = tmp_path / ".devboard" / ".rid_index.json"
+    idx_path = tmp_path / ".agentboard" / ".rid_index.json"
     assert idx_path.exists()
     idx = json.loads(idx_path.read_text(encoding="utf-8"))
     assert rid in idx
@@ -67,7 +67,7 @@ def test_rid_index_dir_first_and_self_heal(tmp_path) -> None:
     assert run_info["rid"] == rid
 
     # Simulate orphan state: delete the run dir but keep the index entry
-    pile_dir = tmp_path / ".devboard" / "runs" / rid
+    pile_dir = tmp_path / ".agentboard" / "runs" / rid
     import shutil
     shutil.rmtree(pile_dir)
     assert not pile_dir.exists()
@@ -104,7 +104,7 @@ def test_sanitize_id_rejects_traversal_rid(tmp_path) -> None:
 
 def test_is_relative_to_defense(tmp_path) -> None:
     """is_relative_to post-resolve guard catches crafted index / symlink
-    attacks where a seemingly-safe rid resolves outside .devboard.
+    attacks where a seemingly-safe rid resolves outside .agentboard.
 
     guards: path traversal defense (security, defense-in-depth)
     """
@@ -112,23 +112,23 @@ def test_is_relative_to_defense(tmp_path) -> None:
 
     store = FileStore(tmp_path)
 
-    # Plant a crafted index pointing outside .devboard (e.g. /etc)
-    (tmp_path / ".devboard").mkdir(exist_ok=True)
+    # Plant a crafted index pointing outside .agentboard (e.g. /etc)
+    (tmp_path / ".agentboard").mkdir(exist_ok=True)
     crafted = {"run_evil": {"gid": "g", "tid": "t"}}
-    (tmp_path / ".devboard" / ".rid_index.json").write_text(
+    (tmp_path / ".agentboard" / ".rid_index.json").write_text(
         json.dumps(crafted), encoding="utf-8"
     )
     # But also make a dir that symlinks outside
     outside = tmp_path.parent / "escape_target"
     outside.mkdir(exist_ok=True)
-    runs_dir = tmp_path / ".devboard" / "runs"
+    runs_dir = tmp_path / ".agentboard" / "runs"
     runs_dir.mkdir(exist_ok=True)
     try:
         (runs_dir / "run_evil").symlink_to(outside)
     except (OSError, NotImplementedError):
         pytest.skip("symlink not supported on this platform")
 
-    # load_run must verify resolved path stays under .devboard
+    # load_run must verify resolved path stays under .agentboard
     info = store.load_run("run_evil")
     assert info is None, "load_run must refuse resolved-path escape"
 
@@ -152,7 +152,7 @@ def test_digest_iter_count_idempotent(tmp_path) -> None:
 
     writer = DigestWriter(store)
     writer.update(rid)
-    digest_path = tmp_path / ".devboard" / "runs" / rid / "digest.json"
+    digest_path = tmp_path / ".agentboard" / "runs" / rid / "digest.json"
     assert digest_path.exists()
     first = digest_path.read_bytes()
 
@@ -196,7 +196,7 @@ def test_digest_per_file_scrubber_fold(tmp_path) -> None:
     writer = DigestWriter(store)
     writer.update(rid)
     digest = json.loads(
-        (tmp_path / ".devboard" / "runs" / rid / "digest.json").read_text(encoding="utf-8")
+        (tmp_path / ".agentboard" / "runs" / rid / "digest.json").read_text(encoding="utf-8")
     )
 
     # foo.py touched in iters 1 and 2
@@ -224,12 +224,12 @@ def test_digest_iter_count_skips_corrupt_iters(tmp_path) -> None:
     store.write_iter_artifact(rid, 3, {"phase": "tdd_red", "iter_n": 3}, gid="g", tid="t")
 
     # Corrupt iter-002.json (simulates partial write / external tampering)
-    corrupt_path = tmp_path / ".devboard" / "runs" / rid / "iters" / "iter-002.json"
+    corrupt_path = tmp_path / ".agentboard" / "runs" / rid / "iters" / "iter-002.json"
     corrupt_path.write_text("this is not valid json {", encoding="utf-8")
 
     DigestWriter(store).update(rid)
     digest = json.loads(
-        (tmp_path / ".devboard" / "runs" / rid / "digest.json").read_text(encoding="utf-8")
+        (tmp_path / ".agentboard" / "runs" / rid / "digest.json").read_text(encoding="utf-8")
     )
 
     # Glob still sees 3 files, but only 2 are usable

@@ -7,7 +7,7 @@ from typing import Any
 
 
 class SessionContext:
-    """Read-only facade over .devboard/ state used by every v2.1 pane.
+    """Read-only facade over .agentboard/ state used by every v2.1 pane.
 
     Resolves the "active" goal/task for rendering and exposes pre-parsed
     decision rows + touched-file lists. All methods are side-effect free
@@ -22,7 +22,7 @@ class SessionContext:
 
     def __init__(self, store_root: Path) -> None:
         self.store_root = store_root
-        self._agentboard = store_root / ".devboard"
+        self._agentboard = store_root / ".agentboard"
         self._goals_dir = self._agentboard / "goals"
         self._override_goal_id: str | None = None
 

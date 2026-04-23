@@ -76,9 +76,9 @@ def test_mcp_init_creates_agentboard_dir(tmp_path: Path):
     result = _dispatch_sync("agentboard_init", {"project_root": str(tmp_path)})
     payload = _json_payload(result)
     assert payload["status"] == "initialized"
-    assert (tmp_path / ".devboard").exists()
-    assert (tmp_path / ".devboard" / "goals").is_dir()
-    assert (tmp_path / ".devboard" / "runs").is_dir()
+    assert (tmp_path / ".agentboard").exists()
+    assert (tmp_path / ".agentboard" / "goals").is_dir()
+    assert (tmp_path / ".agentboard" / "runs").is_dir()
 
 
 def test_mcp_init_is_idempotent(tmp_path: Path):
@@ -528,7 +528,7 @@ def test_mcp_save_brainstorm_happy_path(tmp_path: Path):
     payload = _json_payload(result)
     assert payload.get("status") == "saved"
 
-    bs_path = tmp_path / ".devboard" / "goals" / goal_id / "brainstorm.md"
+    bs_path = tmp_path / ".agentboard" / "goals" / goal_id / "brainstorm.md"
     assert bs_path.exists()
     assert "Users need fast search" in bs_path.read_text()
 
@@ -578,7 +578,7 @@ def test_mcp_save_brainstorm_structured_frontmatter(tmp_path: Path):
     payload = _json_payload(result)
     assert payload.get("status") == "saved"
 
-    bs_path = tmp_path / ".devboard" / "goals" / goal_id / "brainstorm.md"
+    bs_path = tmp_path / ".agentboard" / "goals" / goal_id / "brainstorm.md"
     post = fm_lib.load(str(bs_path))
     assert post.metadata["scope_mode"] == "HOLD"
     assert post.metadata["refined_goal"] == "ship minimum viable X"
@@ -605,7 +605,7 @@ def test_mcp_approve_plan_approved_true(tmp_path: Path):
     payload = _json_payload(result)
     assert payload["status"] == "approved"
 
-    review_path = tmp_path / ".devboard" / "goals" / goal_id / "plan_review.json"
+    review_path = tmp_path / ".agentboard" / "goals" / goal_id / "plan_review.json"
     import json as _json
     data = _json.loads(review_path.read_text())
     assert data["status"] == "approved"
