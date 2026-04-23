@@ -98,6 +98,32 @@ class FileStore(Repository):
                 self._agentboard = legacy_path
                 return
         self._agentboard = new_path
+        # T5 (2026-04-23): per-goal rename of legacy ``gauntlet/``
+        # subdirectory → ``phases/``. Runs on every FileStore init but
+        # short-circuits cheaply on already-migrated goals (no legacy
+        # dir present). Full-chain D1 skills write to ``phases/`` now.
+        self._migrate_goal_phase_dirs()
+
+    def _migrate_goal_phase_dirs(self) -> None:
+        """Rename legacy ``goals/<gid>/gauntlet/`` → ``goals/<gid>/phases/``.
+        Safe to call repeatedly — a goal with no legacy dir, or already
+        migrated, is skipped without an exception."""
+        goals_root = self._agentboard / "goals"
+        if not goals_root.exists():
+            return
+        for goal_dir in goals_root.iterdir():
+            if not goal_dir.is_dir():
+                continue
+            legacy = goal_dir / "gauntlet"
+            new = goal_dir / "phases"
+            if legacy.exists() and not new.exists():
+                try:
+                    legacy.rename(new)
+                except OSError:
+                    # Keep the legacy dir in place if rename fails;
+                    # downstream readers fall back to the older name
+                    # via save_gauntlet_step's legacy alias.
+                    continue
 
     def _goals_dir(self, goal_id: str) -> Path:
         return self._agentboard / "goals" / _sanitize_id(goal_id)
@@ -470,11 +496,20 @@ max_iterations: {plan.max_iterations}
                     pass
         return entries
 
-    def save_gauntlet_step(self, goal_id: str, step_name: str, content: str) -> None:
-        d = self._goals_dir(goal_id) / "gauntlet"
+    def save_phase_step(self, goal_id: str, step_name: str, content: str) -> None:
+        """Write a phase artifact under ``goals/<gid>/phases/<step>.md``.
+        T5 canonical path (2026-04-23); supersedes ``save_gauntlet_step``
+        which remains as a deprecated alias."""
+        d = self._goals_dir(goal_id) / "phases"
         d.mkdir(parents=True, exist_ok=True)
         with open(d / f"{step_name}.md", "w") as f:
             f.write(content)
+
+    def save_gauntlet_step(self, goal_id: str, step_name: str, content: str) -> None:
+        """DEPRECATED T5 alias — forwards to ``save_phase_step``. The
+        on-disk path is identical (``phases/``); only the method name
+        migrated. Callers should switch to ``save_phase_step``."""
+        return self.save_phase_step(goal_id, step_name, content)
 
     # ── Brainstorm ─────────────────────────────────────────────────────────
 

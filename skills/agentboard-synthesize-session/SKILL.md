@@ -32,7 +32,7 @@ Optional:
 ## Step 1 — Harvest artifacts
 
 1. `plan.md` — read from `.agentboard/goals/<goal_id>/plan.md`
-2. `challenge.md` — read from `.../gauntlet/challenge.md` (empty if missing — that signal itself is informative)
+2. `challenge.md` — read from `.../phases/challenge.md` (empty if missing — that signal itself is informative)
 3. `decisions.jsonl` — load **full** rows including `reasoning` text (this is the main input for problem extraction)
 4. `report.md` — read from `.../report.md` if present (gives release-note framing; do not duplicate its content)
 5. `.agentboard/learnings/*.md` — list existing learning names + tags so we avoid duplicates

@@ -211,28 +211,32 @@ def test_ui_preview_skill_includes_scenes_schema() -> None:
         assert field in body, f"scenes.yaml schema missing field '{field}'"
 
 
-def test_gauntlet_skill_chains_ui_preview() -> None:
-    """s_011: agentboard-gauntlet SKILL.md mentions invoking
-    agentboard-ui-preview when ui_surface is True (after arch step).
+def test_architecture_skill_chains_ui_preview() -> None:
+    """s_011 (T5 rename): agentboard-architecture SKILL.md mentions invoking
+    agentboard-ui-preview when ui_surface is True. Replaces the deleted
+    agentboard-gauntlet test — the UI hook moved to the D1 architecture
+    phase during D3 cutover.
     """
-    body = (_REPO_ROOT / "skills" / "agentboard-gauntlet" / "SKILL.md").read_text(
+    body = (_REPO_ROOT / "skills" / "agentboard-architecture" / "SKILL.md").read_text(
         encoding="utf-8"
     )
     assert "agentboard-ui-preview" in body, (
-        "gauntlet SKILL.md must reference agentboard-ui-preview"
+        "architecture SKILL.md must reference agentboard-ui-preview"
     )
     assert "ui_surface" in body
 
 
-def test_tdd_skill_chains_ui_preview() -> None:
-    """s_012: agentboard-tdd SKILL.md invokes agentboard-ui-preview after
-    first widget GREEN when ui_surface is True.
+def test_execute_skill_chains_ui_preview() -> None:
+    """s_012 (T5 rename): agentboard-execute SKILL.md invokes
+    agentboard-ui-preview after first widget GREEN when ui_surface is
+    True. Replaces the deleted agentboard-tdd test — execute is the D1
+    chain's TDD loop.
     """
-    body = (_REPO_ROOT / "skills" / "agentboard-tdd" / "SKILL.md").read_text(
+    body = (_REPO_ROOT / "skills" / "agentboard-execute" / "SKILL.md").read_text(
         encoding="utf-8"
     )
     assert "agentboard-ui-preview" in body, (
-        "tdd SKILL.md must reference agentboard-ui-preview"
+        "execute SKILL.md must reference agentboard-ui-preview"
     )
     assert "ui_surface" in body
 

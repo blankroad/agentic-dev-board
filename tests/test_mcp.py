@@ -275,8 +275,8 @@ def test_install_skills_copies_all(tmp_path: Path):
     installed = install_skills(tmp_path, overwrite=True)
     names = {p.name for p in installed}
     expected = {
-        "agentboard-brainstorm", "agentboard-gauntlet", "agentboard-eng-review",
-        "agentboard-tdd", "agentboard-cso", "agentboard-dep-audit",
+        "agentboard-eng-review",
+        "agentboard-cso", "agentboard-dep-audit",
         "agentboard-redteam", "agentboard-rca",
         "agentboard-approval", "agentboard-retro", "agentboard-replay",
         "agentboard-parallel-review",
@@ -429,7 +429,7 @@ def test_install_all_project_scope_claude_only(tmp_path: Path):
     assert result["mcp_config"] is not None
     assert result["settings"] is not None
     assert result["opencode_config"] is None
-    assert (tmp_path / ".claude" / "skills" / "agentboard-tdd" / "SKILL.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "agentboard-execute" / "SKILL.md").exists()
     assert (tmp_path / ".mcp.json").exists()
 
 
@@ -440,7 +440,7 @@ def test_install_all_project_scope_both_targets(tmp_path: Path):
     assert len(result["installed_skills"]) == _expected_skill_count() * 2
     assert result["mcp_config"] is not None
     assert result["opencode_config"] is not None
-    assert (tmp_path / ".opencode" / "skills" / "agentboard-tdd" / "SKILL.md").exists()
+    assert (tmp_path / ".opencode" / "skills" / "agentboard-execute" / "SKILL.md").exists()
     assert (tmp_path / "opencode.json").exists()
 
 
@@ -457,7 +457,7 @@ def test_install_all_global_scope_no_hooks_or_mcp(tmp_path: Path, monkeypatch):
     assert len(result["installed_skills"]) == _expected_skill_count()
     assert result["installed_hooks"] == []
     assert result["mcp_config"] is None
-    assert (tmp_path / ".claude" / "skills" / "agentboard-gauntlet" / "SKILL.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "agentboard-plan" / "SKILL.md").exists()
 
 
 def test_install_all_global_scope_opencode_target(tmp_path: Path, monkeypatch):
@@ -467,7 +467,7 @@ def test_install_all_global_scope_opencode_target(tmp_path: Path, monkeypatch):
     result = install_all(scope="global", overwrite=True, targets=("opencode",))
     assert result["scope"] == "global"
     assert len(result["installed_skills"]) == _expected_skill_count()
-    expected = tmp_path / ".config" / "opencode" / "skills" / "agentboard-gauntlet" / "SKILL.md"
+    expected = tmp_path / ".config" / "opencode" / "skills" / "agentboard-plan" / "SKILL.md"
     assert expected.exists()
 
 

@@ -18,8 +18,10 @@ SKILL_PATH = SKILL_DIR / "SKILL.md"
 INSTALLED_SKILL_PATH = (
     REPO / ".claude" / "skills" / "agentboard-design-review" / "SKILL.md"
 )
-GAUNTLET_SOURCE = REPO / "skills" / "agentboard-gauntlet" / "SKILL.md"
-GAUNTLET_INSTALLED = REPO / ".claude" / "skills" / "agentboard-gauntlet" / "SKILL.md"
+# T5: gauntlet skill deleted; the design-review invocation now lives in
+# agentboard-architecture (D1 phase chain).
+ARCH_SOURCE = REPO / "skills" / "agentboard-architecture" / "SKILL.md"
+ARCH_INSTALLED = REPO / ".claude" / "skills" / "agentboard-architecture" / "SKILL.md"
 
 
 def _read(path: Path) -> str:
@@ -163,27 +165,40 @@ def test_installed_copy_matches_source() -> None:
     )
 
 
-def test_gauntlet_invokes_design_review() -> None:
-    """s_009 — gauntlet SKILL.md must mention agentboard-design-review
-    near 'Layer 0' wording so Claude invokes the new skill after the ASCII
-    mockup confirm and before Challenge. Both source and installed copy."""
-    for path in (GAUNTLET_SOURCE, GAUNTLET_INSTALLED):
-        assert path.exists(), f"gauntlet skill missing at {path}"
+def test_architecture_invokes_design_review() -> None:
+    """s_009 (T5 rename) — agentboard-architecture SKILL.md must mention
+    agentboard-design-review near the UI hook block so Claude invokes the
+    design-review after the Layer 0 ASCII mockup confirm. Both source and
+    installed copy must agree byte-for-byte.
+
+    Replaces the deleted test_gauntlet_invokes_design_review — the UI hook
+    moved to the architecture phase during D3 cutover."""
+    for path in (ARCH_SOURCE, ARCH_INSTALLED):
+        assert path.exists(), f"architecture skill missing at {path}"
         text = _read(path)
         assert "agentboard-design-review" in text, (
-            f"gauntlet SKILL.md at {path} must name agentboard-design-review"
+            f"architecture SKILL.md at {path} must name agentboard-design-review"
         )
-        # invoke wording must live near the UI Preview Layer 0 block
-        ui_idx = text.find("UI Preview integration")
-        dr_idx = text.find("agentboard-design-review")
-        assert ui_idx != -1, f"UI Preview integration section missing in {path}"
-        assert abs(dr_idx - ui_idx) < 2000, (
-            "design-review invoke is too far from the UI Preview integration "
-            "section — consolidate them so Claude reads them together"
+        # Locate the agentboard-design-review Skill() invocation and then
+        # the UI hook section header that precedes it. Using rfind avoids
+        # false-matching on the skill description at the top of the file.
+        dr_idx = text.find("Skill(agentboard-design-review")
+        if dr_idx == -1:
+            dr_idx = text.find("agentboard-design-review")
+        assert dr_idx != -1, (
+            f"agentboard-design-review invocation missing in {path}"
+        )
+        ui_idx = text.rfind("UI hook", 0, dr_idx)
+        if ui_idx == -1:
+            ui_idx = text.rfind("ui_surface", 0, dr_idx)
+        assert ui_idx != -1, f"UI hook section missing before design-review in {path}"
+        assert dr_idx - ui_idx < 4000, (
+            "design-review invoke is too far after the UI hook section — "
+            "consolidate them so Claude reads them together"
         )
     # source and installed must agree byte-for-byte (same sync contract)
-    assert GAUNTLET_SOURCE.read_bytes() == GAUNTLET_INSTALLED.read_bytes(), (
-        "gauntlet source and installed copy diverge"
+    assert ARCH_SOURCE.read_bytes() == ARCH_INSTALLED.read_bytes(), (
+        "architecture source and installed copy diverge"
     )
 
 

@@ -94,7 +94,7 @@ src/agentboard/
   models.py          — Pydantic models: LockedPlan, AtomicStep, BoardState, Goal
   storage/
     file_store.py    — All disk I/O. atomic_write + fcntl write-locks. Single source of truth.
-  gauntlet/
+  phases/
     lock.py          — build_locked_plan: parse Decide JSON → LockedPlan + SHA256 hash
     pipeline.py      — run_gauntlet: test-only simulator of the 5-step chain (NOT the production path; the production chain is the SKILL.md executed by Claude Code)
     steps/           — frame.py, scope.py, arch.py, challenge.py, decide.py, brainstorm.py

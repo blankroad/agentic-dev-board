@@ -130,7 +130,7 @@ Set `new_risk_invalidates_scope: false`. Proceed silently to Step 4.
 
 ## Step 4 — Write frame.md
 
-Write `.agentboard/goals/<goal_id>/gauntlet/frame.md` (directory name preserved for back-compat with TUI readers; will migrate to `phases/` at C-layer work):
+Write `.agentboard/goals/<goal_id>/phases/frame.md` (directory name preserved for back-compat with TUI readers; will migrate to `phases/` at C-layer work):
 
 ```yaml
 ---
@@ -220,7 +220,7 @@ After `frame.md` written:
    ```
    ## Frame 완료
 
-   저장: .agentboard/goals/{goal_id}/gauntlet/frame.md
+   저장: .agentboard/goals/{goal_id}/phases/frame.md
    riskiest_assumption: {one-line}
    scope_mode (carried): {EXPAND|SELECTIVE|HOLD|REDUCE}
 

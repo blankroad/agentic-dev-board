@@ -36,7 +36,7 @@ Optional:
 1. `git diff <base_sha>..<head_sha>` — full unified diff
 2. `git diff --numstat <base_sha>..<head_sha>` — per-file adds/dels
 3. `plan.md` — read from `.agentboard/goals/<goal_id>/plan.md` (empty string if missing)
-4. `challenge.md` — read from `.agentboard/goals/<goal_id>/gauntlet/challenge.md` (empty string if missing)
+4. `challenge.md` — read from `.agentboard/goals/<goal_id>/phases/challenge.md` (empty string if missing)
 5. `decisions.jsonl` — load. Compute:
    - `phase_counts` — dict phase → count (used for type-tag inference: `tdd_green` → New/Refactor, `redteam` → Hardening, etc.)
    - `redteam_findings` — extract final `HIGH` / `CRITICAL` items mentioned in reasoning text (best-effort regex)

@@ -37,7 +37,7 @@ Scan `.agentboard/goals/<goal_id>/` to determine where in the chain we already a
 | Artifact present | Meaning | Entry point |
 |---|---|---|
 | None (or only `goal.json`) | Fresh goal, never planned | `agentboard-intent` |
-| `brainstorm.md` exists, no `gauntlet/frame.md` | Intent done, frame not started | `agentboard-frame` |
+| `brainstorm.md` exists, no `phases/frame.md` | Intent done, frame not started | `agentboard-frame` |
 | `brainstorm.md` + `frame.md` exist, no `arch.md` | Up to frame, architecture not started | `agentboard-architecture` |
 | ... + `arch.md`, no `challenge.md` | Up to architecture, stress not started | `agentboard-stress` |
 | ... + `challenge.md`, no `plan.json` | Up to stress, lock not started | `agentboard-lock` |

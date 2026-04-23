@@ -767,7 +767,7 @@ def plan(
             console.print(f"  - {m}")
 
     if full:
-        gauntlet_dir = store.root / ".agentboard" / "goals" / gid / "gauntlet"
+        gauntlet_dir = store.root / ".agentboard" / "goals" / gid / "phases"
         if gauntlet_dir.exists():
             console.print(f"\n[bold]Gauntlet Artifacts[/bold]")
             for f in sorted(gauntlet_dir.glob("*.md")):
@@ -1074,7 +1074,7 @@ def show_gauntlet(
         console.print("[red]No goal.[/red]")
         raise typer.Exit(1)
 
-    gauntlet_dir = store.root / ".agentboard" / "goals" / gid / "gauntlet"
+    gauntlet_dir = store.root / ".agentboard" / "goals" / gid / "phases"
     if not gauntlet_dir.exists():
         console.print("[dim]No Gauntlet artifacts for this goal.[/dim]")
         return

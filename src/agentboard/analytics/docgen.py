@@ -50,7 +50,7 @@ def collect_doc(store: FileStore, goal_id: str) -> DesignDoc:
     tasks = [t for t in (store.load_task(goal_id, tid) for tid in goal.task_ids) if t]
     decisions_by_task = {t.id: store.load_decisions(t.id) for t in tasks}
 
-    gauntlet_dir = store.root / ".agentboard" / "goals" / goal_id / "gauntlet"
+    gauntlet_dir = store.root / ".agentboard" / "goals" / goal_id / "phases"
     gauntlet_steps = {}
     if gauntlet_dir.exists():
         for f in gauntlet_dir.glob("*.md"):

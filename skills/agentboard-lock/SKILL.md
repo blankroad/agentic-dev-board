@@ -25,9 +25,9 @@ test -d .agentboard && test -f .mcp.json && echo OK || echo MISSING
 Read and parse YAML frontmatter:
 
 - `.agentboard/goals/<goal_id>/brainstorm.md` — `scope_mode`, `refined_goal`, `req_list`, `rationale`, `alternatives_considered`
-- `.agentboard/goals/<goal_id>/gauntlet/frame.md` — `problem`, `wedge`, `non_goals`, `success_definition`, `key_assumptions`, `riskiest_assumption`
-- `.agentboard/goals/<goal_id>/gauntlet/arch.md` — `architecture_overview`, `critical_files`, `edge_cases`, `test_strategy`, `critical_path`, `out_of_scope_guard`, `complexity`, `ui_surface`, `design_review` (if present)
-- `.agentboard/goals/<goal_id>/gauntlet/challenge.md` — failure modes list with severities, `warrants_replan` (should be `false` by the time you get here; if `true`, stress mis-handled the routing — `AskUserQuestion` and route back)
+- `.agentboard/goals/<goal_id>/phases/frame.md` — `problem`, `wedge`, `non_goals`, `success_definition`, `key_assumptions`, `riskiest_assumption`
+- `.agentboard/goals/<goal_id>/phases/arch.md` — `architecture_overview`, `critical_files`, `edge_cases`, `test_strategy`, `critical_path`, `out_of_scope_guard`, `complexity`, `ui_surface`, `design_review` (if present)
+- `.agentboard/goals/<goal_id>/phases/challenge.md` — failure modes list with severities, `warrants_replan` (should be `false` by the time you get here; if `true`, stress mis-handled the routing — `AskUserQuestion` and route back)
 
 ### Legacy fallback for missing frontmatter
 

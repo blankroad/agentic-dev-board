@@ -76,12 +76,13 @@ def test_plan_pipeline_renders_5_nodes_with_state_icons(tmp_path) -> None:
     containing 5 step markers with ✓ (file exists) or · (missing)."""
     from agentboard.tui.plan_pipeline import render_pipeline
 
-    gauntlet = tmp_path / "gauntlet"
-    gauntlet.mkdir()
+    # T5 rename: subdir is now ``phases/`` (was ``gauntlet/``)
+    phases = tmp_path / "phases"
+    phases.mkdir()
     # Only 3 of 5 exist
-    (gauntlet / "frame.md").write_text("# Frame")
-    (gauntlet / "scope.md").write_text("# Scope")
-    (gauntlet / "arch.md").write_text("# Arch")
+    (phases / "frame.md").write_text("# Frame")
+    (phases / "scope.md").write_text("# Scope")
+    (phases / "arch.md").write_text("# Arch")
     # challenge.md, decide.md missing
 
     rendered = render_pipeline(tmp_path)

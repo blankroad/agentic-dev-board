@@ -32,9 +32,9 @@ Output: `Plan: {goal title} ({goal_id}) — {N} atomic steps, {M} critical files
 ## Step 1 — Load Gauntlet Artifacts
 
 Read the three gauntlet outputs via `Read` tool:
-- `.agentboard/goals/{goal_id}/gauntlet/frame.md`
-- `.agentboard/goals/{goal_id}/gauntlet/arch.md` (including the Meta footer)
-- `.agentboard/goals/{goal_id}/gauntlet/challenge.md`
+- `.agentboard/goals/{goal_id}/phases/frame.md`
+- `.agentboard/goals/{goal_id}/phases/arch.md` (including the Meta footer)
+- `.agentboard/goals/{goal_id}/phases/challenge.md`
 
 ---
 
@@ -98,7 +98,7 @@ If any check fails, add a detail section below:
 
 Before recording the verdict in decisions.jsonl, write the 4-check result
 into a dedicated `## Engineering Review` section at the end of
-`.agentboard/goals/<goal_id>/gauntlet/arch.md`. Upsert rule: **idempotent
+`.agentboard/goals/<goal_id>/phases/arch.md`. Upsert rule: **idempotent
 replace, not append** — if a prior `## Engineering Review` heading exists,
 locate its block (from that heading up to the next top-level `##` heading
 or EOF) and REPLACE it wholesale. A second eng-review run on the same

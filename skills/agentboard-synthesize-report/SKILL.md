@@ -32,7 +32,7 @@ Optional:
 ## Step 1 — Harvest artifacts
 
 1. `plan.md` — read full contents from `.agentboard/goals/<goal_id>/plan.md`
-2. `challenge.md` — read from `.../gauntlet/challenge.md` (empty string if missing)
+2. `challenge.md` — read from `.../phases/challenge.md` (empty string if missing)
 3. `brainstorm.md` — read from `.../brainstorm.md` (empty string if missing)
 4. `decisions.jsonl` — read from `.../tasks/<latest_task>/decisions.jsonl`. Compute:
    - `phase_counts` — dict of phase → count

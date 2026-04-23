@@ -108,14 +108,14 @@ def render_pipeline(
     """Render the 5-step pipeline as a single string.
 
     `goal_dir` is the goal directory (e.g. `.agentboard/goals/<gid>/`).
-    Gauntlet artifacts live under `goal_dir/gauntlet/*.md`.
+    Gauntlet artifacts live under `goal_dir/phases/*.md`.
 
     When `decisions` is provided, the renderer may emit IN_PROGRESS /
     RETRYING / BLOCKED icons in addition to the baseline PASSED / PENDING.
     When it is `None` (or empty), output matches the legacy 2-state
     behavior for test-fixture and pre-decisions-data compatibility.
     """
-    gauntlet_dir = goal_dir / "gauntlet"
+    gauntlet_dir = goal_dir / "phases"
     rows = list(decisions or [])
     parts: list[str] = []
     prior_exists = False
@@ -193,6 +193,6 @@ class PlanPipeline(Static):
         self.refresh_render()
 
     def action_open_step(self) -> None:
-        step_path = self._goal_dir / "gauntlet" / f"{self._focused_step}.md"
+        step_path = self._goal_dir / "phases" / f"{self._focused_step}.md"
         if self.app is not None:
             self.app.push_screen(PlanStepModal(step_path))

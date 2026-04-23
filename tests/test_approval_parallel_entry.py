@@ -5,7 +5,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 APPROVAL_MD = ROOT / "skills" / "agentboard-approval" / "SKILL.md"
-TDD_MD = ROOT / "skills" / "agentboard-tdd" / "SKILL.md"
+# T5 rename: agentboard-tdd → agentboard-execute (D1 chain execution phase)
+EXECUTE_MD = ROOT / "skills" / "agentboard-execute" / "SKILL.md"
 PARALLEL_MD = ROOT / "skills" / "agentboard-parallel-review" / "SKILL.md"
 
 
@@ -29,11 +30,13 @@ def test_approval_falls_back_to_legacy_cso_redteam() -> None:
     assert 'phase="redteam"' in text or "phase='redteam'" in text, "approval SKILL.md must reference phase=redteam for fallback"
 
 
-def test_tdd_handoff_points_to_parallel_review() -> None:
-    """TDD SKILL.md's handoff section must mention agentboard-parallel-review (for reviewer PASS flow)."""
-    text = TDD_MD.read_text(encoding="utf-8")
+def test_execute_handoff_points_to_parallel_review() -> None:
+    """Execute SKILL.md's handoff section must mention agentboard-parallel-review
+    (for reviewer PASS flow). T5 rename: supersedes the legacy agentboard-tdd
+    equivalent after D3 cutover."""
+    text = EXECUTE_MD.read_text(encoding="utf-8")
     assert "agentboard-parallel-review" in text, (
-        "tdd SKILL.md handoff does not point to agentboard-parallel-review"
+        "execute SKILL.md handoff does not point to agentboard-parallel-review"
     )
 
 

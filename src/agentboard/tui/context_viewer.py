@@ -54,7 +54,7 @@ class ContextViewer(Widget):
                 self.set_tab_body("plan", plan_file.read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError):
                 pass
-        gauntlet_dir = goal_dir / "gauntlet"
+        gauntlet_dir = goal_dir / "phases"
         if gauntlet_dir.exists():
             parts: list[str] = []
             for step in ("frame", "scope", "arch", "challenge", "decide"):

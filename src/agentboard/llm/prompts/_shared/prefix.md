@@ -69,6 +69,6 @@ At runtime, synthesizer skills (e.g. `agentboard-synthesize-report`, `agentboard
 <contents of synthesizer-specific prompt>
 ```
 
-(Historical note: the gauntlet's Frame/Arch/Challenge/Decide prompts used to live as Python wrappers in `src/agentboard/gauntlet/steps/*.py` and markdown files in `llm/prompts/gauntlet/<step>.md`. Those were removed in F4 when the production gauntlet path moved entirely to `skills/agentboard-gauntlet/SKILL.md`.)
+(Historical note: the gauntlet's Frame/Arch/Challenge/Decide prompts used to live as Python wrappers in `src/agentboard/gauntlet/steps/*.py` and markdown files in `llm/prompts/phases/<step>.md`. Those were removed in F4 when the production gauntlet path moved entirely to `skills/agentboard-gauntlet/SKILL.md`.)
 
 Edit this file to shift the standard; every downstream prompt inherits the change.

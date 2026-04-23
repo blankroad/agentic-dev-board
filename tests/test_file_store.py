@@ -201,14 +201,30 @@ def test_append_decision(store: FileStore) -> None:
     assert line["reasoning"] == "test failed"
 
 
-def test_gauntlet_step_saved(store: FileStore) -> None:
-    goal = Goal(title="Gauntlet goal")
+def test_save_phase_step_writes_to_phases_dir(store: FileStore) -> None:
+    """T5 rename: save_phase_step is the canonical name; legacy alias
+    save_gauntlet_step forwards here and writes to phases/ (not gauntlet/)."""
+    goal = Goal(title="Phase step goal")
     store.save_goal(goal)
 
     content = "## Frame\nThis is the problem statement."
-    store.save_gauntlet_step(goal.id, "frame", content)
+    store.save_phase_step(goal.id, "frame", content)
 
-    step_path = store._goals_dir(goal.id) / "gauntlet" / "frame.md"
+    step_path = store._goals_dir(goal.id) / "phases" / "frame.md"
+    assert step_path.exists()
+    assert step_path.read_text() == content
+
+
+def test_save_gauntlet_step_forwards_to_phases(store: FileStore) -> None:
+    """T5 back-compat: legacy save_gauntlet_step alias must write to the
+    new phases/ subdir (same as save_phase_step)."""
+    goal = Goal(title="Legacy alias goal")
+    store.save_goal(goal)
+
+    content = "## Arch\nLegacy call path."
+    store.save_gauntlet_step(goal.id, "arch", content)
+
+    step_path = store._goals_dir(goal.id) / "phases" / "arch.md"
     assert step_path.exists()
     assert step_path.read_text() == content
 
