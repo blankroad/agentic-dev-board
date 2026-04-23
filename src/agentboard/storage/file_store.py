@@ -473,13 +473,7 @@ max_iterations: {plan.max_iterations}
         rationale: str | None = None,
         user_confirmed: bool | None = None,
     ) -> None:
-        now = datetime.now(timezone.utc)
-        ts = now.isoformat()
-        ts_slug = now.strftime("%Y%m%d_%H%M%S_%f")
-        premises_lines = "\n".join(f"- {p}" for p in premises)
-        risks_lines = "\n".join(f"- {r}" for r in risks)
-        alts_lines = "\n".join(f"- {a}" for a in alternatives)
-
+        # Input validation runs outside the lock (no disk I/O yet).
         if alternatives_considered is not None:
             for i, alt in enumerate(alternatives_considered):
                 if not isinstance(alt, dict):
@@ -495,35 +489,48 @@ max_iterations: {plan.max_iterations}
                     f"with chosen=true (got {chosen_count})"
                 )
 
-        fm_fields: dict = {"goal_id": goal_id, "ts": ts}
-        if scope_mode is not None:
-            fm_fields["scope_mode"] = scope_mode
-        if refined_goal is not None:
-            fm_fields["refined_goal"] = refined_goal
-        if wedge is not None:
-            fm_fields["wedge"] = wedge
-        if req_list is not None:
-            fm_fields["req_list"] = req_list
-        if alternatives_considered is not None:
-            fm_fields["alternatives_considered"] = alternatives_considered
-        if rationale is not None:
-            fm_fields["rationale"] = rationale
-        if user_confirmed is not None:
-            fm_fields["user_confirmed"] = user_confirmed
+        premises_lines = "\n".join(f"- {p}" for p in premises)
+        risks_lines = "\n".join(f"- {r}" for r in risks)
+        alts_lines = "\n".join(f"- {a}" for a in alternatives)
 
-        fm_yaml = yaml.safe_dump(fm_fields, sort_keys=False, allow_unicode=True)
-        fm = f"---\n{fm_yaml}---\n"
-
-        content = (
-            f"{fm}"
-            f"## Premises\n{premises_lines}\n\n"
-            f"## Risks\n{risks_lines}\n\n"
-            f"## Alternatives\n{alts_lines}\n\n"
-            f"## Existing Code Notes\n{existing_code_notes}\n"
-        )
         d = self._goals_dir(goal_id)
-        atomic_write(d / f"brainstorm-{ts_slug}.md", content)
-        atomic_write(d / "brainstorm.md", content)
+        # B0: acquire the goal-level lock BEFORE sampling the timestamp. This
+        # guarantees ts ordering matches write-order, so the lexically newest
+        # brainstorm-{ts}.md is the one whose body the alias points to. Without
+        # the lock (or with the timestamp sampled outside), two concurrent
+        # callers can produce a state where the alias lags behind the newest
+        # versioned file.
+        with file_lock(d / "brainstorm.md"):
+            now = datetime.now(timezone.utc)
+            ts = now.isoformat()
+            ts_slug = now.strftime("%Y%m%d_%H%M%S_%f")
+
+            fm_fields: dict = {"goal_id": goal_id, "ts": ts}
+            if scope_mode is not None:
+                fm_fields["scope_mode"] = scope_mode
+            if refined_goal is not None:
+                fm_fields["refined_goal"] = refined_goal
+            if wedge is not None:
+                fm_fields["wedge"] = wedge
+            if req_list is not None:
+                fm_fields["req_list"] = req_list
+            if alternatives_considered is not None:
+                fm_fields["alternatives_considered"] = alternatives_considered
+            if rationale is not None:
+                fm_fields["rationale"] = rationale
+            if user_confirmed is not None:
+                fm_fields["user_confirmed"] = user_confirmed
+
+            fm_yaml = yaml.safe_dump(fm_fields, sort_keys=False, allow_unicode=True)
+            content = (
+                f"---\n{fm_yaml}---\n"
+                f"## Premises\n{premises_lines}\n\n"
+                f"## Risks\n{risks_lines}\n\n"
+                f"## Alternatives\n{alts_lines}\n\n"
+                f"## Existing Code Notes\n{existing_code_notes}\n"
+            )
+            atomic_write(d / f"brainstorm-{ts_slug}.md", content)
+            atomic_write(d / "brainstorm.md", content)
 
     # ── Plan Review ────────────────────────────────────────────────────────
 

@@ -429,6 +429,54 @@ def test_save_brainstorm_legacy_format_unchanged(store: FileStore) -> None:
     assert "refined_goal" not in post.metadata
 
 
+def test_save_brainstorm_alias_consistent_under_concurrency(store: FileStore) -> None:
+    """B0 (redteam HIGH): concurrent save_brainstorm must not leave the brainstorm.md
+    alias pointing at an older body than the newest brainstorm-{ts}.md versioned file.
+
+    Without the file_lock fix, atomic_write on versioned + alias can interleave across
+    threads: thread A writes versioned-7, thread B writes versioned-9, thread A writes
+    alias with content-7 → alias points to content-7 but latest versioned is content-9.
+    """
+    import concurrent.futures
+    import threading
+
+    goal = Goal(title="Concurrency test")
+    store.save_goal(goal)
+
+    barrier = threading.Barrier(20)
+
+    def _write(n: int) -> str:
+        marker = f"PREMISE-{n:02d}"
+        barrier.wait()
+        store.save_brainstorm(
+            goal_id=goal.id,
+            premises=[marker],
+            risks=[],
+            alternatives=[],
+            existing_code_notes="",
+        )
+        return marker
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as ex:
+        futures = [ex.submit(_write, n) for n in range(20)]
+        markers = [f.result() for f in futures]
+
+    d = store._goals_dir(goal.id)
+    versioned = sorted(d.glob("brainstorm-*.md"))
+    alias = d / "brainstorm.md"
+    assert len(versioned) == 20
+    assert alias.exists()
+
+    alias_body = alias.read_text()
+    # pick the versioned file with the lexically latest timestamp
+    latest_versioned_body = versioned[-1].read_text()
+    assert alias_body == latest_versioned_body, (
+        "alias diverged from the latest versioned file — "
+        f"alias markers={[m for m in markers if m in alias_body]}, "
+        f"latest versioned markers={[m for m in markers if m in latest_versioned_body]}"
+    )
+
+
 def test_save_brainstorm_rejects_non_dict_alternatives(store: FileStore) -> None:
     """F4 redteam HIGH: non-dict items in alternatives_considered must raise ValueError,
     not AttributeError. MCP dispatch only catches ValueError."""
