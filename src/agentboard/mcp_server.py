@@ -260,6 +260,17 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="agentboard_phases_snapshot",
+            description="Build a goals × phases matrix for the current project — rows = goals, columns = D1 phases (intent / frame / architecture / stress / lock / execute / parallel_review / approval), cells = phase state (NOT_STARTED / RUNNING / COMPLETED / BLOCKED) derived from decisions.jsonl phase-boundary events. Consumed by the TUI phases tab + retro dashboards + cross-agent phase comparison tooling. Pure read path; no writes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                },
+                "required": ["project_root"],
+            },
+        ),
+        Tool(
             name="agentboard_list_phase_events",
             description="Return phase-boundary decision entries aggregated across all tasks under a goal. Filters out per-cycle TDD events (RED_CONFIRMED, GREEN_CONFIRMED, SKIPPED, REFACTORED) — only phase-level markers (PHASE_START, PHASE_END, PHASE_ABORT, COMPLETED, COMMITTED, DISPATCHED, PASS, RETRY, PUSHED, MERGED, LEGACY_FALLBACK, SCOPE_REVISIT_REQUESTED, BLOCKER_OVERRIDDEN). Consumed by TUI phases tab + retro dashboards + cross-agent phase comparison. Uses filesystem-based task discovery so it works even when board index is out of sync.",
             inputSchema={
@@ -1050,6 +1061,10 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "computed_hash": computed,
             "goal_id": args["goal_id"],
         })
+
+    if name == "agentboard_phases_snapshot":
+        from agentboard.analytics.phases_snapshot import phases_snapshot
+        return _text(phases_snapshot(args["project_root"]))
 
     if name == "agentboard_list_phase_events":
         store = _store(args["project_root"])

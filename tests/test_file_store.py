@@ -429,6 +429,61 @@ def test_save_brainstorm_legacy_format_unchanged(store: FileStore) -> None:
     assert "refined_goal" not in post.metadata
 
 
+def test_phases_snapshot_matrix_per_goal(tmp_path) -> None:
+    """C2: phases_snapshot(project_root) returns a goals-by-phases matrix.
+    Each cell = one of {NOT_STARTED, RUNNING, COMPLETED, BLOCKED}. Used by
+    the TUI phases tab + cross-agent phase comparison dashboards."""
+    from agentboard.models import BoardState, Task, DecisionEntry
+    from agentboard.analytics.phases_snapshot import phases_snapshot
+
+    store = FileStore(tmp_path)
+    (tmp_path / ".devboard").mkdir()
+
+    g1 = Goal(title="G1 all done")
+    g2 = Goal(title="G2 at frame")
+    g3 = Goal(title="G3 fresh")
+    store.save_goal(g1)
+    store.save_goal(g2)
+    store.save_goal(g3)
+    for g in (g1, g2, g3):
+        t = Task(goal_id=g.id, title="T")
+        store.save_task(t)
+        g.task_ids.append(t.id)
+        store.save_goal(g)
+    board = BoardState()
+    board.goals.extend([g1, g2, g3])
+    store.save_board(board)
+
+    # G1: full chain completed through lock
+    t1 = g1.task_ids[0]
+    for phase in ["intent", "frame", "architecture", "stress", "lock"]:
+        store.append_decision(t1, DecisionEntry(
+            iter=0, phase=phase, reasoning=f"{phase} done", verdict_source="COMPLETED",
+        ))
+
+    # G2: only intent completed
+    t2 = g2.task_ids[0]
+    store.append_decision(t2, DecisionEntry(
+        iter=0, phase="intent", reasoning="committed", verdict_source="COMMITTED",
+    ))
+
+    # G3: no decisions — fresh goal
+
+    snapshot = phases_snapshot(tmp_path)
+    # snapshot must be a dict with goals list
+    assert "goals" in snapshot
+    goals_by_id = {g["id"]: g for g in snapshot["goals"]}
+    assert g1.id in goals_by_id
+    assert g2.id in goals_by_id
+    assert g3.id in goals_by_id
+
+    assert goals_by_id[g1.id]["phases"]["intent"] == "COMPLETED"
+    assert goals_by_id[g1.id]["phases"]["lock"] == "COMPLETED"
+    assert goals_by_id[g2.id]["phases"]["intent"] == "COMPLETED"
+    assert goals_by_id[g2.id]["phases"]["frame"] == "NOT_STARTED"
+    assert goals_by_id[g3.id]["phases"]["intent"] == "NOT_STARTED"
+
+
 def test_list_phase_events_returns_events_across_goal_tasks(store: FileStore) -> None:
     """C1: list_phase_events(goal_id) aggregates phase-boundary entries
     from decisions.jsonl across every task under the goal. Used by TUI
