@@ -288,34 +288,92 @@ If the user refuses with "지금은 아니야" / "나중에" / equivalent: save 
 
 ---
 
-## `--deep` modes (opt-in depth expansion)
+## `--deep` modes (opt-in depth expansion via gstack wrappers)
 
-Invoked via argument flag (e.g., `/agentboard-intent --deep=ceo <prompt>`). Default (no flag) = the 6-phase flow above.
+Invoked via argument flag (e.g., `/agentboard-intent --deep=ceo <prompt>`). Default (no flag) = the 6-phase flow above. `--deep` modes WRAP the corresponding `gstack` skill — they invoke it via the `Skill` tool with phase context, collect the rubric output, and fold it into the intent flow. This avoids duplicating thousands of lines of gstack rubric text here while preserving the absorption contract (user no longer needs to manually invoke gstack `plan-*-review` / `office-hours`).
 
-### `--deep=ceo` — plan-ceo-review rubric
+### `--deep=ceo` — plan-ceo-review rubric wrapper
 
-Insert a CEO-mode scope review BEFORE Phase 4 Alternatives. Draws on `gstack plan-ceo-review` (4 modes: SCOPE EXPANSION / SELECTIVE EXPANSION / HOLD SCOPE / SCOPE REDUCTION). Output:
+**Trigger**: user writes "intent --deep=ceo", "think bigger", "rethink scope", "10-star product", "expand this".
 
-- The rubric's 10-star-product question: "if you had unlimited resources, what would this be?"
-- Premise challenges: which Phase 1 REQ items presume a smaller problem than necessary?
-- Mode recommendation with at least 2-sentence rationale tied to Phase 3 answers.
+**Flow**:
 
-Phase 4 still runs after, but Phase 4's 이상적 slot MUST incorporate the CEO rubric's 10-star answer, and the RECOMMENDATION must reference the CEO mode explicitly. `scope_mode` in Phase 6 frontmatter follows the CEO mode verbatim unless the user overrides in Phase 4.
+1. Run Phase 0 (goal context + learnings) + Phase 1 (Request Restatement) AS NORMAL. Scope rigor requires the restated R-list.
+2. Before Phase 3, invoke the gstack skill:
 
-Invocation: when the user writes "intent this big" / "think bigger" / "rethink scope" / "intent --deep=ceo".
+   ```
+   Skill(skill="plan-ceo-review", args=f"""
+   <context>
+   goal_id: {goal_id}
+   R-list (from Phase 1, user-confirmed):
+     {req_list_formatted}
+   prior_learnings (top 5, constraint-tagged only):
+     {learnings_summary}
+   </context>
 
-### `--deep=officehours` — YC 6 forcing questions
+   <user_prompt>
+   {original_user_prompt}
+   </user_prompt>
 
-Replace Phase 3 adaptive axes with the YC Office Hours 6-question rubric, asked one at a time (hard cap remains 3 `AskUserQuestion` calls; if more than 3 questions remain unanswered after cap, record the rest as `ASSUMPTION:` entries per the standard Phase 3 rule):
+   Run the CEO scope review. Produce:
+   - 10-star product answer (if unlimited resources)
+   - Premise challenges (which R-items presume too small a problem)
+   - Mode recommendation: SCOPE EXPANSION | SELECTIVE EXPANSION | HOLD SCOPE | SCOPE REDUCTION
+   - Rationale: minimum 2 sentences tied to R-items
+   """)
+   ```
 
-1. **Demand reality** — what existing pain does this solve? Whose?
-2. **Status quo** — what are people currently doing instead?
-3. **Desperate specificity** — what happens the week this does NOT exist?
-4. **Narrowest wedge** — what's the smallest testable slice?
-5. **Observation** — have you watched someone struggle with this?
-6. **Future-fit** — does this compose with where the system is going?
+3. Parse the gstack skill's response. Extract:
+   - `ceo_mode` → maps to agentboard `scope_mode`: `EXPANSION→EXPAND`, `SELECTIVE→SELECTIVE`, `HOLD→HOLD`, `REDUCTION→REDUCE`
+   - `ten_star_answer` → becomes Phase 4 `가장 이상적인 방안` slot's summary (MUST incorporate)
+   - `rationale` → seeds Phase 4 `RECOMMENDATION` rationale
 
-Phase 4 remains MANDATORY (이상적 + 현실적). The `--deep=officehours` output enriches Phase 4 rationale and `wedge` derivation. Invocation: when the user writes "office hours on this" / "validate this idea" / "intent --deep=officehours".
+4. Skip adaptive Phase 3 (the CEO review is the depth for this invocation). If the user volunteers Phase 3-style info, record as `ASSUMPTION:` in `premises` body.
+5. Phase 4 proceeds with CEO-seeded 이상적 slot + normal 현실적 slot. RECOMMENDATION line must cite the CEO mode.
+6. Phase 6 frontmatter: `scope_mode` = the mapped CEO mode unless user overrides at Phase 4 user-selection `AskUserQuestion`.
+
+**Fold-back contract**: the CEO skill's output becomes input to Phase 4; intent remains the scope authority. If gstack returns incomplete or errors: log `verdict_source="DEEP_CEO_INCOMPLETE"` and fall back to standard Phase 3 adaptive axes.
+
+### `--deep=officehours` — YC 6 forcing questions wrapper
+
+**Trigger**: user writes "intent --deep=officehours", "office hours on this", "validate this idea", "YC questions".
+
+**Flow**:
+
+1. Run Phase 0 + Phase 1 AS NORMAL.
+2. Invoke the gstack skill:
+
+   ```
+   Skill(skill="office-hours", args=f"""
+   <context>
+   goal_id: {goal_id}
+   R-list (from Phase 1):
+     {req_list_formatted}
+   </context>
+
+   <user_prompt>
+   {original_user_prompt}
+   </user_prompt>
+
+   Run YC Office Hours — Startup mode preferred if the goal is product-facing;
+   Builder mode if it's side-project / hackathon / learning. Produce:
+   - 6 forcing-question answers (demand reality, status quo, desperate specificity,
+     narrowest wedge, observation, future-fit)
+   - Concrete wedge candidate (1 sentence)
+   - Design-doc save path if Builder mode
+   """)
+   ```
+
+3. Parse the gstack response. Extract:
+   - `narrowest_wedge` → becomes intent's `wedge` frontmatter field (seed; Phase 4 can refine)
+   - Each answered question → becomes an entry in `premises` prose body prefixed with `YC:`
+   - `design_doc_path` (if Builder mode) → record in `existing_code_notes`
+
+4. Skip adaptive Phase 3 (the YC questions ARE the axes for this invocation).
+5. Phase 4 MANDATORY (이상적 + 현실적 slots). Use `narrowest_wedge` as a reality check on the 현실적 slot.
+6. Phase 6 frontmatter unchanged — YC content enriches prose body, structured fields follow the chosen alternative.
+
+**Fold-back contract**: if gstack returns fewer than 4 meaningful answers or errors, log `verdict_source="DEEP_OFFICEHOURS_INCOMPLETE"` and fall back to standard Phase 3.
 
 ### Invariants across `--deep` modes
 
@@ -324,6 +382,8 @@ Phase 4 remains MANDATORY (이상적 + 현실적). The `--deep=officehours` outp
 - Phase 5 self-review + decision log MANDATORY.
 - Phase 6 frontmatter schema unchanged.
 - NEVER-ASK list applies to deep modes too.
+- `scope_mode` derivation mechanics unchanged — deep modes seed the Phase 4 selection but the user's pick is still authoritative.
+- gstack wrapper MUST log either `DEEP_<MODE>_COMPLETED` or `DEEP_<MODE>_INCOMPLETE` via `agentboard_log_decision` for retro visibility.
 
 ---
 

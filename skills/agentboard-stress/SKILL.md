@@ -190,35 +190,69 @@ After `challenge.md` written:
 
 ---
 
-## `--deep` modes
+## `--deep` modes (gstack wrapper)
 
-### `--deep=codex` — 200 IQ second opinion via Codex CLI
+### `--deep=codex` — 200 IQ second opinion via gstack `codex` skill
 
-Dispatch the failure-mode generation to Codex in `challenge` mode for a second opinion. The `gstack codex` skill has a `challenge` mode that runs Codex against a plan context — use that pattern.
+**Trigger**: user writes "stress --deep=codex", "codex challenge this", "second opinion", or an earlier phase flagged high risk (e.g., `frame.riskiest_assumption` mentions concurrency / crypto / protocol edge cases).
 
-Invocation: `/agentboard-stress --deep=codex` or user says "codex challenge this".
+**Flow**:
 
-### Flow
+1. Run Step 1 AS NORMAL — produce your own 4+ failure modes first. Codex is a second opinion, not a replacement.
+2. Invoke the gstack skill via the `Skill` tool in `challenge` mode:
 
-1. Run Step 1 (yourself) first — get your own 4+ failure modes.
-2. Call Codex via `Bash`:
+   ```
+   Skill(skill="codex", args=f"""
+   mode: challenge
 
-   ```bash
-   codex challenge --plan .devboard/goals/<goal_id>/gauntlet/arch.md --frame .devboard/goals/<goal_id>/gauntlet/frame.md
+   <context>
+   goal_id: {goal_id}
+   brainstorm.md frontmatter: {brainstorm_yaml}
+   frame.md (full): {frame_full}
+   arch.md (full): {arch_full}
+   stress draft (your own failure modes from Step 1): {stress_draft}
+   </context>
+
+   Run adversarial challenge on the PLAN (not the code — no code exists yet).
+   Produce 4+ additional failure modes with Codex's 200 IQ perspective.
+   Each finding: severity (CRITICAL/HIGH/MEDIUM), root cause, concrete trigger,
+   mitigation, warrants_replan verdict.
+
+   Specifically stress-test:
+   - The riskiest_assumption from frame.md
+   - The critical_path from arch.md
+   - Edge cases the stress draft may have missed
+   - Integration boundaries against out_of_scope_guard
+
+   Return structured findings. Do NOT write to decisions.jsonl — the parent
+   agentboard-stress will aggregate and log once.
+   """)
    ```
 
-   (Exact CLI invocation TBD when Codex integration lands — placeholder for now. See `reference_gstack_absorption.md` for the `codex` skill mapping.)
+3. Parse Codex's response into Finding objects with `category_namespace="codex"`.
+4. Dedupe against your own findings — if Codex's finding + your finding share root + trigger, keep the higher-severity one and merge rationales. Otherwise append Codex's as a new entry.
+5. Tag Codex findings in challenge.md body as `[codex]` suffix on the `## Failure Mode N` heading for traceability:
 
-3. Parse Codex's output into `Finding` objects with `category_namespace="codex"`.
-4. Dedupe against your own findings (drop Codex findings that duplicate yours on root + mitigation).
-5. Merge deduped Codex findings into `failure_modes`, tag them in challenge.md body as `[codex]` for traceability.
-6. Self-audit (Step 2) on the combined set.
+   ```markdown
+   ## Failure Mode 5 — {NAME}  ({SEVERITY}) [codex]
+
+   **Why it fails**: ...
+   ```
+
+6. Re-run Step 2 Self-audit on the COMBINED set. Count triggers (`failure_modes_count` in frontmatter) includes the merged total.
+
+**Fold-back contract**: on Codex timeout / error / empty response, log `verdict_source="DEEP_CODEX_INCOMPLETE"` and proceed with your own findings only. Challenge.md still ships with ≥4 failure modes from Step 1.
+
+**Token discipline**: Codex dispatch has real latency and token cost. Skip `--deep=codex` on goals where your own Step 1 findings already include ≥6 well-cited distinct failure modes covering all 5 required categories — Codex's ROI drops sharply at that point.
 
 ### Invariants across `--deep`
 
-- Minimum 4 distinct failure modes still required (yours OR Codex's).
-- `warrants_replan` computed over the union.
-- `challenge.md` structure unchanged.
+- Minimum 4 distinct failure modes still required (yours alone, OR the merged set when `--deep=codex` succeeds).
+- `warrants_replan` computed over the UNION of your + Codex's findings.
+- `challenge.md` structure unchanged (same sections, same frontmatter schema).
+- Self-audit (Step 2) runs AFTER merge, not before.
+- `category_namespace="codex"` on all Codex-originated findings so retro can distinguish who found what.
+- Exactly one `--deep` flag per invocation. (Codex is currently the only depth mode for stress; future additions would follow the same wrapper pattern.)
 
 ---
 

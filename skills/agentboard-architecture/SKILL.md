@@ -343,53 +343,134 @@ After `arch.md` written:
 
 ---
 
-## `--deep` modes
+## `--deep` modes (gstack wrappers)
 
-### `--deep=eng` — plan-eng-review rubric
+Invoked via argument flag. Each `--deep` mode invokes the corresponding `gstack` skill via the `Skill` tool, collects the rubric output, and folds results into arch.md's frontmatter + body. Content absorption without duplicating ~2000 lines of gstack rubric text in this file.
 
-Expand Step 5 Test Strategy with the `gstack plan-eng-review` depth:
+### `--deep=eng` — plan-eng-review rubric wrapper
 
-- **Architecture coherence** — does the critical_files list actually deliver the refined_goal? Draw a mental execution trace.
-- **Test coverage gaps** — for each `must_test` entry, which component / interaction does it leave uncovered?
-- **Integration risks** — where does this change touch modules outside critical_files? Are side-effects accounted for?
-- **Performance footprint** — any N² loops, unbounded reads, blocking calls on the hot path?
-- **Diagrams** — if data flow is non-trivial, include ASCII sequence/state diagram inline.
+**Trigger**: user writes "architecture --deep=eng", "eng review this design", "lock in the plan", or architecture Step 8 sets `ENG_REVIEW_NEEDED=true` AND user opts for the deep review instead of separate agentboard-eng-review.
 
-Invocation: `/agentboard-architecture --deep=eng` or user writes "eng review this design".
+**Flow**:
 
-### `--deep=design` — plan-design-review rubric (ui_surface=true only)
+1. Complete Steps 1-7 (Architecture Overview through Out-of-scope Guard) AS NORMAL.
+2. Before Step 8 Complexity Check, invoke:
 
-Replace or supplement `agentboard-design-review` with 0-10 scores per UI dimension:
+   ```
+   Skill(skill="plan-eng-review", args=f"""
+   <context>
+   goal_id: {goal_id}
+   brainstorm.md frontmatter: {brainstorm_yaml}
+   frame.md frontmatter: {frame_yaml}
+   arch.md draft (Steps 1-7 output): {arch_draft_yaml_plus_body}
+   </context>
 
-- Information Architecture (0-10)
-- Interaction State Coverage (0-10)
-- User Journey (0-10)
-- AI Slop Risk (0-10)
-- Design System Alignment (0-10)
-- Responsive / Keyboard (0-10)
-- Unresolved Decisions (0-10)
+   Run engineering manager-mode plan review. Lock in:
+   - Architecture coherence — does critical_files list actually deliver refined_goal?
+     Mental execution trace.
+   - Test coverage gaps — for each must_test entry, which component / interaction
+     does it leave uncovered?
+   - Integration risks — where does this change touch modules outside critical_files?
+     Side-effects accounted for?
+   - Performance footprint — N² loops, unbounded reads, blocking calls on hot path?
+   - Diagrams — if data flow is non-trivial, include ASCII sequence/state diagram.
+   """)
+   ```
 
-Output: what each dimension would need to score 10, and which are the weakest. Fix proposals are upserted into arch.md's `## Design Review` section.
+3. Parse gstack response. Extract:
+   - Coherence findings → fold into `arch.md` body's `## Architecture Overview` section as a sub-block
+   - Test-gap findings → append to `test_strategy.must_test` (deduped)
+   - Integration-risk findings → become candidate `edge_cases` entries
+   - Performance-footprint findings → become `edge_cases` or `out_of_scope_guard` notes
+   - Diagrams → embed in a new `## Sequence / State Diagrams` section in arch.md
 
-Invocation: `/agentboard-architecture --deep=design`. Only meaningful when `ui_surface=true`; otherwise no-op + log `verdict_source="DEEP_DESIGN_NOT_APPLICABLE"`.
+4. Proceed to Step 8 Complexity Check. The enriched test_strategy + edge_cases feed Step 11 Self-review + downstream `agentboard-stress`.
 
-### `--deep=devex` — plan-devex-review rubric (developer-facing APIs / CLIs)
+**Fold-back contract**: on incomplete / error, log `verdict_source="DEEP_ENG_INCOMPLETE"` and proceed with Steps 1-7 output unchanged.
 
-When the critical path affects a developer-facing surface (CLI, SDK, public API, MCP tool schema), expand with:
+### `--deep=design` — plan-design-review rubric wrapper (ui_surface=true only)
 
-- **Persona** — who's the builder using this? Not the end user.
-- **Magical moments** — the 1-2 steps in the workflow that make the tool feel good.
-- **Friction audit** — unnecessary steps, confusing names, unhelpful errors.
-- **Benchmark** — how does this compare to the closest competitor on the same dimension?
+**Trigger**: user writes "architecture --deep=design", "design critique", "review the design plan", only when `ui_surface=true`.
 
-Invocation: `/agentboard-architecture --deep=devex`. Use for agentboard skill file designs, MCP tool additions, CLI subcommands.
+**Flow**:
+
+1. Complete Steps 1-8 AS NORMAL.
+2. In Step 9 UI hook, REPLACE the default `agentboard-design-review` invocation with:
+
+   ```
+   Skill(skill="plan-design-review", args=f"""
+   <context>
+   goal_id: {goal_id}
+   arch.md (UI-relevant sections): {ui_sections_yaml}
+   mockup_sha: {layer_0_mockup_sha}
+   </context>
+
+   Run designer's-eye plan review. Score 0-10 on each dimension:
+   - Information Architecture
+   - Interaction State Coverage (modal stacking, focus trap, z-order)
+   - User Journey
+   - AI Slop Risk
+   - Design System Alignment
+   - Responsive + Keyboard
+   - Unresolved Decisions
+
+   For each dimension < 8: describe what would make it 10. Output fix proposals.
+   """)
+   ```
+
+3. Parse gstack response. Extract:
+   - Per-dimension scores → `design_review.scores` in arch.md frontmatter
+   - Fix proposals → upsert into arch.md's `## Design Review` section (same format as default agentboard-design-review)
+   - Overall verdict (MEAN score < 7 → WARN, < 5 → BLOCKER, else APPROVED) → arch.md frontmatter `design_review.verdict`
+
+4. Apply Step 9 branching unchanged (APPROVED / WARN → continue; BLOCKER → back to Step 1; NOT_APPLICABLE impossible when ui_surface=true).
+
+**No-op guard**: if `ui_surface=false`, skip entirely and log `verdict_source="DEEP_DESIGN_NOT_APPLICABLE"`. User likely invoked flag on wrong goal.
+
+### `--deep=devex` — plan-devex-review rubric wrapper
+
+**Trigger**: user writes "architecture --deep=devex", "DX review", "developer experience", or when `critical_files` contains developer-facing surfaces (CLI, SDK, MCP tool schema, public API, skill file).
+
+**Flow**:
+
+1. Complete Steps 1-7 AS NORMAL.
+2. Invoke:
+
+   ```
+   Skill(skill="plan-devex-review", args=f"""
+   <context>
+   goal_id: {goal_id}
+   arch.md critical_files: {critical_files_yaml}
+   refined_goal: {brainstorm.refined_goal}
+   </context>
+
+   Run developer-experience plan review. For the developer-facing surfaces listed:
+   - Persona — who's the builder using this? Not the end user.
+   - Magical moments — the 1-2 steps in the workflow that make the tool feel good.
+   - Friction audit — unnecessary steps, confusing names, unhelpful errors.
+   - Benchmark — closest competitor on the same dimension; how does this compare?
+
+   Output: friction list + magical-moment commitments + competitor gaps.
+   """)
+   ```
+
+3. Parse gstack response. Extract:
+   - Friction items → become `edge_cases` in arch.md
+   - Magical moments → become entries in `test_strategy.must_test` (agent must verify those flows exist)
+   - Competitor gaps → append to arch.md body as `## DX Benchmark` section
+
+4. Proceed to Step 8 + Step 10 (arch.md write). DX findings enrich stress phase's failure-mode generation.
+
+**Targeting guard**: skill classifies goal as "developer-facing" by checking `critical_files` paths against `cli.py` / `mcp_server.py` / `skills/` / `*_sdk.py` patterns. If none match, log `verdict_source="DEEP_DEVEX_NOT_APPLICABLE"` and skip.
 
 ### Invariants across `--deep` modes
 
-- Steps 1-8 and 10-12 unchanged.
-- Complexity Check still runs and sets `ENG_REVIEW_NEEDED` normally.
+- Steps 1-8 and 10-12 unchanged except where explicitly noted above.
+- Complexity Check still runs and sets `ENG_REVIEW_NEEDED` normally (even under `--deep=eng`, the flag is still set — the flag triggers optional agentboard-eng-review which is a DIFFERENT dispatch from `--deep=eng`).
 - `ui_surface` detection unchanged.
-- Self-review (Step 11) unchanged.
+- Self-review (Step 11) unchanged — the gstack output passes through the same placeholder / single-responsibility / complexity-arithmetic checks.
+- Exactly one `--deep` flag per invocation. If multiple needed (rare), run architecture multiple times with separate flags and merge.
+- Each wrapper MUST log either `DEEP_<MODE>_COMPLETED` or `DEEP_<MODE>_INCOMPLETE` via `agentboard_log_decision`.
 
 ---
 
