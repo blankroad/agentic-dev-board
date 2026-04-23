@@ -306,7 +306,7 @@ Non-blocking by contract — failure here MUST NOT gate handoff.
 
 Read `arch.md` frontmatter `complexity.ENG_REVIEW_NEEDED`:
 
-- **false** → invoke execution phase directly. Until `agentboard-execute` (future D1f) lands, that means invoking `agentboard-tdd` (legacy, frozen chain). This is the sanctioned freeze exemption — `agentboard-tdd` called via the new D1 lock handoff, not via legacy gauntlet auto-routing. Log `verdict_source="EXECUTE_VIA_LEGACY_TDD"` to mark the transition context for retro.
+- **false** → invoke `agentboard-execute` (D1f) directly via the `Skill` tool. Pass `{task_id, run_id, locked_hash, goal_id}` in the args payload so execute can verify hash + load the plan. Log `verdict_source="EXECUTE_HANDOFF"`.
 - **true** → `AskUserQuestion`:
 
   ```
@@ -314,12 +314,12 @@ Read `arch.md` frontmatter `complexity.ENG_REVIEW_NEEDED`:
   TDD 시작 전 engineering review를 실행할까요? (권장) [Y/n]
   ```
 
-  - `Y` → invoke `agentboard-eng-review` via `Skill` tool. After eng-review completes, it invokes execution phase itself.
-  - `n` → invoke execution phase directly. Log `verdict_source="ENG_REVIEW_DECLINED"`.
+  - `Y` → invoke `agentboard-eng-review` via `Skill` tool. After eng-review completes, it invokes `agentboard-execute` itself.
+  - `n` → invoke `agentboard-execute` directly via the `Skill` tool. Log `verdict_source="ENG_REVIEW_DECLINED"`.
 
-### `task_id` + `run_id` threading
+### `task_id` + `run_id` + `locked_hash` threading
 
-Pass `{task_id, run_id, locked_hash}` through the `args` payload of the execution-phase Skill invocation so the execution skill can thread them into its own MCP calls.
+Pass `{task_id, run_id, locked_hash, goal_id}` through the `args` payload of the `agentboard-execute` Skill invocation. Execute's entry-step will verify `locked_hash` matches `plan.json` before starting the R-G-R loop.
 
 ### Final output
 
@@ -333,7 +333,7 @@ task_id: {id}
 run_id: {id}
 scope_decision: {mode} (from brainstorm.md)
 
-다음 단계: {agentboard-eng-review | agentboard-tdd (legacy via D1 handoff)}
+다음 단계: {agentboard-eng-review → agentboard-execute | agentboard-execute}
 ```
 
 ---
@@ -358,7 +358,7 @@ scope_decision: {mode} (from brainstorm.md)
 | 6 | `agentboard_update_task_status(task_id, "planning", metadata={...})` | Set 3 markers |
 | 7 | `agentboard_checkpoint(run_id, "gauntlet_complete", {...})` | Run event log |
 | 8 | `Skill(agentboard-synthesize-report, ...)` (non-blocking) | Overview report |
-| 9 | `AskUserQuestion` + `Skill(agentboard-eng-review \| agentboard-tdd, ...)` | Execution handoff |
+| 9 | `AskUserQuestion` + `Skill(agentboard-eng-review \| agentboard-execute, ...)` | Execution handoff |
 
 ---
 
@@ -370,7 +370,7 @@ scope_decision: {mode} (from brainstorm.md)
 - **Step Quality Check is a safety net, not a decision point.** Flagged steps are split suggestions; user can accept or proceed. Lock itself never silently splits.
 - **Scope revisit at lock routes back to intent.** Allowing `scope` as a `revise` option at the approval gate would be an F4-equivalent silent-override vector. The answer is always "return to intent".
 - **Metadata markers are the downstream contract.** CSO / redteam / approval / ui-preview all read `task.metadata` — getting this right at lock is what makes the rest of the chain work without coordination overhead.
-- **`agentboard-tdd` via D1 handoff is sanctioned freeze exemption.** The freeze memory says don't auto-invoke tdd via legacy gauntlet. Invoking tdd as the execution phase after D1 lock is a different path — explicit, logged, and expected until D1f `agentboard-execute` lands.
+- **`agentboard-execute` is the D1 execution phase (D1f).** Lock hands off here rather than to the legacy `agentboard-tdd`. Execute verifies `locked_hash` at entry, emits phase_start / phase_end events, and runs the same Iron-Law-enforced R-G-R loop as legacy tdd.
 - **No `--deep` modes by design.** Lock is where re-decisions become dangerous. The symmetry is: intent has `--deep` because it's the creative phase; lock doesn't because it's mechanical.
 
 ---
