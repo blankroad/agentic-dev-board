@@ -474,11 +474,45 @@ max_iterations: {plan.max_iterations}
         user_confirmed: bool | None = None,
     ) -> None:
         # Input validation runs outside the lock (no disk I/O yet).
+        # H0 (redteam MEDIUM fixes 2026-04-23):
+        #   - scope_mode must be one of the 4 canonical modes
+        #   - req_list items must be dicts with id + text keys
+        #   - alternatives_considered[i].chosen must be a boolean, not a
+        #     string / int / other truthy sentinel
+
+        _SCOPE_MODES = {"EXPAND", "SELECTIVE", "HOLD", "REDUCE"}
+        if scope_mode is not None and scope_mode not in _SCOPE_MODES:
+            raise ValueError(
+                f"scope_mode must be one of {sorted(_SCOPE_MODES)} "
+                f"(got {scope_mode!r})"
+            )
+
+        if req_list is not None:
+            for i, item in enumerate(req_list):
+                if not isinstance(item, dict):
+                    raise ValueError(
+                        f"req_list[{i}] must be a dict with id + text keys, "
+                        f"got {type(item).__name__}"
+                    )
+                missing = {"id", "text"} - set(item.keys())
+                if missing:
+                    raise ValueError(
+                        f"req_list[{i}] missing required keys: {sorted(missing)}"
+                    )
+
         if alternatives_considered is not None:
             for i, alt in enumerate(alternatives_considered):
                 if not isinstance(alt, dict):
                     raise ValueError(
                         f"alternatives_considered[{i}] must be a dict, got {type(alt).__name__}"
+                    )
+                # chosen, when present, must be a strict bool — not a
+                # truthy string like 'true' that may appear after a
+                # non-strict JSON transport round-trip.
+                if "chosen" in alt and not isinstance(alt["chosen"], bool):
+                    raise ValueError(
+                        f"alternatives_considered[{i}].chosen must be a bool, "
+                        f"got {type(alt['chosen']).__name__}={alt['chosen']!r}"
                     )
             chosen_count = sum(
                 1 for alt in alternatives_considered if alt.get("chosen") is True

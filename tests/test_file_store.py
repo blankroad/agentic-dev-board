@@ -529,6 +529,74 @@ def test_save_brainstorm_alias_consistent_under_concurrency(store: FileStore) ->
     )
 
 
+def test_save_brainstorm_validates_req_list_shape(store: FileStore) -> None:
+    """H0 (redteam MEDIUM): req_list items must be dicts with id + text.
+    Before the fix, None / strings / arbitrary dicts passed through."""
+    goal = Goal(title="req_list validation")
+    store.save_goal(goal)
+
+    # Non-dict items
+    with pytest.raises(ValueError, match="req_list"):
+        store.save_brainstorm(
+            goal_id=goal.id, premises=["p"], risks=[], alternatives=[],
+            existing_code_notes="",
+            req_list=["R1 string", "R2 string"],
+        )
+    with pytest.raises(ValueError, match="req_list"):
+        store.save_brainstorm(
+            goal_id=goal.id, premises=["p"], risks=[], alternatives=[],
+            existing_code_notes="",
+            req_list=[None, {"id": "R1", "text": "x", "status": "in_scope"}],
+        )
+    # Dict missing required keys
+    with pytest.raises(ValueError, match="req_list"):
+        store.save_brainstorm(
+            goal_id=goal.id, premises=["p"], risks=[], alternatives=[],
+            existing_code_notes="",
+            req_list=[{"only_id": "R1"}],
+        )
+
+
+def test_save_brainstorm_validates_scope_mode_enum(store: FileStore) -> None:
+    """H0 (redteam MEDIUM): scope_mode must be one of EXPAND / SELECTIVE /
+    HOLD / REDUCE. MCP schema enum is best-effort; direct Python callers
+    bypass it. Validate server-side."""
+    goal = Goal(title="scope_mode validation")
+    store.save_goal(goal)
+
+    with pytest.raises(ValueError, match="scope_mode"):
+        store.save_brainstorm(
+            goal_id=goal.id, premises=["p"], risks=[], alternatives=[],
+            existing_code_notes="",
+            scope_mode="INVALID_MODE",
+        )
+    with pytest.raises(ValueError, match="scope_mode"):
+        store.save_brainstorm(
+            goal_id=goal.id, premises=["p"], risks=[], alternatives=[],
+            existing_code_notes="",
+            scope_mode="",
+        )
+
+
+def test_save_brainstorm_chosen_must_be_boolean(store: FileStore) -> None:
+    """H0 (redteam MEDIUM): alternatives_considered[i].chosen must be a
+    bool. `is True` correctly rejects string 'true', but that's silent —
+    turn it into an explicit ValueError so bad transport serialization
+    surfaces loudly."""
+    goal = Goal(title="chosen type validation")
+    store.save_goal(goal)
+
+    with pytest.raises(ValueError, match="chosen"):
+        store.save_brainstorm(
+            goal_id=goal.id, premises=["p"], risks=[], alternatives=[],
+            existing_code_notes="",
+            alternatives_considered=[
+                {"name": "A", "chosen": "true"},  # string, not bool
+                {"name": "B", "chosen": False},
+            ],
+        )
+
+
 def test_save_brainstorm_rejects_non_dict_alternatives(store: FileStore) -> None:
     """F4 redteam HIGH: non-dict items in alternatives_considered must raise ValueError,
     not AttributeError. MCP dispatch only catches ValueError."""
