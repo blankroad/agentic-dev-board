@@ -4,6 +4,8 @@ description: ALWAYS activate for any task that writes or modifies production cod
 when_to_use: Any code change. User says "build X", "add Y", "fix Z bug", "refactor W", "implement Q", "write a function", "make this return", "handle the case where". Activates automatically after agentboard-gauntlet locks a plan, or directly on simple TDD requests without a gauntlet.
 ---
 
+> ⚠️ **DEPRECATED 2026-04-23 (D3 cutover).** Replaced by `agentboard-execute` (same Iron Law + Red-Green-Refactor discipline, but adds phase_start / phase_end events per P4 Observable-by-Default, and verifies `locked_hash` on entry from `agentboard-lock` handoff). Retained for retro / replay compatibility with pre-cutover goals only. **Do NOT invoke for new work** — `agentboard-lock` now routes to `agentboard-execute` directly.
+
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
 
 ## Preamble — Project Guard (MANDATORY first check)

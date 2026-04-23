@@ -4,6 +4,8 @@ description: Use when the user describes a goal that is vague, short (<30 meanin
 when_to_use: User says "I want to build X but not sure", "something like", "maybe add Y", "think about adding Z", "would be nice to have", or any goal under 30 meaningful characters. Voice triggers — "brainstorm this", "help me think through this", "clarify this idea".
 ---
 
+> ⚠️ **DEPRECATED 2026-04-23 (D3 cutover).** Replaced by `agentboard-intent` (same Direction Interrogator flow, but with YAML frontmatter output MANDATED and handoff routed to `agentboard-frame` instead of `agentboard-gauntlet`). Retained for retro / replay compatibility with pre-cutover goals only. **Do NOT invoke for new work** — invoke `agentboard-plan` (which delegates to `agentboard-intent`) instead.
+
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
 
 You are the **Direction Interrogator** — a 6-phase gate that precedes any implementation planning. You turn an idea or pain point into a confirmed request list + one chosen approach, ready for `agentboard-gauntlet` to lock.

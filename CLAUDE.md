@@ -142,17 +142,32 @@ All tools are in `mcp_server.py:call_tool`. Add new tools in `list_tools()` + th
 
 When the user's request matches an available skill, ALWAYS invoke it via the Skill tool as your FIRST action. Do NOT answer directly and do NOT use other tools first.
 
-Key routing rules:
+Key routing rules (post-D3 cutover, 2026-04-23):
 
-- Brainstorm a feature goal → `agentboard-brainstorm`
-- Build a locked plan → `agentboard-gauntlet`
-- Implement a locked plan with TDD → `agentboard-tdd`
-- Security / CSO review → `agentboard-cso`
+- **Plan + build any non-trivial feature → `agentboard-plan`** (thin orchestrator that chains intent → frame → architecture → stress → lock → execute)
+- Single-phase invocation (advanced usage) → `agentboard-intent` / `-frame` / `-architecture` / `-stress` / `-lock` / `-execute`
+- Security / CSO review → `agentboard-parallel-review` (dispatches `agentboard-cso` + `agentboard-redteam`)
 - Final approval + PR → `agentboard-approval`
 - Post-sprint retro → `agentboard-retro`
-- Bugs, errors → `investigate` or `agentboard-rca`
+- Replay past goal from checkpoint → `agentboard-replay`
+- Root-cause analysis on bugs → `agentboard-rca` or `investigate`
 
-> **F4 landed (2026-04-23):** The triplicate scope-decision gates are gone. `agentboard-brainstorm` Phase 4 RECOMMENDATION is the single scope authority, emitted as YAML frontmatter in `brainstorm.md`. `agentboard-gauntlet` is now 4 steps (Frame → Arch → Challenge → Decide) — Step 2 Scope is deleted, and Step 3 Complexity Check only sets `ENG_REVIEW_NEEDED`, never prompts for scope reduction. If a user wants to revise scope at the plan-review gate, they return to brainstorm Phase 4 rather than the gauntlet.
+### `--deep` modes (opt-in depth per phase)
+
+- `agentboard-intent --deep=ceo` (10-star scope rethink via gstack `plan-ceo-review`)
+- `agentboard-intent --deep=officehours` (YC 6 forcing questions via gstack `office-hours`)
+- `agentboard-architecture --deep=eng` (engineering manager review via gstack `plan-eng-review`)
+- `agentboard-architecture --deep=design` (designer review via gstack `plan-design-review`, `ui_surface=true` only)
+- `agentboard-architecture --deep=devex` (developer experience review via gstack `plan-devex-review`)
+- `agentboard-stress --deep=codex` (200 IQ second opinion via gstack `codex` challenge mode)
+
+### Deprecated skills (retained for retro / replay compat, do NOT invoke for new work)
+
+- `agentboard-brainstorm` → replaced by `agentboard-intent`
+- `agentboard-gauntlet` → replaced by `agentboard-plan` (+ D1 phase chain)
+- `agentboard-tdd` → replaced by `agentboard-execute`
+
+Each legacy SKILL.md carries a DEPRECATED banner pointing at the replacement. Pre-cutover goals that used the legacy chain keep working — retro / replay / timeline / decisions dashboards read their artifacts unchanged.
 
 ## Key files to read before touching
 
@@ -170,52 +185,26 @@ Key routing rules:
 
 See `TODOS.md` for tracked items.
 
-**Planning-layer redesign roadmap (revised 2026-04-23, D-first):**
+**Planning-layer redesign — D-first, all landed 2026-04-23:**
 
-### M0 ✅ F4 landed (2026-04-23, merge `dd3b75b`)
+- ✅ **M0** F4 (merge `dd3b75b`) — planning-layer surgical refactor; scope gates collapsed to brainstorm authority; dead code removed
+- ✅ **D1** — 6 phase-skill files content-filled (`agentboard-intent` / `-frame` / `-architecture` / `-stress` / `-lock` / `-execute`). Each skill outputs YAML frontmatter; each hands off to the next.
+- ✅ **D2** — `--deep` mode gstack wrappers on intent (ceo, officehours), architecture (eng, design, devex), stress (codex). Each wrapper invokes the gstack skill via the `Skill` tool and folds rubric output into phase artifacts.
+- ✅ **D3** — `agentboard-plan` thin orchestrator added; legacy `agentboard-gauntlet` / `-brainstorm` / `-tdd` carry DEPRECATED banners; CLAUDE.md routing updated; freeze directive lifted.
+- ✅ **B0** — `save_brainstorm` alias/versioned concurrency race fixed (file_lock + timestamp-inside-lock).
 
-Brainstorm YAML frontmatter contract; gauntlet Step 2 Scope deleted; Complexity Check reduced to `ENG_REVIEW_NEEDED` flag only; `scope_decision` injected from `brainstorm.md`; dead code removed (`gauntlet/steps/`, `gauntlet/pipeline.py`, `llm/prompts/gauntlet/`). **The current `agentboard-gauntlet` chain is now FROZEN** — do not invoke for new work (see `memory/feedback_freeze_gauntlet_flow.md`).
+**Remaining (deferred):**
 
-### D1 — Phase-skill skeletons (TOP PRIORITY)
+### C — Fleet observability layer (deferred, additive)
 
-Build new phase skills in parallel with the frozen gauntlet (no disruption until D3 cutover). Each skill outputs YAML-frontmatter-first artifacts so later observability layers can parse without retrofit.
+Because D1 skills emit YAML frontmatter + `phase_start` / `phase_end` events, this is additive:
 
-- **D1a `agentboard-intent`** — discover + commit to scope (replaces `agentboard-brainstorm` eventually). Writes `brainstorm.md` YAML frontmatter (already defined by F4).
-- **D1b `agentboard-frame`** — surface hidden assumptions + riskiest assumption + success criteria. Reads `brainstorm.md` frontmatter. No scope decisions (owned by intent).
-- **D1c `agentboard-architecture`** — file structure, test strategy, `critical_files`, `out_of_scope_guard`. UI hook + design-review gate when `ui_surface=true`. Complexity Check emits `ENG_REVIEW_NEEDED` only.
-- **D1d `agentboard-stress`** — adversarial plan review (4+ failure modes). Reads prior phases.
-- **D1e `agentboard-lock`** — atomic_steps decomposition, SHA256 hash via `build_locked_plan`, writes `plan.md` + `plan.json`. Mechanical (no LLM re-decision).
+- **C1** — Standardize phase event vocabulary + add dashboard queries
+- **C2** — TUI `phases` tab consuming the event stream + artifacts (k9s-style grid)
 
-### D2 — `--deep` modes (gstack absorption)
+### Housekeeping (orthogonal)
 
-Layered on D1 skills. Each `--deep` flag expands the phase with a specific depth rubric imported from gstack:
-
-- `intent --deep=ceo` ← `plan-ceo-review` (10x scope thinking, 4 modes)
-- `intent --deep=officehours` ← `office-hours` (YC 6 forcing questions)
-- `architecture --deep=eng` ← `plan-eng-review` (architecture coherence, test strategy, diagrams)
-- `architecture --deep=design` / `visual --deep=design` ← `plan-design-review` (0-10 rating per dimension, for `ui_surface`)
-- `architecture --deep=devex` ← `plan-devex-review` (persona, magical moments)
-- `stress --deep=codex` ← `codex challenge` (200 IQ adversarial)
-
-All depth-mode outputs remain structured (YAML frontmatter compliant). See `memory/reference_gstack_absorption.md`.
-
-### D3 — Orchestrator + cutover
-
-- Thin `agentboard-plan` skill chains `intent → frame → architecture → (visual?) → stress → lock`.
-- `agentboard-gauntlet` is deprecated and renamed; CLAUDE.md skill routing updated to point at the new chain.
-- `agentboard-brainstorm` is deprecated in favor of `agentboard-intent`.
-- The freeze directive lifts automatically once D3 cutover lands.
-
-### C — Observability layer (after D, deferred)
-
-Because D1 skills already emit YAML-frontmatter artifacts, this layer is additive not invasive:
-
-- **C1** — `phase_start` / `phase_end` events in `decisions.jsonl` (each phase skill already prepared to emit)
-- **C2** — TUI `phases` tab consuming the event stream + artifacts
-
-### Housekeeping (orthogonal, address when convenient)
-
-- **H0** `save_brainstorm` validation hardening (3 MEDIUM findings from F4 redteam) — **may be obsoleted** by D1a since `agentboard-intent` will own the write path.
-- **B0** `atomic_write` alias-vs-versioned concurrency race (pre-existing, affects `file_store.py` broadly) — **promote to D1-prerequisite** if D1 skills reuse the same `atomic_write` pattern; alternatively fix the pattern in a shared helper that D1 skills adopt from day 1.
+- **H0** `save_brainstorm` 3 MEDIUM validation gaps (`req_list` shape / `scope_mode` server enum / `chosen` string-truthy) — likely obsoleted once the legacy `agentboard-brainstorm` is deleted and only `agentboard-intent` owns the write path.
+- **Deprecation sweep** — once a full quarter's worth of pre-cutover goals have completed all retro / replay flows, delete `agentboard-brainstorm` / `-gauntlet` / `-tdd` SKILL.md files + expected-set entries in tests.
 
 `install.sh` branch hardcoding: fix before merging to main.

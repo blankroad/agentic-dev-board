@@ -4,6 +4,8 @@ description: MANDATORY planning gate. Proactively invoke this skill (do NOT writ
 when_to_use: User asks to build/implement/create/add/make something with multiple files or tests. User says "plan this", "design this", "how should we approach", "think this through", "architect this". MANDATORY before agentboard-tdd for non-trivial work. Also invoke when the user says `rethink` or requests replanning.
 ---
 
+> ⚠️ **DEPRECATED 2026-04-23 (D3 cutover).** Replaced by `agentboard-plan` (thin orchestrator) + the D1 phase chain (`agentboard-intent` → `agentboard-frame` → `agentboard-architecture` → `agentboard-stress` → `agentboard-lock`). This file is retained for retro / replay compatibility with pre-cutover goals only. **Do NOT invoke for new work** — invoke `agentboard-plan` instead. Will be removed in a future release after the deprecation window.
+
 > **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
 
 ## Preamble — Project Guard (MANDATORY first check)
