@@ -260,6 +260,18 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="agentboard_list_phase_events",
+            description="Return phase-boundary decision entries aggregated across all tasks under a goal. Filters out per-cycle TDD events (RED_CONFIRMED, GREEN_CONFIRMED, SKIPPED, REFACTORED) — only phase-level markers (PHASE_START, PHASE_END, PHASE_ABORT, COMPLETED, COMMITTED, DISPATCHED, PASS, RETRY, PUSHED, MERGED, LEGACY_FALLBACK, SCOPE_REVISIT_REQUESTED, BLOCKER_OVERRIDDEN). Consumed by TUI phases tab + retro dashboards + cross-agent phase comparison. Uses filesystem-based task discovery so it works even when board index is out of sync.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_root": {"type": "string"},
+                    "goal_id": {"type": "string"},
+                },
+                "required": ["project_root", "goal_id"],
+            },
+        ),
+        Tool(
             name="agentboard_log_parallel_review",
             description=(
                 "Record a single combined parallel CSO+redteam review outcome. Writes one "
@@ -1038,6 +1050,11 @@ async def _dispatch(name: str, args: dict) -> list[TextContent]:
             "computed_hash": computed,
             "goal_id": args["goal_id"],
         })
+
+    if name == "agentboard_list_phase_events":
+        store = _store(args["project_root"])
+        events = store.list_phase_events(args["goal_id"])
+        return _text({"goal_id": args["goal_id"], "events": events, "count": len(events)})
 
     # ── decisions & diffs ─────────────────────────────────────────────────────
     if name == "agentboard_log_decision":

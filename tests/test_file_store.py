@@ -429,6 +429,58 @@ def test_save_brainstorm_legacy_format_unchanged(store: FileStore) -> None:
     assert "refined_goal" not in post.metadata
 
 
+def test_list_phase_events_returns_events_across_goal_tasks(store: FileStore) -> None:
+    """C1: list_phase_events(goal_id) aggregates phase-boundary entries
+    from decisions.jsonl across every task under the goal. Used by TUI
+    phases tab + retro dashboards."""
+    from agentboard.models import BoardState, Task, DecisionEntry
+
+    goal = Goal(title="Phase events test")
+    store.save_goal(goal)
+    task = Task(goal_id=goal.id, title="T1")
+    store.save_task(task)
+    goal.task_ids.append(task.id)
+    store.save_goal(goal)
+    # append_decision uses load_board → _find_goal_for_task, so we need
+    # the goal to be registered in state.json, not just goal.json.
+    board = BoardState()
+    board.goals.append(goal)
+    store.save_board(board)
+
+    # Mix of phase-boundary + per-iter entries
+    store.append_decision(task.id, DecisionEntry(
+        iter=0, phase="intent", reasoning="phase_start",
+        verdict_source="PHASE_START",
+    ))
+    store.append_decision(task.id, DecisionEntry(
+        iter=0, phase="intent", reasoning="scope_mode=HOLD",
+        verdict_source="COMMITTED",
+    ))
+    store.append_decision(task.id, DecisionEntry(
+        iter=1, phase="tdd_red", reasoning="RED test written",
+        verdict_source="RED_CONFIRMED",
+    ))
+    store.append_decision(task.id, DecisionEntry(
+        iter=3, phase="execute", reasoning="phase_end — 3 iters",
+        verdict_source="PHASE_END",
+    ))
+
+    events = store.list_phase_events(goal.id)
+    # Phase-boundary filter: PHASE_START / PHASE_END / PHASE_ABORT / terminal verdicts
+    verdicts = [e["verdict_source"] for e in events]
+    assert "PHASE_START" in verdicts
+    assert "PHASE_END" in verdicts
+    assert "COMMITTED" in verdicts
+    # Per-cycle entries (RED_CONFIRMED) are NOT phase events — they're iter-level
+    assert "RED_CONFIRMED" not in verdicts
+    # Each event has required fields
+    for ev in events:
+        assert "phase" in ev
+        assert "task_id" in ev
+        assert "iter" in ev
+        assert "verdict_source" in ev
+
+
 def test_save_brainstorm_alias_consistent_under_concurrency(store: FileStore) -> None:
     """B0 (redteam HIGH): concurrent save_brainstorm must not leave the brainstorm.md
     alias pointing at an older body than the newest brainstorm-{ts}.md versioned file.

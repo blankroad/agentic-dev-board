@@ -555,6 +555,72 @@ max_iterations: {plan.max_iterations}
 
     # ── Helpers ────────────────────────────────────────────────────────────
 
+    # C1: canonical phase-event verdicts. Used by list_phase_events + TUI
+    # phases tab + retro dashboards. Per-cycle events (RED_CONFIRMED,
+    # GREEN_CONFIRMED, SKIPPED, REFACTORED) are intentionally NOT phase
+    # events — they're iter-level. A phase event marks entry, exit, or
+    # terminal state of a D1 phase (intent / frame / architecture /
+    # stress / lock / execute / parallel_review / approval / plan).
+    PHASE_EVENT_VERDICTS = frozenset({
+        "PHASE_START",
+        "PHASE_END",
+        "PHASE_ABORT",
+        "COMPLETED",
+        "COMMITTED",
+        "DISPATCHED",
+        "PASS",
+        "RETRY",
+        "PUSHED",
+        "MERGED",
+        "LEGACY_FALLBACK",
+        "SCOPE_REVISIT_REQUESTED",
+        "BLOCKER_OVERRIDDEN",
+    })
+
+    def list_phase_events(self, goal_id: str) -> list[dict]:
+        """Aggregate phase-boundary decision entries across all tasks under
+        a goal. Returns a list of dicts with fields
+        {task_id, phase, iter, verdict_source, reasoning, ts}.
+        Per-cycle TDD entries (RED_CONFIRMED, GREEN_CONFIRMED, etc.) are
+        filtered out — they're iter-level, not phase-level.
+
+        Uses filesystem-based task discovery (`.devboard/goals/<gid>/tasks/*`)
+        rather than board.state.json traversal so it works even when the
+        board index is out of sync with on-disk state.
+        """
+        events: list[dict] = []
+        goal_dir = self._goals_dir(goal_id)
+        tasks_dir = goal_dir / "tasks"
+        if not tasks_dir.exists():
+            return events
+        for task_subdir in sorted(tasks_dir.iterdir()):
+            if not task_subdir.is_dir():
+                continue
+            task_id = task_subdir.name
+            path = task_subdir / "decisions.jsonl"
+            if not path.exists():
+                continue
+            for line in path.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except Exception:
+                    continue
+                verdict = data.get("verdict_source", "")
+                if verdict not in self.PHASE_EVENT_VERDICTS:
+                    continue
+                events.append({
+                    "task_id": task_id,
+                    "phase": data.get("phase", ""),
+                    "iter": data.get("iter", 0),
+                    "verdict_source": verdict,
+                    "reasoning": data.get("reasoning", ""),
+                    "ts": data.get("ts", ""),
+                })
+        return events
+
     def _find_goal_for_task(self, task_id: str) -> str | None:
         board = self.load_board()
         for goal in board.goals:
