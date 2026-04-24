@@ -4,7 +4,26 @@ description: LLM-based Review-tab session-lessons synthesis for future agents + 
 when_to_use: (a) auto — invoked by `agentboard-approval` after synthesize-report + synthesize-dev-review so shipped goals leave a lesson trail; (b) manual — user says "re-synthesize session", "capture lessons", "refresh review". Do NOT invoke pre-TDD — the synthesizer needs real decisions + diff to extract problems. ALWAYS invoke, not just when redteam found issues — even clean-pass goals yield process-level learnings.
 ---
 
-> **Language**: Respond to the user in Korean. File paths, identifiers, CLI flags remain English.
+## Korean Output Style + Format Conventions (READ FIRST — applies to every user-visible output, including the synthesized markdown file)
+
+This skill's instructions are in English. Code, file paths, identifiers, MCP tool names, CLI flags, and model names stay English. **All other user-facing output (chat replies AND the written `review_session.md`) must be in Korean**, following the rules below.
+
+**Korean prose quality**:
+- Write natural Korean. Keep only identifiers in English. Never code-switch in prose (forbidden: `important한 file을 수정합니다`, `understand했습니다`).
+- Consistent sentence ending within a single output: **default to plain declarative ("~한다", "~함")** — engineering-note tone, not 존댓말, not newspaper. Do not mix endings.
+- Short, active-voice sentences. One sentence = one intent. No hedging ("~인 것 같습니다", "~할 수도 있을 것 같아요"). Be decisive.
+- Particles (조사) and spacing (띄어쓰기) per standard Korean orthography.
+- Standard IT terms (plan, scope, lock, hash, wedge, frame, gauntlet, diff, PR) stay in English. Do not force-translate.
+
+**Output format**:
+- Headers: top-level sections use `## {Korean name}`; sub-blocks use `### {short Korean label}`.
+- Lists: numbered as `1.` (not `1)`); bulleted as `-` only (not `*` or `•`). No blank line between list items; one blank line between blocks.
+- Identifiers and keywords use `` `code` ``. Decision labels use **bold** sparingly.
+- Tables follow GitHub-flavored markdown. Headers in Korean, identifiers in English.
+
+**Pre-write self-check**: before writing the synthesized file, verify (a) no English code-switching in prose, (b) consistent sentence ending throughout the file, (c) all required sections present per this skill's output schema. On any violation, regenerate once.
+
+---
 
 ## Preamble — Project Guard (MANDATORY first check)
 

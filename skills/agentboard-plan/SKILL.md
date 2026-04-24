@@ -4,7 +4,34 @@ description: D3 entry point (2026-04-23, replaces agentboard-gauntlet). **Scoped
 when_to_use: Project has `.agentboard/` + `.mcp.json` AND the user asks to build, implement, add, create, make, or extend anything involving more than one file, tests, auth, payments, sessions, databases, APIs, architecture decisions, or anything destined for main/production. User says "plan this", "design this", "architect this", "how should we approach X", "rethink Y". MANDATORY before agentboard-execute for non-trivial work. Skip only for typo fixes, pure config tweaks, or when the user explicitly says "skip planning". In non-agentboard projects, this skill does NOT apply — fall back to the project's own planning flow.
 ---
 
-> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+## Korean Output Style + Format Conventions (READ FIRST — applies to every user-visible output)
+
+This skill's instructions are in English. Code, file paths, identifiers, MCP tool names, and commit messages stay English. **All other user-facing output must be in Korean**, following the rules below.
+
+**Korean prose quality**:
+- Write natural Korean. Keep only identifiers in English. Never code-switch in prose (forbidden: `important한 file을 수정합니다`, `understand했습니다`).
+- Consistent sentence ending within a single response: **default to plain declarative ("~한다", "~함")** — do not mix in 존댓말 ("~합니다", "~해요"). Direct questions inside `AskUserQuestion` may use "~할까?" / "~인가?".
+- Short, active-voice sentences. One sentence = one intent. No hedging ("~인 것 같습니다", "~할 수도 있을 것 같아요"). Be decisive.
+- Particles (조사) and spacing (띄어쓰기) per standard Korean orthography.
+- Standard IT terms (plan, scope, lock, hash, wedge, frame, gauntlet) stay in English. Do not force-translate (bad: "잠금 계획"; good: "locked plan").
+
+**Output format**:
+- Headers: `## Phase N — {Korean name}` for major phases; `### {short Korean label}` for sub-blocks. Do not append the English handle to sub-headers.
+- Lists: numbered as `1.` (not `1)`); bulleted as `-` only (not `*` or `•`). No blank line between list items; one blank line between blocks.
+- Identifiers and keywords use `` `code` ``. Decision labels use **bold** (max 2-3 per block — do not over-bold).
+- Use `---` separators only between top-level phases, never inside a phase.
+
+**AskUserQuestion 4-part body** (every call's question text is 3-5 lines, in this order):
+1. **Re-ground** — one line stating which phase / which item is being decided.
+2. **Plain reframe** — 1-2 lines describing the choice in outcome terms (no implementation jargon). Korean.
+3. **Recommendation** — `RECOMMENDATION: {option label} — {one-line reason}`.
+4. **Options** — short option labels in the `options` array (put detail in each option's `description` field, not in the question body).
+
+Bounced or meta replies ("너가 정해", "추천해줘", "어떤게 좋을까?") **do not consume the phase budget** — answer inline, then immediately re-ask the same axis with tightened options.
+
+**Pre-send self-check**: before emitting any user-visible block, verify (a) no English code-switching in prose, (b) consistent sentence ending, (c) required header is present, (d) `AskUserQuestion` body has all 4 parts. On any violation, regenerate once.
+
+---
 
 > **Status (2026-04-23, D3 cutover):** Canonical planning entry point. Replaces `agentboard-gauntlet` (deprecated). Routes any "build / implement / plan" request into the D1 phase chain. The legacy `agentboard-gauntlet` + `agentboard-brainstorm` + `agentboard-tdd` skills carry DEPRECATED banners and stay on disk for retro / replay compatibility with pre-cutover goals, but new work should never invoke them directly.
 

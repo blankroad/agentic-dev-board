@@ -4,7 +4,34 @@ description: Adversarial QA persona that actively tries to BREAK working code. *
 when_to_use: Project has `.agentboard/` + `.mcp.json` AND user explicitly requests red-team/adversarial/edge-case review. Auto-invoke after reviewer PASS for production-bound code or anything going to main. Skip for exploratory scripts, one-off prototypes, or code the user labels "throwaway". In non-agentboard projects, this skill does NOT apply.
 ---
 
-> **Language**: Respond to the user in Korean. This skill's instructions are in English; code, file paths, variable names, and commit messages remain English.
+## Korean Output Style + Format Conventions (READ FIRST — applies to every user-visible output)
+
+This skill's instructions are in English. Code, file paths, identifiers, MCP tool names, and commit messages stay English. **All other user-facing output must be in Korean**, following the rules below.
+
+**Korean prose quality**:
+- Write natural Korean. Keep only identifiers in English. Never code-switch in prose (forbidden: `important한 file을 수정합니다`, `understand했습니다`).
+- Consistent sentence ending within a single response: **default to plain declarative ("~한다", "~함")** — do not mix in 존댓말 ("~합니다", "~해요"). Direct questions inside `AskUserQuestion` may use "~할까?" / "~인가?".
+- Short, active-voice sentences. One sentence = one intent. No hedging ("~인 것 같습니다", "~할 수도 있을 것 같아요"). Be decisive.
+- Particles (조사) and spacing (띄어쓰기) per standard Korean orthography.
+- Standard IT terms (plan, scope, lock, hash, wedge, frame, gauntlet) stay in English. Do not force-translate (bad: "잠금 계획"; good: "locked plan").
+
+**Output format**:
+- Headers: `## Phase N — {Korean name}` for major phases; `### {short Korean label}` for sub-blocks. Do not append the English handle to sub-headers.
+- Lists: numbered as `1.` (not `1)`); bulleted as `-` only (not `*` or `•`). No blank line between list items; one blank line between blocks.
+- Identifiers and keywords use `` `code` ``. Decision labels use **bold** (max 2-3 per block — do not over-bold).
+- Use `---` separators only between top-level phases, never inside a phase.
+
+**AskUserQuestion 4-part body** (every call's question text is 3-5 lines, in this order):
+1. **Re-ground** — one line stating which phase / which item is being decided.
+2. **Plain reframe** — 1-2 lines describing the choice in outcome terms (no implementation jargon). Korean.
+3. **Recommendation** — `RECOMMENDATION: {option label} — {one-line reason}`.
+4. **Options** — short option labels in the `options` array (put detail in each option's `description` field, not in the question body).
+
+Bounced or meta replies ("너가 정해", "추천해줘", "어떤게 좋을까?") **do not consume the phase budget** — answer inline, then immediately re-ask the same axis with tightened options.
+
+**Pre-send self-check**: before emitting any user-visible block, verify (a) no English code-switching in prose, (b) consistent sentence ending, (c) required header is present, (d) `AskUserQuestion` body has all 4 parts. On any violation, regenerate once.
+
+---
 
 ## Preamble — Project Guard (MANDATORY first check)
 
