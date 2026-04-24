@@ -116,6 +116,36 @@ hooks/               — PostToolUse hooks: iron-law-check.sh, danger-guard.sh, 
 tests/               — 738+ tests. Run: pytest
 ```
 
+## Cross-Project Memory (Tier 1 / Tier 2)
+
+Goal `g_20260424_035650_6ecdd2` introduced a dual-tier state model so Claude Code sessions capture value even when run in non-`agentboard`-initialized directories.
+
+- **Tier 1** — project is agentboard-initialized (`.agentboard/` present). State writes go to project-local truth (`FileStore`) AND mirror to the global index (`GlobalIndex` at `~/.agentboard/index/learnings.jsonl`). Backward compatible with pre-Tier 1 flow.
+- **Tier 2** — ambient capture only. Claude Code session in any cwd (no `.agentboard/`) writes session metadata to `~/.agentboard/sessions/<date>/<sid>/session.md` via Claude Code user-scope hooks. No project-local writes.
+
+Routing:
+
+- `storage/path_filter.py::resolve_tier(path)` returns `"tier1" | "tier2" | "skip"`. Walks up for `.agentboard/` (stopping before `$HOME` so the global store dir isn't mis-classified), then home-check (`skip`), else `tier2`. `~/.agentboard/ignore_paths.txt` exact-prefix match wins first (FM7 escape hatch).
+- `config.resolve_project_root(None)` routes rootless MCP calls to `~/.agentboard/`.
+- `config.discover_state_dir(cwd)` walks up for a project state dir, falls back to `~/.agentboard/`.
+- `memory/rootless.py` routes `save_learning_rootless` / `relevant_learnings_rootless` — Tier 1 writes project-local + global; rootless writes global only; retrieval is global-scope by design (R3 auto-inject surfaces other projects' learnings).
+
+Hook entry points (`src/agentboard/hooks_py/`):
+
+- `session_start.py` — initializes Tier 2 session record (`GlobalStore.init_tier2_session`).
+- `user_prompt_submit.py` — emits `<system-reminder>` block with top-K matching learnings, truncated to 2KB at learning boundary with overflow marker `...(N more via agentboard_search_learnings)`.
+- `post_tool_use.py` — captures tool call events tagged `source=user_hook`.
+- `stop.py` — writes `finalized: true` marker to session.md.
+
+Dedup layers:
+
+- **Decisions (goal_checklist #4)** — `GlobalStore.write_decision` uses a **source-excluded** content key `{session|seq|tool|args|ts_bucket}`; `_content_key` persisted inside each JSONL line; init rebuilds seen-set from disk so hook+MCP dual-capture collapses to 1 entry across processes.
+- **Learnings (FM6)** — `GlobalIndex.register_learning` is **append-only**. Multiple source streams (user hook, project hook, MCP) retain distinct entries; `search_learnings` returns the union.
+
+Install — `install.write_user_hooks` additively merges new hook entries into `~/.claude/settings.json` `hooks` dict with `_source: "agentboard"` tagging; reinstall removes prior agentboard-tagged entries for the matching event before writing fresh (idempotent, FM5). Foreign entries (no `_source` or different value) preserved.
+
+FM2 guard — `tests/conftest.py` session-scoped autouse fixture `home_tmpdir` redirects `$HOME` to a per-session pytest tmpdir so the full suite cannot pollute the developer's real `~/.agentboard/`.
+
 ## Invariants
 
 - MCP server never calls an LLM. State management + deterministic verification only.

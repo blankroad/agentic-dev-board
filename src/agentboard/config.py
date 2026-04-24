@@ -100,3 +100,27 @@ def get_api_key() -> str:
             "ANTHROPIC_API_KEY not set. Run: export ANTHROPIC_API_KEY=your_key"
         )
     return key
+
+
+def resolve_project_root(project_root: Path | None) -> Path:
+    """Route None (rootless mode) to ~/.agentboard/ global fallback.
+
+    Ref: goal g_20260424_035650_6ecdd2 — MCP tools called without a
+    project_root land on the global state dir instead of erroring.
+    """
+    if project_root is None:
+        return Path.home() / ".agentboard"
+    return project_root
+
+
+def discover_state_dir(cwd: Path) -> Path:
+    """Walk up from cwd for a project-local .agentboard/, else ~/.agentboard/.
+
+    Used by hooks/CLI entry points that need a state dir but may be invoked
+    from arbitrary cwd (Tier 2 ambient capture scenario).
+    """
+    for parent in [cwd, *cwd.parents]:
+        candidate = parent / ".agentboard"
+        if candidate.is_dir():
+            return candidate
+    return Path.home() / ".agentboard"

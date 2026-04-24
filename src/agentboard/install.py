@@ -283,3 +283,38 @@ def install_all(
             )
 
     return result
+
+
+def write_user_hooks(settings_path: Path, new_hooks: dict) -> None:
+    """Additive + idempotent merge of new_hooks into a Claude Code settings.json.
+
+    Ref: goal g_20260424_035650_6ecdd2 FM5 — installer MUST NOT clobber existing
+    hooks or permissions written by prior installers / other plugins, AND must
+    not accumulate duplicates on reinstall. Each agentboard-owned entry is
+    tagged ``_source: "agentboard"``; reinstall removes prior agentboard-tagged
+    entries for the same event before writing fresh ones. Foreign entries
+    (missing/other _source) are preserved verbatim.
+    """
+    import json
+
+    try:
+        data = json.loads(settings_path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Malformed/missing settings — start fresh. Existing file (if any)
+        # gets replaced with valid JSON so the next install round trip works.
+        data = {}
+    # Wrong-schema guard: `hooks` must be a dict (Claude Code spec). If the
+    # file was hand-edited or clobbered into an array, reset to {} so we
+    # don't call list.setdefault below.
+    if not isinstance(data.get("hooks"), dict):
+        data["hooks"] = {}
+    hooks = data.setdefault("hooks", {})
+    for event, entries in new_hooks.items():
+        existing = hooks.setdefault(event, [])
+        # Drop prior agentboard entries for this event (idempotent reinstall).
+        existing[:] = [e for e in existing if e.get("_source") != "agentboard"]
+        for entry in entries:
+            tagged = dict(entry)
+            tagged["_source"] = "agentboard"
+            existing.append(tagged)
+    settings_path.write_text(json.dumps(data, indent=2))

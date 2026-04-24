@@ -242,6 +242,32 @@ Hooks work **independently of skills** — even if `agentboard-tdd` isn't loaded
 
 ---
 
+## Ambient capture + global install (Cross-Project Memory)
+
+agentboard runs in two tiers so your Claude Code sessions contribute memory even in directories that aren't initialized:
+
+- **Tier 1** — installed project with `.agentboard/`. Full feature set; every write mirrors to the global index `~/.agentboard/index/learnings.jsonl` so learnings are available to sessions in other projects.
+- **Tier 2** — ambient capture in any cwd. Session metadata lands at `~/.agentboard/sessions/<date>/<session_id>/session.md` via Claude Code user-scope hooks; no project-local writes.
+
+Global install registers four user-scope hooks into `~/.claude/settings.json`:
+
+| Hook | What it does |
+|---|---|
+| `SessionStart` | Creates the Tier 2 session record (`~/.agentboard/sessions/<date>/<sid>/session.md`). |
+| `UserPromptSubmit` | Emits a `<system-reminder>` block with the top-K learnings matching your prompt (truncated to 2KB with an overflow marker). This is how R3 auto-inject surfaces past-project knowledge in a brand-new session. |
+| `PostToolUse` | Writes each tool call to the global `decisions.jsonl`, tagged `source=user_hook`. Duplicate writes from MCP dedup to a single entry via a content-key excluding `source`. |
+| `Stop` | Appends `finalized: true` to the session record on clean exit. |
+
+Install writes are **idempotent** — each agentboard-owned entry is tagged `_source: "agentboard"` and reinstall replaces prior agentboard entries without clobbering hooks from other plugins or your own config.
+
+Escape hatch: `~/.agentboard/ignore_paths.txt` (one path prefix per line) excludes matching directories from Tier 2 capture.
+
+Pollution safety: the test suite uses a session-scoped `conftest.py` fixture that redirects `$HOME` to a pytest tmpdir, so the full suite (including dual-write paths) leaves your real `~/.agentboard/` untouched.
+
+See `CLAUDE.md` → "Cross-Project Memory (Tier 1 / Tier 2)" for the module-level breakdown.
+
+---
+
 ## Analytics outputs
 
 The `agentboard.analytics` module produces human-readable artifacts from `.agentboard/` state — no extra LLM calls.
