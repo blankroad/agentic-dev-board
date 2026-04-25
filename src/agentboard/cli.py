@@ -143,6 +143,98 @@ def install(
         console.print(f"\n[dim]Skills available globally. For hooks + MCP, run [bold]agentboard install[/bold] in each project.[/dim]")
 
 
+# ── Uninstall ─────────────────────────────────────────────────────────────
+
+
+@app.command()
+def uninstall(
+    scope: str = typer.Option("all", "--scope", "-s", help="project | global | all"),
+    target: str = typer.Option(
+        "both",
+        "--target",
+        "-t",
+        help="claude | opencode | both — which agent host to uninstall from",
+    ),
+    purge_data: bool = typer.Option(
+        False,
+        "--purge-data",
+        help="Also delete .agentboard/ user data (project) and ~/.agentboard/ (global). Destructive.",
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Print what would be removed."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompts."),
+) -> None:
+    """Remove skills + hooks + MCP wiring written by ``agentboard install``.
+
+    Safe by default:
+
+    - Only ``agentboard-*`` skills are removed; foreign skills untouched.
+    - Only the ``agentboard`` MCP server entry is stripped; other servers preserved.
+    - Only agentboard-tagged hook entries are stripped (or legacy entries pointing
+      at ``danger-guard.sh`` / ``iron-law-check.sh`` / ``activity-log.py``).
+    - Project ``.agentboard/`` and ``~/.agentboard/`` user data are kept unless
+      ``--purge-data`` is passed.
+    """
+    from agentboard.uninstall import uninstall_global, uninstall_project
+
+    if scope not in ("project", "global", "all"):
+        console.print(f"[red]invalid --scope: {scope!r}[/red] (valid: project|global|all)")
+        raise typer.Exit(1)
+    if target not in ("claude", "opencode", "both"):
+        console.print(f"[red]invalid --target: {target!r}[/red] (valid: claude|opencode|both)")
+        raise typer.Exit(1)
+    targets: tuple[str, ...] = (
+        ("claude", "opencode") if target == "both" else (target,)
+    )
+
+    if purge_data and not dry_run and not yes:
+        console.print(
+            "[yellow]--purge-data will delete user data in[/yellow] "
+            "[bold].agentboard/[/bold] and/or [bold]~/.agentboard/[/bold]."
+        )
+        if not typer.confirm("Proceed?", default=False):
+            console.print("[dim]aborted[/dim]")
+            raise typer.Exit(1)
+
+    project_plan = None
+    global_plan = None
+    if scope in ("project", "all"):
+        project_plan = uninstall_project(
+            targets=targets, purge_data=purge_data, dry_run=dry_run
+        )
+    if scope in ("global", "all"):
+        global_plan = uninstall_global(
+            targets=targets, purge_data=purge_data, dry_run=dry_run
+        )
+
+    prefix = "[dim](dry-run)[/dim] " if dry_run else ""
+    if project_plan:
+        console.print(f"{prefix}[bold]Project[/bold] [dim]{project_plan['project_root']}[/dim]")
+        console.print(f"  Skills removed:        [bold]{len(project_plan['removed_skills'])}[/bold]")
+        console.print(f"  Hook scripts removed:  [bold]{len(project_plan['removed_hook_scripts'])}[/bold]")
+        console.print(f"  Settings hooks pruned: [bold]{project_plan['stripped_project_hooks']}[/bold]")
+        console.print(f"  .mcp.json cleaned:     [bold]{project_plan['stripped_mcp']}[/bold]")
+        console.print(f"  opencode.json cleaned: [bold]{project_plan['stripped_opencode']}[/bold]")
+        if project_plan["removed_data"]:
+            console.print(f"  Data removed:          [red]{project_plan['removed_data']}[/red]")
+    if global_plan:
+        console.print(f"{prefix}[bold]Global[/bold]")
+        console.print(f"  Skills removed:        [bold]{len(global_plan['removed_skills'])}[/bold]")
+        console.print(f"  User hooks pruned:     [bold]{global_plan['stripped_user_hooks']}[/bold]")
+        if global_plan["removed_data"]:
+            console.print(f"  Data removed:          [red]{global_plan['removed_data']}[/red]")
+
+    if dry_run:
+        console.print("\n[dim]Dry run — no files modified. Re-run without --dry-run to apply.[/dim]")
+    else:
+        console.print(f"\n[green]✓[/green] uninstall complete (scope=[bold]{scope}[/bold])")
+        if scope in ("global", "all"):
+            console.print(
+                "[dim]Note: shell alias in ~/.zshrc / ~/.bashrc and the install dir "
+                "(~/.local/share/agentic-dev-board/) are removed by [bold]uninstall.sh[/bold], "
+                "not this command.[/dim]"
+            )
+
+
 # ── Init ──────────────────────────────────────────────────────────────────
 
 
